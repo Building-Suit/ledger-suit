@@ -1,10 +1,13 @@
 /*
  * Building Suit — design tokens.
  *
- * Mirrored from the brand guidelines
- * (building-suit/.docs/building-suit-brand-guidelines/07-design-tokens/colors.css).
- * Treat that repository as the source of truth: change a value there first, then
- * bring it across here. Do not invent new brand colours locally.
+ * Source of truth: tareq-abdelwhap/building-suit.
+ *   - Canonical values: .docs/building-suit-brand-guidelines/07-design-tokens/design-tokens.json
+ *   - Implemented baseline this file mirrors: prototype/src/styles.css
+ *
+ * Token NAMES follow the implemented baseline so the two stay diffable. Change
+ * a value in that repository first, then bring it across here; do not invent
+ * brand values locally.
  *
  * Two layers:
  *   1. Brand palette — fixed values, identical in both themes.
@@ -16,10 +19,17 @@
  */
 
 :root {
-  /* ---- Brand palette (fixed) ---------------------------------------- */
+  /* ---- Typefaces ----------------------------------------------------- */
+  --bs-font-latin: 'Manrope Variable', 'Manrope', 'Inter', -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --bs-font-arabic: 'IBM Plex Sans Arabic', 'Cairo', 'Tajawal', 'Segoe UI',
+    Tahoma, Arial, sans-serif;
+  --bs-font-mono: 'Fira Mono', ui-monospace, 'SF Mono', 'Roboto Mono', monospace;
+
+  /* ---- Brand palette (fixed) ----------------------------------------- */
   --bs-building-navy: #16293b;
   --bs-deep-structure-navy: #0d1b28;
-  --bs-midnight-background: #0a111a;
+  --bs-midnight-bg: #0a111a;
   --bs-navy-surface: #14233a;
   --bs-navy-surface-raised: #1b2e47;
   --bs-steel-border: #2e3f52;
@@ -28,6 +38,8 @@
   --bs-highlight-gold: #ebb45a;
   --bs-gold-700: #a86c1c;
   --bs-gold-600: #c8902f;
+  --bs-gold-500: #d89b42;
+  --bs-gold-400: #ebb45a;
   --bs-gold-300: #f4ce86;
 
   --bs-pearl-white: #f7f8fa;
@@ -43,10 +55,29 @@
   --bs-slate-gray: #5a6573;
   --bs-steel-gray: #9aa6b4;
 
+  --bs-success: #2e9e6b;
+  --bs-success-bg: #e4f4ec;
+  --bs-warning: #e1841f;
+  --bs-warning-bg: #fbeedd;
+  --bs-error: #d14b4b;
+  --bs-error-bg: #f8e3e3;
+  --bs-info: #2f77c9;
+  --bs-info-bg: #dce6f1;
+
+  --bs-success-dark: #46b383;
+  --bs-success-bg-dark: #18352a;
+  --bs-warning-dark: #f09a3c;
+  --bs-warning-bg-dark: #3a2a14;
+  --bs-error-dark: #e26a6a;
+  --bs-error-bg-dark: #3a1e1e;
+  --bs-info-dark: #4f92dd;
+  --bs-info-bg-dark: #15263a;
+
+  --bs-gradient-gold: linear-gradient(135deg, #ebb45a 0%, #d89b42 50%, #a86c1c 100%);
   --bs-gradient-navy: linear-gradient(160deg, #16293b 0%, #0d1b28 100%);
 
-  /* ---- Role tokens — light mode (default) --------------------------- */
-  --bs-background: var(--bs-pearl-white);
+  /* ---- Role tokens — light mode (default) ---------------------------- */
+  --bs-bg: var(--bs-pearl-white);
   --bs-surface: var(--bs-white);
   --bs-surface-muted: var(--bs-soft-silver);
   --bs-surface-raised: var(--bs-white);
@@ -61,38 +92,103 @@
   --bs-border-strong: var(--bs-slate-gray);
 
   --bs-primary: var(--bs-building-navy);
-  --bs-primary-hover: var(--bs-deep-structure-navy);
+  --bs-primary-hover: #1e3a50;
+  --bs-primary-pressed: var(--bs-deep-structure-navy);
   --bs-accent: var(--bs-premium-gold);
+  --bs-accent-hover: var(--bs-highlight-gold);
   --bs-link: var(--bs-slate-blue);
   --bs-focus-ring: var(--bs-premium-gold);
+  --bs-scrim: rgb(13 27 40 / 0.48);
 
-  --bs-success: #2e9e6b;
-  --bs-success-bg: #e4f4ec;
-  --bs-warning: #e1841f;
-  --bs-warning-bg: #fbeedd;
-  --bs-error: #d14b4b;
-  --bs-error-bg: #f8e3e3;
-  --bs-info: #2f77c9;
-  --bs-info-bg: #dce6f1;
+  /* Status roles are indirected so dark mode remaps them in one place rather
+     than every component knowing about a dark variant. */
+  --bs-status-success: var(--bs-success);
+  --bs-status-success-bg: var(--bs-success-bg);
+  --bs-status-warning: var(--bs-warning);
+  --bs-status-warning-bg: var(--bs-warning-bg);
+  --bs-status-error: var(--bs-error);
+  --bs-status-error-bg: var(--bs-error-bg);
+  --bs-status-info: var(--bs-info);
+  --bs-status-info-bg: var(--bs-info-bg);
 
+  /* ---- Typography scale ---------------------------------------------- */
+  --bs-weight-regular: 400;
+  --bs-weight-medium: 500;
+  --bs-weight-semibold: 600;
+  --bs-weight-bold: 700;
+  --bs-weight-extrabold: 800;
+
+  --bs-type-display-size: 32px;
+  --bs-type-display-lh: 40px;
+  --bs-type-h1-size: 26px;
+  --bs-type-h1-lh: 34px;
+  --bs-type-h2-size: 22px;
+  --bs-type-h2-lh: 30px;
+  --bs-type-h3-size: 18px;
+  --bs-type-h3-lh: 26px;
+  --bs-type-body-l-size: 16px;
+  --bs-type-body-l-lh: 24px;
+  --bs-type-body-m-size: 14px;
+  --bs-type-body-m-lh: 22px;
+  --bs-type-caption-size: 12px;
+  --bs-type-caption-lh: 18px;
+  --bs-type-overline-size: 11px;
+  --bs-type-overline-lh: 16px;
+  --bs-type-button-size: 15px;
+  --bs-type-button-lh: 20px;
+
+  /* ---- 8px spacing scale ---------------------------------------------- */
+  --bs-space-0: 0px;
+  --bs-space-1: 4px;
+  --bs-space-2: 8px;
+  --bs-space-3: 12px;
+  --bs-space-4: 16px;
+  --bs-space-5: 24px;
+  --bs-space-6: 32px;
+  --bs-space-7: 48px;
+  --bs-space-8: 64px;
+  --bs-space-9: 96px;
+
+  /* ---- Radii (keep to this set) --------------------------------------- */
+  --bs-radius-chip: 8px;
+  --bs-radius-button: 12px;
+  --bs-radius-input: 12px;
+  --bs-radius-card: 16px;
+  --bs-radius-modal: 24px;
+  --bs-radius-large: 24px;
+  --bs-radius-full: 9999px;
+
+  /* ---- Sizing --------------------------------------------------------- */
+  --bs-button-height: 48px;
+  --bs-input-height: 48px;
+  --bs-tap-target-min: 44px;
+  --bs-target-gap-min: 8px;
+
+  /* ---- Elevation ------------------------------------------------------ */
   --bs-shadow-1: 0 2px 8px rgb(13 27 40 / 0.08);
   --bs-shadow-2: 0 4px 16px rgb(13 27 40 / 0.12);
   --bs-shadow-3: 0 8px 24px rgb(13 27 40 / 0.16);
+  --bs-shadow-1-dark: 0 2px 8px rgb(0 0 0 / 0.32);
+  --bs-shadow-2-dark: 0 4px 16px rgb(0 0 0 / 0.4);
+  --bs-shadow-3-dark: 0 8px 24px rgb(0 0 0 / 0.48);
+  --bs-elevation-1: var(--bs-shadow-1);
+  --bs-elevation-2: var(--bs-shadow-2);
+  --bs-elevation-3: var(--bs-shadow-3);
 
-  /* ---- Radii (keep to this small set) ------------------------------- */
-  --bs-radius-chip: 8px;
-  --bs-radius-control: 12px;
-  --bs-radius-card: 16px;
-  --bs-radius-modal: 20px;
+  /* ---- Motion --------------------------------------------------------- */
+  --bs-motion-quick: 120ms ease;
+  --bs-motion-default: 180ms ease;
+  --bs-motion-enter: 200ms ease;
 
-  /* ---- Motion ------------------------------------------------------- */
-  --bs-duration: 160ms;
-  --bs-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  /* ---- Focus ---------------------------------------------------------- */
+  --bs-focus-ring-width: 2px;
+  --bs-focus-ring-offset: 2px;
+  --bs-focus-ring-style: var(--bs-focus-ring-width) solid var(--bs-focus-ring);
 }
 
-/* ---- Role tokens — dark mode --------------------------------------- */
-[data-theme='dark'] {
-  --bs-background: var(--bs-midnight-background);
+/* ---- Role tokens — dark mode ----------------------------------------- */
+:root[data-theme='dark'] {
+  --bs-bg: var(--bs-midnight-bg);
   --bs-surface: var(--bs-navy-surface);
   --bs-surface-muted: var(--bs-deep-structure-navy);
   --bs-surface-raised: var(--bs-navy-surface-raised);
@@ -108,28 +204,39 @@
 
   --bs-primary: var(--bs-premium-gold);
   --bs-primary-hover: var(--bs-highlight-gold);
+  --bs-primary-pressed: var(--bs-gold-600);
   --bs-accent: var(--bs-highlight-gold);
+  --bs-accent-hover: var(--bs-gold-300);
   --bs-link: var(--bs-sky-steel);
   --bs-focus-ring: var(--bs-highlight-gold);
+  --bs-scrim: rgb(0 0 0 / 0.64);
 
-  --bs-success: #46b383;
-  --bs-success-bg: #18352a;
-  --bs-warning: #f09a3c;
-  --bs-warning-bg: #3a2a14;
-  --bs-error: #e26a6a;
-  --bs-error-bg: #3a1e1e;
-  --bs-info: #4f92dd;
-  --bs-info-bg: #15263a;
+  --bs-status-success: var(--bs-success-dark);
+  --bs-status-success-bg: var(--bs-success-bg-dark);
+  --bs-status-warning: var(--bs-warning-dark);
+  --bs-status-warning-bg: var(--bs-warning-bg-dark);
+  --bs-status-error: var(--bs-error-dark);
+  --bs-status-error-bg: var(--bs-error-bg-dark);
+  --bs-status-info: var(--bs-info-dark);
+  --bs-status-info-bg: var(--bs-info-bg-dark);
 
-  --bs-shadow-1: 0 2px 8px rgb(0 0 0 / 0.32);
-  --bs-shadow-2: 0 4px 16px rgb(0 0 0 / 0.4);
-  --bs-shadow-3: 0 8px 24px rgb(0 0 0 / 0.48);
+  --bs-elevation-1: var(--bs-shadow-1-dark);
+  --bs-elevation-2: var(--bs-shadow-2-dark);
+  --bs-elevation-3: var(--bs-shadow-3-dark);
 }
 
-/* Users who never touch the theme toggle still get their OS preference. */
+/*
+ * Addition beyond the prototype, recorded rather than silently resolved (the
+ * design-system-control manifest asks for conflicts to be logged):
+ *
+ * The prototype only themes via [data-theme]. A web app has users who never
+ * open a theme picker, so the OS preference is honoured when no explicit choice
+ * has been made. Values are identical to the [data-theme="dark"] block above —
+ * this adds a trigger, not a new palette.
+ */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bs-background: var(--bs-midnight-background);
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --bs-bg: var(--bs-midnight-bg);
     --bs-surface: var(--bs-navy-surface);
     --bs-surface-muted: var(--bs-deep-structure-navy);
     --bs-surface-raised: var(--bs-navy-surface-raised);
@@ -145,21 +252,24 @@
 
     --bs-primary: var(--bs-premium-gold);
     --bs-primary-hover: var(--bs-highlight-gold);
+    --bs-primary-pressed: var(--bs-gold-600);
     --bs-accent: var(--bs-highlight-gold);
+    --bs-accent-hover: var(--bs-gold-300);
     --bs-link: var(--bs-sky-steel);
     --bs-focus-ring: var(--bs-highlight-gold);
+    --bs-scrim: rgb(0 0 0 / 0.64);
 
-    --bs-success: #46b383;
-    --bs-success-bg: #18352a;
-    --bs-warning: #f09a3c;
-    --bs-warning-bg: #3a2a14;
-    --bs-error: #e26a6a;
-    --bs-error-bg: #3a1e1e;
-    --bs-info: #4f92dd;
-    --bs-info-bg: #15263a;
+    --bs-status-success: var(--bs-success-dark);
+    --bs-status-success-bg: var(--bs-success-bg-dark);
+    --bs-status-warning: var(--bs-warning-dark);
+    --bs-status-warning-bg: var(--bs-warning-bg-dark);
+    --bs-status-error: var(--bs-error-dark);
+    --bs-status-error-bg: var(--bs-error-bg-dark);
+    --bs-status-info: var(--bs-info-dark);
+    --bs-status-info-bg: var(--bs-info-bg-dark);
 
-    --bs-shadow-1: 0 2px 8px rgb(0 0 0 / 0.32);
-    --bs-shadow-2: 0 4px 16px rgb(0 0 0 / 0.4);
-    --bs-shadow-3: 0 8px 24px rgb(0 0 0 / 0.48);
+    --bs-elevation-1: var(--bs-shadow-1-dark);
+    --bs-elevation-2: var(--bs-shadow-2-dark);
+    --bs-elevation-3: var(--bs-shadow-3-dark);
   }
 }

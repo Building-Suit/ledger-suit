@@ -31,7 +31,7 @@ const formatted = computed(() => {
 
 const tone = computed(() => {
   if (!props.signed || value.value === 0) return ''
-  return value.value > 0 ? 'text-[var(--bs-success)]' : 'text-[var(--bs-error)]'
+  return value.value > 0 ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'
 })
 </script>
 

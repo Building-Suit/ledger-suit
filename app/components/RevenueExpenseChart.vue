@@ -43,7 +43,7 @@ const bars = computed(() =>
   <div>
     <div class="mb-4 flex items-center gap-4 text-xs text-fg-muted">
       <span class="flex items-center gap-1.5">
-        <span class="inline-block size-2.5 rounded-sm bg-[var(--bs-success)]" aria-hidden="true" />
+        <span class="inline-block size-2.5 rounded-sm bg-[var(--bs-status-success)]" aria-hidden="true" />
         {{ t('dashboard.revenue') }}
       </span>
       <span class="flex items-center gap-1.5">
@@ -66,7 +66,7 @@ const bars = computed(() =>
           >
             <div class="flex items-end justify-center gap-1" :style="{ height: `${CHART_HEIGHT}px` }">
               <div
-                class="w-4 rounded-t-chip bg-[var(--bs-success)]"
+                class="w-4 rounded-t-chip bg-[var(--bs-status-success)]"
                 :style="{ height: `${bar.revenueHeight}px` }"
                 :title="`${t('dashboard.revenue')} ${formatMoney(bar.revenue, baseCurrency, locale)}`"
               />

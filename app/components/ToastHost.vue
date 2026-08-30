@@ -3,8 +3,8 @@ const { toasts, dismiss } = useToasts()
 const { t } = useI18n()
 
 const tones: Record<string, string> = {
-  success: 'border-[var(--bs-success)] bg-[var(--bs-success-bg)] text-[var(--bs-success)]',
-  error: 'border-[var(--bs-error)] bg-[var(--bs-error-bg)] text-[var(--bs-error)]',
+  success: 'border-[var(--bs-status-success)] bg-[var(--bs-status-success-bg)] text-[var(--bs-status-success)]',
+  error: 'border-[var(--bs-status-error)] bg-[var(--bs-status-error-bg)] text-[var(--bs-status-error)]',
   info: 'border-[var(--bs-border)] bg-[var(--bs-surface)] text-fg',
 }
 </script>

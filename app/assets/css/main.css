@@ -11,14 +11,13 @@
 @import '@fontsource/ibm-plex-sans-arabic/700.css';
 
 @theme {
-  --font-sans: 'Manrope Variable', 'Manrope', -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-arabic: 'IBM Plex Sans Arabic', 'Cairo', 'Tajawal', 'Segoe UI', Tahoma,
-    Arial, sans-serif;
+  --font-sans: var(--bs-font-latin);
+  --font-arabic: var(--bs-font-arabic);
+  --font-mono: var(--bs-font-mono);
 
   /* Brand roles exposed to Tailwind so utilities like `text-fg-muted` and
      `bg-surface` resolve to the token layer instead of a hard-coded palette. */
-  --color-background: var(--bs-background);
+  --color-background: var(--bs-bg);
   --color-surface: var(--bs-surface);
   --color-surface-muted: var(--bs-surface-muted);
   --color-surface-raised: var(--bs-surface-raised);
@@ -30,39 +29,82 @@
   --color-primary: var(--bs-primary);
   --color-accent: var(--bs-accent);
   --color-link: var(--bs-link);
-  --color-success: var(--bs-success);
-  --color-warning: var(--bs-warning);
-  --color-danger: var(--bs-error);
-  --color-info: var(--bs-info);
+  --color-success: var(--bs-status-success);
+  --color-warning: var(--bs-status-warning);
+  --color-danger: var(--bs-status-error);
+  --color-info: var(--bs-status-info);
+
+  /* The 8px scale, so `gap-bs-4` and friends cannot drift from the tokens. */
+  --spacing-bs-1: var(--bs-space-1);
+  --spacing-bs-2: var(--bs-space-2);
+  --spacing-bs-3: var(--bs-space-3);
+  --spacing-bs-4: var(--bs-space-4);
+  --spacing-bs-5: var(--bs-space-5);
+  --spacing-bs-6: var(--bs-space-6);
+  --spacing-bs-7: var(--bs-space-7);
+  --spacing-bs-8: var(--bs-space-8);
 
   --radius-chip: var(--bs-radius-chip);
-  --radius-control: var(--bs-radius-control);
+  --radius-control: var(--bs-radius-button);
   --radius-card: var(--bs-radius-card);
   --radius-modal: var(--bs-radius-modal);
 
-  --shadow-card: var(--bs-shadow-1);
-  --shadow-raised: var(--bs-shadow-2);
-  --shadow-overlay: var(--bs-shadow-3);
+  --shadow-card: var(--bs-elevation-1);
+  --shadow-raised: var(--bs-elevation-2);
+  --shadow-overlay: var(--bs-elevation-3);
+
+  --text-display: var(--bs-type-display-size);
+  --text-display--line-height: var(--bs-type-display-lh);
+  --text-h1: var(--bs-type-h1-size);
+  --text-h1--line-height: var(--bs-type-h1-lh);
+  --text-h2: var(--bs-type-h2-size);
+  --text-h2--line-height: var(--bs-type-h2-lh);
+  --text-h3: var(--bs-type-h3-size);
+  --text-h3--line-height: var(--bs-type-h3-lh);
+  --text-body-l: var(--bs-type-body-l-size);
+  --text-body-l--line-height: var(--bs-type-body-l-lh);
+  --text-body-m: var(--bs-type-body-m-size);
+  --text-body-m--line-height: var(--bs-type-body-m-lh);
+  --text-caption: var(--bs-type-caption-size);
+  --text-caption--line-height: var(--bs-type-caption-lh);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 html {
+  min-height: 100%;
+  background: var(--bs-bg);
   color-scheme: light dark;
 }
 
 body {
-  background: var(--bs-background);
+  min-height: 100%;
+  background: var(--bs-bg);
   color: var(--bs-text);
+  font-family: var(--bs-font-latin);
+  font-size: var(--bs-type-body-m-size);
+  line-height: var(--bs-type-body-m-lh);
+  letter-spacing: 0;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* Arabic needs slightly more vertical room than Latin at the same size, and
-   never uppercase or letter-spacing — see the typography guidelines. */
-:lang(ar) {
-  font-family: var(--font-arabic);
+   never uppercase or letter-spacing — see the typography guidelines. Matched to
+   the prototype, which keys on direction as well as language. */
+:lang(ar),
+[dir='rtl'] {
+  font-family: var(--bs-font-arabic);
   line-height: 1.7;
 }
 
-:lang(ar) .uppercase {
+:lang(ar) .uppercase,
+[dir='rtl'] .uppercase {
   text-transform: none;
   letter-spacing: normal;
 }
@@ -70,8 +112,8 @@ body {
 /* Focus is a 2px Premium Gold ring with an offset, on every interactive
    element, in both themes. Never remove it. */
 :focus-visible {
-  outline: 2px solid var(--bs-focus-ring);
-  outline-offset: 2px;
+  outline: var(--bs-focus-ring-style);
+  outline-offset: var(--bs-focus-ring-offset);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -83,13 +125,13 @@ body {
   }
 }
 
-/* Deliberately unlayered so it wins over Tailwind's own .sr-only utility.
+/*
+ * Deliberately unlayered so it wins over Tailwind's own .sr-only utility.
  *
  * Tailwind's sr-only is `position:absolute` with `margin:-1px` and no inset, so
  * it resolves to its static position — the inline-start edge. In LTR that is
  * x=0 and harmless; in RTL it is the right edge, and the -1px margin pushes it
- * outside the viewport, giving every page a horizontal scrollbar. Anchoring it
- * and dropping the negative margin keeps it invisible without overflowing.
+ * outside the viewport, giving every page a horizontal scrollbar.
  */
 .sr-only {
   inset-inline-start: 0;
@@ -110,12 +152,12 @@ body {
     border-radius: var(--bs-radius-card);
     border: 1px solid var(--bs-border);
     background: var(--bs-surface);
-    box-shadow: var(--bs-shadow-1);
+    box-shadow: var(--bs-elevation-1);
   }
 
   /* Flat variant for cards that sit inside another card. */
   .ls-card-flat {
-    border-radius: var(--bs-radius-control);
+    border-radius: var(--bs-radius-button);
     border: 1px solid var(--bs-border);
     background: var(--bs-surface-raised);
     box-shadow: none;
@@ -125,22 +167,23 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--bs-space-2);
     white-space: nowrap;
-    border-radius: var(--bs-radius-control);
-    border: 1px solid var(--bs-border);
+    min-height: var(--bs-button-height);
+    padding: var(--bs-space-3) var(--bs-space-5);
+    border: 1.5px solid var(--bs-border);
+    border-radius: var(--bs-radius-button);
     background: var(--bs-surface);
     color: var(--bs-text);
-    /* 44px minimum touch target. */
-    min-height: 2.75rem;
-    padding: 0.5rem 1rem;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    line-height: 1.25rem;
+    font-size: var(--bs-type-button-size);
+    line-height: var(--bs-type-button-lh);
+    font-weight: var(--bs-weight-semibold);
+    cursor: pointer;
     transition:
-      background-color var(--bs-duration) var(--bs-easing),
-      border-color var(--bs-duration) var(--bs-easing),
-      color var(--bs-duration) var(--bs-easing);
+      background var(--bs-motion-quick),
+      color var(--bs-motion-quick),
+      border-color var(--bs-motion-quick),
+      opacity var(--bs-motion-quick);
   }
 
   .ls-btn:hover:not(:disabled) {
@@ -149,17 +192,30 @@ body {
 
   .ls-btn:disabled {
     cursor: not-allowed;
-    opacity: 0.5;
+    color: var(--bs-text-disabled);
+    opacity: 0.6;
   }
 
   .ls-btn-primary {
     border-color: transparent;
     background: var(--bs-primary);
     color: var(--bs-text-on-primary);
+    box-shadow: var(--bs-elevation-1);
   }
 
   .ls-btn-primary:hover:not(:disabled) {
     background: var(--bs-primary-hover);
+  }
+
+  .ls-btn-primary:active:not(:disabled) {
+    background: var(--bs-primary-pressed);
+  }
+
+  /* Secondary is an outlined primary, per the implemented baseline. */
+  .ls-btn-secondary {
+    border-color: var(--bs-primary);
+    background: transparent;
+    color: var(--bs-primary);
   }
 
   /* Gold is the single focal point: reserved for the one most important action
@@ -168,34 +224,37 @@ body {
     border-color: transparent;
     background: var(--bs-accent);
     color: var(--bs-text-on-accent);
+    box-shadow: var(--bs-elevation-1);
   }
 
   .ls-btn-accent:hover:not(:disabled) {
-    background: var(--bs-gold-600);
+    background: var(--bs-accent-hover);
   }
 
   .ls-btn-danger {
     border-color: transparent;
-    background: var(--bs-error);
+    background: var(--bs-status-error);
     color: #fff;
   }
 
   .ls-btn-sm {
-    min-height: 2rem;
-    padding: 0.25rem 0.625rem;
-    font-size: 0.8125rem;
+    min-height: var(--bs-tap-target-min);
+    padding: var(--bs-space-2) var(--bs-space-3);
+    font-size: var(--bs-type-caption-size);
+    line-height: var(--bs-type-caption-lh);
   }
 
   .ls-input {
     width: 100%;
-    min-height: 2.75rem;
-    border-radius: var(--bs-radius-control);
-    border: 1px solid var(--bs-border);
+    min-height: var(--bs-input-height);
+    padding: 0 var(--bs-space-4);
+    border: 1.5px solid var(--bs-border);
+    border-radius: var(--bs-radius-input);
     background: var(--bs-surface);
     color: var(--bs-text);
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    transition: border-color var(--bs-duration) var(--bs-easing);
+    font-size: var(--bs-type-body-m-size);
+    line-height: var(--bs-type-body-m-lh);
+    transition: border-color var(--bs-motion-quick);
   }
 
   .ls-input::placeholder {
@@ -206,67 +265,82 @@ body {
     border-color: var(--bs-border-strong);
   }
 
+  /* Focused fields get the gold ring plus the soft gold glow the prototype
+     uses, rather than the generic focus outline. */
+  .ls-input:focus,
+  .ls-input:focus-visible {
+    border-color: var(--bs-focus-ring);
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(216 155 66 / 0.15);
+  }
+
   .ls-input:disabled {
     opacity: 0.5;
   }
 
   .ls-input[aria-invalid='true'] {
-    border-color: var(--bs-error);
+    border-color: var(--bs-status-error);
   }
 
   .ls-label {
     display: block;
-    margin-bottom: 0.25rem;
-    font-size: 0.875rem;
-    font-weight: 600;
+    margin-bottom: var(--bs-space-1);
     color: var(--bs-text);
+    font-size: var(--bs-type-caption-size);
+    line-height: var(--bs-type-caption-lh);
+    font-weight: var(--bs-weight-semibold);
   }
 
   .ls-hint {
-    margin-top: 0.25rem;
-    font-size: 0.75rem;
+    margin-top: var(--bs-space-1);
     color: var(--bs-text-muted);
+    font-size: var(--bs-type-caption-size);
+    line-height: var(--bs-type-caption-lh);
   }
 
   .ls-error {
-    border-radius: var(--bs-radius-control);
-    background: var(--bs-error-bg);
-    color: var(--bs-error);
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
+    border-radius: var(--bs-radius-button);
+    background: var(--bs-status-error-bg);
+    color: var(--bs-status-error);
+    padding: var(--bs-space-2) var(--bs-space-3);
+    font-size: var(--bs-type-body-m-size);
+    line-height: var(--bs-type-body-m-lh);
   }
 
   .ls-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: var(--bs-space-1);
     border-radius: var(--bs-radius-chip);
-    padding: 0.125rem 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 600;
+    padding: 2px var(--bs-space-2);
+    font-size: var(--bs-type-caption-size);
+    line-height: var(--bs-type-caption-lh);
+    font-weight: var(--bs-weight-semibold);
   }
 
   .ls-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.875rem;
+    font-size: var(--bs-type-body-m-size);
+    line-height: var(--bs-type-body-m-lh);
   }
 
   /* text-align: start, not left — the table mirrors in Arabic. */
   .ls-table th {
     border-bottom: 1px solid var(--bs-border);
-    padding: 0.625rem 0.75rem;
+    padding: var(--bs-space-2) var(--bs-space-3);
     text-align: start;
-    font-size: 0.6875rem;
-    font-weight: 600;
+    color: var(--bs-text-muted);
+    font-size: var(--bs-type-overline-size);
+    line-height: var(--bs-type-overline-lh);
+    font-weight: var(--bs-weight-semibold);
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--bs-text-muted);
   }
 
   .ls-table td {
     border-bottom: 1px solid color-mix(in oklab, var(--bs-border) 55%, transparent);
-    padding: 0.625rem 0.75rem;
+    padding: var(--bs-space-2) var(--bs-space-3);
     vertical-align: middle;
   }
 
@@ -280,15 +354,17 @@ body {
   .ls-nav-link {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    border-radius: var(--bs-radius-control);
-    padding: 0.625rem 0.75rem;
-    font-size: 0.875rem;
-    font-weight: 600;
+    gap: var(--bs-space-3);
+    min-height: var(--bs-tap-target-min);
+    border-radius: var(--bs-radius-button);
+    padding: var(--bs-space-2) var(--bs-space-3);
     color: var(--bs-text-muted);
+    font-size: var(--bs-type-body-m-size);
+    line-height: var(--bs-type-body-m-lh);
+    font-weight: var(--bs-weight-semibold);
     transition:
-      background-color var(--bs-duration) var(--bs-easing),
-      color var(--bs-duration) var(--bs-easing);
+      background var(--bs-motion-quick),
+      color var(--bs-motion-quick);
   }
 
   .ls-nav-link:hover {
@@ -311,20 +387,27 @@ body {
 
   .ls-tab {
     border-bottom: 2px solid transparent;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    white-space: nowrap;
+    padding: var(--bs-space-2) var(--bs-space-3);
     color: var(--bs-text-muted);
+    font-size: var(--bs-type-body-m-size);
+    line-height: var(--bs-type-body-m-lh);
+    font-weight: var(--bs-weight-semibold);
+    white-space: nowrap;
   }
 
   .ls-tab:hover {
     color: var(--bs-text);
   }
 
+  /* Active tab indicator is gold, per the component guide. */
   .ls-tab-active {
     border-color: var(--bs-accent);
     color: var(--bs-text);
+  }
+
+  /* Modal and drawer backdrops use the themed scrim, not an ad-hoc black. */
+  .ls-scrim {
+    background: var(--bs-scrim);
   }
 }
 

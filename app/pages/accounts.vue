@@ -118,7 +118,7 @@ const hasAccounts = computed(() => (balances.value?.length ?? 0) > 0)
                   <span v-if="account.is_archived" class="ls-badge ms-2 bg-[var(--bs-surface-muted)] text-fg-muted">
                     {{ t('accounts.archived') }}
                   </span>
-                  <span v-else-if="account.is_liquid" class="ls-badge ms-2 bg-[var(--bs-info-bg)] text-[var(--bs-info)]">
+                  <span v-else-if="account.is_liquid" class="ls-badge ms-2 bg-[var(--bs-status-info-bg)] text-[var(--bs-status-info)]">
                     {{ t('accounts.liquid') }}
                   </span>
                 </td>

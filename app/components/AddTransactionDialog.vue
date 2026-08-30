@@ -339,7 +339,7 @@ async function submit() {
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+      class="fixed inset-0 z-50 flex items-end justify-center ls-scrim p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-transaction-title"
@@ -631,7 +631,7 @@ async function submit() {
               </span>
               <span
                 class="font-semibold"
-                :class="adjustmentTotals.balanced ? 'text-[var(--bs-success)]' : 'text-[var(--bs-error)]'"
+                :class="adjustmentTotals.balanced ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'"
               >
                 {{ adjustmentTotals.balanced ? t('add.balanced') : t('add.notBalanced') }}
               </span>

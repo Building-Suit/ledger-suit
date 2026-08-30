@@ -94,7 +94,7 @@ async function reverse() {
   <Teleport to="body">
     <div
       v-if="transactionId"
-      class="fixed inset-0 z-50 flex justify-end bg-black/40"
+      class="fixed inset-0 z-50 flex justify-end ls-scrim"
       role="dialog"
       aria-modal="true"
       aria-labelledby="transaction-detail-title"
@@ -179,7 +179,7 @@ async function reverse() {
 
           <p
             v-if="transaction?.reversed_by_transaction_id"
-            class="rounded-control bg-[var(--bs-info-bg)] px-3 py-2 text-sm text-[var(--bs-info)]"
+            class="rounded-control bg-[var(--bs-status-info-bg)] px-3 py-2 text-sm text-[var(--bs-status-info)]"
           >
             {{ t('detail.reversedNotice') }}
           </p>
