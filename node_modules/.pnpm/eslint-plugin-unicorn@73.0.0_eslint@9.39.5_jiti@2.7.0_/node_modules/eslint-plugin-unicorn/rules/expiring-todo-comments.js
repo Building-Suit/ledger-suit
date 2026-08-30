@@ -1,0 +1,664 @@
+import path from 'node:path';
+import {isRegExp} from 'node:util/types';
+import semver from 'semver';
+import * as ci from 'ci-info';
+import {
+	isEslintDisableOrEnableDirective,
+	getBuiltinRule,
+	getComments,
+	normalizeComment,
+	onRoot,
+} from './utils/index.js';
+import {readPackageJson} from './shared/package-json.js';
+
+const baseRule = getBuiltinRule('no-warning-comments');
+
+// `unicorn/` prefix is added to avoid conflicts with core rule
+const MESSAGE_ID_AVOID_MULTIPLE_DATES = 'unicorn/avoidMultipleDates';
+const MESSAGE_ID_EXPIRED_TODO = 'unicorn/expiredTodo';
+const MESSAGE_ID_AVOID_MULTIPLE_PACKAGE_VERSIONS
+	= 'unicorn/avoidMultiplePackageVersions';
+const MESSAGE_ID_REACHED_PACKAGE_VERSION = 'unicorn/reachedPackageVersion';
+const MESSAGE_ID_HAVE_PACKAGE = 'unicorn/havePackage';
+const MESSAGE_ID_DONT_HAVE_PACKAGE = 'unicorn/dontHavePackage';
+const MESSAGE_ID_VERSION_MATCHES = 'unicorn/versionMatches';
+const MESSAGE_ID_PEER_VERSION_MATCHES = 'unicorn/peerVersionMatches';
+const MESSAGE_ID_UNSUPPORTED_CATALOG_PROTOCOL = 'unicorn/unsupportedCatalogProtocol';
+const MESSAGE_ID_ENGINE_MATCHES = 'unicorn/engineMatches';
+const MESSAGE_ID_REMOVE_WHITESPACE = 'unicorn/removeWhitespaces';
+const MESSAGE_ID_MISSING_AT_SYMBOL = 'unicorn/missingAtSymbol';
+
+// Override of core rule message with a more specific one - no prefix
+const MESSAGE_ID_CORE_RULE_UNEXPECTED_COMMENT = 'unexpectedComment';
+const messages = {
+	[MESSAGE_ID_AVOID_MULTIPLE_DATES]:
+		'Avoid using multiple expiration dates: {{expirationDates}}. {{message}}',
+	[MESSAGE_ID_EXPIRED_TODO]:
+		'Past due date: {{expirationDate}}. {{message}}',
+	[MESSAGE_ID_REACHED_PACKAGE_VERSION]:
+		'Past due package version: {{comparison}}. {{message}}',
+	[MESSAGE_ID_AVOID_MULTIPLE_PACKAGE_VERSIONS]:
+		'Avoid using multiple package versions: {{versions}}. {{message}}',
+	[MESSAGE_ID_HAVE_PACKAGE]:
+		'Due since {{package}} was installed. {{message}}',
+	[MESSAGE_ID_DONT_HAVE_PACKAGE]:
+		'Due since {{package}} was removed. {{message}}',
+	[MESSAGE_ID_VERSION_MATCHES]:
+		'Due since package version matched: {{comparison}}. {{message}}',
+	[MESSAGE_ID_PEER_VERSION_MATCHES]:
+		'Due since peer dependency version matched: {{comparison}}. {{message}}',
+	[MESSAGE_ID_UNSUPPORTED_CATALOG_PROTOCOL]:
+		'Cannot check {{dependencyType}} version because {{package}} uses the unsupported `catalog:` protocol. {{message}}',
+	[MESSAGE_ID_ENGINE_MATCHES]:
+		'Due since Node.js version matched: {{comparison}}. {{message}}',
+	[MESSAGE_ID_REMOVE_WHITESPACE]:
+		'Avoid using whitespace on TODO argument. On \'{{original}}\' use \'{{fix}}\'. {{message}}',
+	[MESSAGE_ID_MISSING_AT_SYMBOL]:
+		'Missing \'@\' on TODO argument. On \'{{original}}\' use \'{{fix}}\'. {{message}}',
+	...baseRule.meta.messages,
+	[MESSAGE_ID_CORE_RULE_UNEXPECTED_COMMENT]:
+		'Unexpected \'{{matchedTerm}}\': \'{{comment}}\'.',
+};
+
+/** @param {string} dirname */
+function getPackageHelpers(dirname) {
+	const packageJsonResult = readPackageJson(dirname);
+	const packageJson = packageJsonResult?.packageJson ?? {};
+	const hasPackage = Boolean(packageJsonResult);
+
+	const packageDependencies = {
+		...packageJson.dependencies,
+		...packageJson.devDependencies,
+	};
+
+	function parseTodoWithArguments(string, {terms}) {
+		const lowerCaseString = string.toLowerCase();
+		const lowerCaseTerms = terms.map(term => term.toLowerCase());
+		const hasTerm = lowerCaseTerms.some(term => lowerCaseString.includes(term));
+
+		if (!hasTerm) {
+			return false;
+		}
+
+		const TODO_ARGUMENT_RE = /\[(?<rawArguments>[^}]+)]/;
+		const result = TODO_ARGUMENT_RE.exec(string);
+
+		if (!result) {
+			return false;
+		}
+
+		const {rawArguments} = result.groups;
+
+		const parsedArguments = rawArguments
+			.split(',')
+			.map(argument => parseArgument(argument.trim()));
+
+		return createArgumentGroup(parsedArguments);
+	}
+
+	function parseArgument(argumentString, dirname) {
+		const {hasPackage} = getPackageHelpers(dirname);
+		if (ISO8601_DATE.test(argumentString)) {
+			return {
+				type: 'dates',
+				value: argumentString,
+			};
+		}
+
+		if (hasPackage && DEPENDENCY_INCLUSION_RE.test(argumentString)) {
+			const condition = argumentString[0] === '+' ? 'in' : 'out';
+			const name = argumentString.slice(1).trim();
+
+			return {
+				type: 'dependencies',
+				value: {
+					name,
+					condition,
+				},
+			};
+		}
+
+		if (hasPackage && VERSION_COMPARISON_RE.test(argumentString)) {
+			const {groups} = VERSION_COMPARISON_RE.exec(argumentString);
+			const name = groups.name.trim();
+			const condition = groups.condition.trim();
+			const version = groups.version.trim();
+
+			const hasEngineKeyword = name.indexOf('engine:') === 0;
+			const isNodeEngine = hasEngineKeyword && name === 'engine:node';
+
+			if (hasEngineKeyword && isNodeEngine) {
+				return {
+					type: 'engines',
+					value: {
+						condition,
+						version,
+					},
+				};
+			}
+
+			const hasPeerKeyword = name.indexOf('peer:') === 0;
+			if (hasPeerKeyword) {
+				return {
+					type: 'peerDependencies',
+					value: {
+						name: name.slice('peer:'.length),
+						condition,
+						version,
+					},
+				};
+			}
+
+			if (!hasEngineKeyword) {
+				return {
+					type: 'dependencies',
+					value: {
+						name,
+						condition,
+						version,
+					},
+				};
+			}
+		}
+
+		if (hasPackage && PKG_VERSION_RE.test(argumentString)) {
+			const result = PKG_VERSION_RE.exec(argumentString);
+			const {condition, version} = result.groups;
+
+			return {
+				type: 'packageVersions',
+				value: {
+					condition: condition.trim(),
+					version: version.trim(),
+				},
+			};
+		}
+
+		// Currently being ignored as integration tests pointed
+		// some TODO comments have `[random data like this]`
+		return {
+			type: 'unknowns',
+			value: argumentString,
+		};
+	}
+
+	function parseTodoMessage(todoString) {
+		// @example "TODO [...]: message here"
+		// @example "TODO [...] message here"
+		const argumentsEnd = todoString.indexOf(']');
+
+		const afterArguments = todoString.slice(argumentsEnd + 1).trim();
+
+		// Check if have to skip colon
+		// @example "TODO [...]: message here"
+		const isDropColon = afterArguments[0] === ':';
+		if (isDropColon) {
+			return afterArguments.slice(1).trim();
+		}
+
+		return afterArguments;
+	}
+
+	return {
+		packageResult: packageJsonResult,
+		hasPackage,
+		packageJson,
+		packageDependencies,
+		parseArgument,
+		parseTodoMessage,
+		parseTodoWithArguments,
+	};
+}
+
+const DEPENDENCY_INCLUSION_RE = /^[+-]\s*\S{2,}/;
+const VERSION_COMPARISON_RE = /^(?<name>\S{2,})@(?<condition>>|>=)(?<version>\d+(?:\.\d+){0,2}(?:-[\d\-a-z]+(?:\.[\d\-a-z]+)*)?(?:\+[\d\-a-z]+(?:\.[\d\-a-z]+)*)?)/i;
+const PKG_VERSION_RE = /^(?<condition>>|>=)(?<version>\d+(?:\.\d+){0,2}(?:-[\d\-a-z]+(?:\.[\d\-a-z]+)*)?(?:\+[\d\-a-z]+(?:\.[\d\-a-z]+)*)?)\s*$/;
+const ISO8601_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function createArgumentGroup(arguments_) {
+	const groups = {};
+	for (const {value, type} of arguments_) {
+		groups[type] ??= [];
+		groups[type].push(value);
+	}
+
+	return groups;
+}
+
+function reachedDate(past, now) {
+	return Date.parse(past) < Date.parse(now);
+}
+
+function tryToCoerceVersion(rawVersion) {
+	// `version` in `package.json` and comment can't be empty
+	/* c8 ignore next 3 */
+	if (!rawVersion) {
+		return false;
+	}
+
+	let version = String(rawVersion);
+
+	// Remove leading things like `^1.0.0`, `>1.0.0`
+	const leadingNoises = [
+		'>=',
+		'<=',
+		'>',
+		'<',
+		'~',
+		'^',
+	];
+	const foundTrailingNoise = leadingNoises.find(noise => version.startsWith(noise));
+	if (foundTrailingNoise) {
+		version = version.slice(foundTrailingNoise.length);
+	}
+
+	// Get only the first member for cases such as `1.0.0 - 2.9999.9999`
+	const parts = version.split(' ');
+	// We don't have this `package.json` to test
+	/* c8 ignore next 3 */
+	if (parts.length > 1) {
+		version = parts[0];
+	}
+
+	// We don't have this `package.json` to test
+	/* c8 ignore next 3 */
+	if (semver.valid(version)) {
+		return version;
+	}
+
+	try {
+		// Try to semver.parse a perfect match while semver.coerce tries to fix errors
+		// But coerce can't parse pre-releases.
+		return semver.parse(version) || semver.coerce(version);
+	} catch {
+		// We don't have this `package.json` to test
+		/* c8 ignore next 3 */
+		return false;
+	}
+}
+
+function satisfiesRange(version, condition, range) {
+	return semver.satisfies(version, `${condition}${range}`, {includePrerelease: true});
+}
+
+// The minimum version supported by a semver range, for example `8.0.0` for `^8 || ^9`.
+// Returns `undefined` for non-semver ranges such as `workspace:*`.
+function getRangeFloor(range) {
+	return semver.validRange(range) ? semver.minVersion(range) : undefined;
+}
+
+function isCatalogProtocol(rawVersion) {
+	return typeof rawVersion === 'string' && rawVersion.startsWith('catalog:');
+}
+
+const DEFAULT_OPTIONS = {
+	terms: ['todo', 'fixme', 'xxx'],
+	ignore: [],
+	checkDates: false,
+	checkDatesOnPullRequests: false,
+	allowWarningComments: true,
+};
+
+function getMarkdownHtmlComments(sourceCode) {
+	const comments = [];
+	const collectComments = node => {
+		if (node.type === 'html' && typeof node.position?.start?.offset === 'number') {
+			const nodeStart = node.position.start.offset;
+			const {value} = node;
+
+			for (let index = 0; index < value.length; index++) {
+				if (!value.startsWith('<!--', index)) {
+					continue;
+				}
+
+				const end = value.indexOf('-->', index + 4);
+				const valueEnd = end === -1 ? value.length : end;
+				const range = [
+					nodeStart + index,
+					nodeStart + (end === -1 ? value.length : end + 3),
+				];
+				comments.push({
+					type: 'Block',
+					value: value.slice(index + 4, valueEnd),
+					range,
+					loc: {
+						start: sourceCode.getLocFromIndex(range[0]),
+						end: sourceCode.getLocFromIndex(range[1]),
+					},
+				});
+				index = end === -1 ? value.length - 1 : end + 2;
+			}
+		}
+
+		if (!Array.isArray(node.children)) {
+			return;
+		}
+
+		for (const child of node.children) {
+			collectComments(child);
+		}
+	};
+
+	if (sourceCode.ast) {
+		collectComments(sourceCode.ast);
+	}
+
+	return comments;
+}
+
+/** @param {import('eslint').Rule.RuleContext} context */
+const create = context => {
+	const today = new Date();
+	const options = {
+		date: today.toISOString().slice(0, 10),
+		...context.options[0],
+	};
+
+	const ignoreRegexes = options.ignore.map(pattern => isRegExp(pattern) ? pattern : new RegExp(pattern, 'u'));
+
+	const dirname = path.dirname(context.filename);
+	const {packageJson, packageDependencies, parseArgument, parseTodoMessage, parseTodoWithArguments} = getPackageHelpers(dirname);
+
+	const {sourceCode} = context;
+	const filename = context.physicalFilename?.toLowerCase() ?? '';
+	const isMarkdown = filename.endsWith('.md') || filename.endsWith('.markdown');
+	const markdownComments = isMarkdown ? getMarkdownHtmlComments(sourceCode) : [];
+	const comments = [...getComments(context), ...markdownComments];
+	const unusedComments = comments
+		.filter(comment => comment.type !== 'Shebang' && !isEslintDisableOrEnableDirective(context, comment))
+		.map(comment => normalizeComment(comment, context))
+		// Block comments come as one.
+		// Split for situations like this:
+		// /*
+		//  * TODO [2999-01-01]: Validate this
+		//  * TODO [2999-01-01]: And this
+		//  * TODO [2999-01-01]: Also this
+		//  */
+		.flatMap(comment =>
+			comment.value.split('\n').map(line => ({
+				...comment,
+				value: line,
+			}))).filter(comment => processComment(comment));
+
+	// This is highly dependable on ESLint's `no-warning-comments` implementation.
+	// What we do is patch the parts we know the rule will use, `getAllComments`.
+	// Since we have priority, we leave only the comments that we didn't use.
+	const fakeContext = new Proxy(context, {
+		get(target, property, receiver) {
+			if (property === 'sourceCode') {
+				return {
+					...sourceCode,
+					getAllComments: () => options.allowWarningComments ? [] : unusedComments,
+				};
+			}
+
+			return Reflect.get(target, property, receiver);
+		},
+	});
+	const rules = baseRule.create(fakeContext);
+
+	// eslint-disable-next-line complexity
+	function processComment(comment) {
+		if (ignoreRegexes.some(ignore => ignore.test(comment.value))) {
+			return;
+		}
+
+		const parsed = parseTodoWithArguments(comment.value, options);
+
+		if (!parsed) {
+			return true;
+		}
+
+		// Count if there are valid properties.
+		// Otherwise, it's a useless TODO and falls back to `no-warning-comments`.
+		let uses = 0;
+
+		const {
+			packageVersions = [],
+			dates = [],
+			dependencies = [],
+			peerDependencies = [],
+			engines = [],
+			unknowns = [],
+		} = parsed;
+		const todoMessage = parseTodoMessage(comment.value);
+
+		function report(messageId, data = {}) {
+			context.report({
+				node: comment,
+				messageId,
+				data: {
+					...data,
+					message: todoMessage,
+				},
+			});
+		}
+
+		if (dates.length > 1) {
+			uses++;
+			report(MESSAGE_ID_AVOID_MULTIPLE_DATES, {
+				expirationDates: dates.join(', '),
+			});
+		} else if (dates.length === 1) {
+			uses++;
+			const [expirationDate] = dates;
+
+			const shouldCheckDate = options.checkDates && (options.checkDatesOnPullRequests || !ci.isPR);
+			if (shouldCheckDate && reachedDate(expirationDate, options.date)) {
+				report(MESSAGE_ID_EXPIRED_TODO, {expirationDate});
+			}
+		}
+
+		if (packageVersions.length > 1) {
+			uses++;
+			report(MESSAGE_ID_AVOID_MULTIPLE_PACKAGE_VERSIONS, {
+				versions: packageVersions
+					.map(({condition, version}) => `${condition}${version}`)
+					.join(', '),
+			});
+		} else if (packageVersions.length === 1) {
+			uses++;
+			const [{condition, version}] = packageVersions;
+
+			const packageVersion = tryToCoerceVersion(packageJson.version);
+			if (packageVersion && satisfiesRange(packageVersion, condition, version)) {
+				report(MESSAGE_ID_REACHED_PACKAGE_VERSION, {comparison: `${condition}${version}`});
+			}
+		}
+
+		// Inclusion: 'in', 'out'
+		// Comparison: '>', '>='
+		for (const dependency of dependencies) {
+			uses++;
+			const targetPackageRawVersion = packageDependencies[dependency.name];
+			const hasTargetPackage = Boolean(targetPackageRawVersion);
+
+			const isInclusion = ['in', 'out'].includes(dependency.condition);
+			if (isInclusion) {
+				const [trigger, messageId]
+					= dependency.condition === 'in'
+						? [hasTargetPackage, MESSAGE_ID_HAVE_PACKAGE]
+						: [!hasTargetPackage, MESSAGE_ID_DONT_HAVE_PACKAGE];
+
+				if (trigger) {
+					report(messageId, {package: dependency.name});
+				}
+
+				continue;
+			}
+
+			if (isCatalogProtocol(targetPackageRawVersion)) {
+				report(MESSAGE_ID_UNSUPPORTED_CATALOG_PROTOCOL, {
+					dependencyType: 'dependency',
+					package: dependency.name,
+				});
+				continue;
+			}
+
+			const targetPackageVersion = tryToCoerceVersion(targetPackageRawVersion);
+
+			/* c8 ignore start */
+			if (!hasTargetPackage || !targetPackageVersion) {
+				// Can't compare `¯\_(ツ)_/¯`
+				continue;
+			}
+			/* c8 ignore end */
+
+			if (satisfiesRange(targetPackageVersion, dependency.condition, dependency.version)) {
+				report(MESSAGE_ID_VERSION_MATCHES, {comparison: `${dependency.name} ${dependency.condition} ${dependency.version}`});
+			}
+		}
+
+		const packagePeerDependencies = packageJson.peerDependencies || {};
+
+		for (const peerDependency of peerDependencies) {
+			uses++;
+
+			const targetPeerRawVersion = packagePeerDependencies[peerDependency.name];
+
+			if (!targetPeerRawVersion) {
+				continue;
+			}
+
+			if (isCatalogProtocol(targetPeerRawVersion)) {
+				report(MESSAGE_ID_UNSUPPORTED_CATALOG_PROTOCOL, {
+					dependencyType: 'peer dependency',
+					package: peerDependency.name,
+				});
+				continue;
+			}
+
+			const targetPeerVersion = getRangeFloor(targetPeerRawVersion);
+
+			if (targetPeerVersion && satisfiesRange(targetPeerVersion, peerDependency.condition, peerDependency.version)) {
+				report(MESSAGE_ID_PEER_VERSION_MATCHES, {comparison: `${peerDependency.name} ${peerDependency.condition} ${peerDependency.version}`});
+			}
+		}
+
+		const packageEngines = packageJson.engines || {};
+
+		for (const engine of engines) {
+			uses++;
+
+			const targetPackageRawEngineVersion = packageEngines.node;
+			const hasTargetEngine = Boolean(targetPackageRawEngineVersion);
+
+			/* c8 ignore next 3 */
+			if (!hasTargetEngine) {
+				continue;
+			}
+
+			const targetPackageEngineVersion = tryToCoerceVersion(targetPackageRawEngineVersion);
+
+			if (targetPackageEngineVersion && satisfiesRange(targetPackageEngineVersion, engine.condition, engine.version)) {
+				report(MESSAGE_ID_ENGINE_MATCHES, {comparison: `node${engine.condition}${engine.version}`});
+			}
+		}
+
+		for (const unknown of unknowns) {
+			// In this case, check if there's just an '@' missing before a '>' or '>='.
+			const hasAt = unknown.includes('@');
+			const comparisonIndex = unknown.indexOf('>');
+
+			if (!hasAt && comparisonIndex !== -1) {
+				const testString = `${unknown.slice(
+					0,
+					comparisonIndex,
+				)}@${unknown.slice(comparisonIndex)}`;
+
+				if (parseArgument(testString).type !== 'unknowns') {
+					uses++;
+					report(MESSAGE_ID_MISSING_AT_SYMBOL, {
+						original: unknown,
+						fix: testString,
+					});
+					continue;
+				}
+			}
+
+			const withoutWhitespace = unknown.replaceAll(' ', '');
+
+			if (parseArgument(withoutWhitespace).type !== 'unknowns') {
+				uses++;
+				report(MESSAGE_ID_REMOVE_WHITESPACE, {
+					original: unknown,
+					fix: withoutWhitespace,
+				});
+			}
+		}
+
+		return uses === 0;
+	}
+
+	onRoot(context, () => {
+		rules.Program(); // eslint-disable-line new-cap
+	});
+};
+
+const schema = [
+	{
+		type: 'object',
+		additionalProperties: false,
+		properties: {
+			terms: {
+				type: 'array',
+				items: {
+					type: 'string',
+				},
+				description: 'Comment terms to check.',
+			},
+			ignore: {
+				type: 'array',
+				items: {
+					type: ['string', 'object'],
+					additionalProperties: true,
+				},
+				uniqueItems: true,
+				description: 'Patterns to ignore.',
+			},
+			checkDates: {
+				type: 'boolean',
+				description: 'Whether to check expiration dates.',
+			},
+			checkDatesOnPullRequests: {
+				type: 'boolean',
+				description: 'Whether to check expiration dates on pull requests.',
+			},
+			allowWarningComments: {
+				type: 'boolean',
+				description: 'Whether to allow warning comments.',
+			},
+			date: {
+				type: 'string',
+				format: 'date',
+				description: 'The reference date.',
+			},
+		},
+	},
+];
+
+/** @type {import('eslint').Rule.RuleModule} */
+const config = {
+	create,
+	meta: {
+		type: 'suggestion',
+		docs: {
+			description: 'Add expiration conditions to TODO comments.',
+			recommended: 'unopinionated',
+		},
+		schema,
+		defaultOptions: [{...DEFAULT_OPTIONS}],
+		messages,
+		languages: [
+			'js/js',
+			'css/css',
+			'html/html',
+			'json/jsonc',
+			'json/json5',
+			'markdown/commonmark',
+			'markdown/gfm',
+		],
+	},
+};
+
+export default config;
