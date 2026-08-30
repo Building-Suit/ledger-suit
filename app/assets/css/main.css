@@ -1,100 +1,329 @@
 @import 'tailwindcss';
+@import './tokens.css';
+
+/* Self-hosted, per the brand guidelines: never depend on a runtime CDN.
+   Manrope carries the Latin UI; IBM Plex Sans Arabic is the Arabic default and
+   is the closest tonal match to Manrope. */
+@import '@fontsource-variable/manrope/index.css';
+@import '@fontsource/ibm-plex-sans-arabic/400.css';
+@import '@fontsource/ibm-plex-sans-arabic/500.css';
+@import '@fontsource/ibm-plex-sans-arabic/600.css';
+@import '@fontsource/ibm-plex-sans-arabic/700.css';
 
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Manrope Variable', 'Manrope', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-arabic: 'IBM Plex Sans Arabic', 'Cairo', 'Tajawal', 'Segoe UI', Tahoma,
+    Arial, sans-serif;
 
-  /* One accent, used sparingly. Financial state is carried by positive /
-     negative colours, which are never the only cue — every status also has a
-     text label, so the UI stays readable without colour vision. */
-  --color-accent-50: oklch(0.97 0.02 256);
-  --color-accent-100: oklch(0.93 0.04 256);
-  --color-accent-600: oklch(0.52 0.18 256);
-  --color-accent-700: oklch(0.45 0.17 256);
+  /* Brand roles exposed to Tailwind so utilities like `text-fg-muted` and
+     `bg-surface` resolve to the token layer instead of a hard-coded palette. */
+  --color-background: var(--bs-background);
+  --color-surface: var(--bs-surface);
+  --color-surface-muted: var(--bs-surface-muted);
+  --color-surface-raised: var(--bs-surface-raised);
+  --color-fg: var(--bs-text);
+  --color-fg-muted: var(--bs-text-muted);
+  --color-fg-disabled: var(--bs-text-disabled);
+  --color-line: var(--bs-border);
+  --color-line-strong: var(--bs-border-strong);
+  --color-primary: var(--bs-primary);
+  --color-accent: var(--bs-accent);
+  --color-link: var(--bs-link);
+  --color-success: var(--bs-success);
+  --color-warning: var(--bs-warning);
+  --color-danger: var(--bs-error);
+  --color-info: var(--bs-info);
+
+  --radius-chip: var(--bs-radius-chip);
+  --radius-control: var(--bs-radius-control);
+  --radius-card: var(--bs-radius-card);
+  --radius-modal: var(--bs-radius-modal);
+
+  --shadow-card: var(--bs-shadow-1);
+  --shadow-raised: var(--bs-shadow-2);
+  --shadow-overlay: var(--bs-shadow-3);
 }
 
-:root {
+html {
   color-scheme: light dark;
 }
 
 body {
-  @apply bg-neutral-50 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+  background: var(--bs-background);
+  color: var(--bs-text);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Focus is always visible. Never remove it. */
+/* Arabic needs slightly more vertical room than Latin at the same size, and
+   never uppercase or letter-spacing — see the typography guidelines. */
+:lang(ar) {
+  font-family: var(--font-arabic);
+  line-height: 1.7;
+}
+
+:lang(ar) .uppercase {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Focus is a 2px Premium Gold ring with an offset, on every interactive
+   element, in both themes. Never remove it. */
 :focus-visible {
-  @apply outline-2 outline-offset-2 outline-accent-600;
+  outline: 2px solid var(--bs-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Deliberately unlayered so it wins over Tailwind's own .sr-only utility.
+ *
+ * Tailwind's sr-only is `position:absolute` with `margin:-1px` and no inset, so
+ * it resolves to its static position — the inline-start edge. In LTR that is
+ * x=0 and harmless; in RTL it is the right edge, and the -1px margin pushes it
+ * outside the viewport, giving every page a horizontal scrollbar. Anchoring it
+ * and dropping the negative margin keeps it invisible without overflowing.
+ */
+.sr-only {
+  inset-inline-start: 0;
+  margin: 0;
+}
+
+/* The route announcer sets its offsets inline, so it cannot be overridden by a
+   normal rule. Anchoring and clipping the wrapper contains the child instead. */
+.nuxt-route-announcer {
+  inset-inline-start: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
 @layer components {
   .ls-card {
-    @apply rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900;
+    border-radius: var(--bs-radius-card);
+    border: 1px solid var(--bs-border);
+    background: var(--bs-surface);
+    box-shadow: var(--bs-shadow-1);
+  }
+
+  /* Flat variant for cards that sit inside another card. */
+  .ls-card-flat {
+    border-radius: var(--bs-radius-control);
+    border: 1px solid var(--bs-border);
+    background: var(--bs-surface-raised);
+    box-shadow: none;
   }
 
   .ls-btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300
-           px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors
-           hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50
-           dark:border-neutral-700 dark:hover:bg-neutral-800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    border-radius: var(--bs-radius-control);
+    border: 1px solid var(--bs-border);
+    background: var(--bs-surface);
+    color: var(--bs-text);
+    /* 44px minimum touch target. */
+    min-height: 2.75rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    transition:
+      background-color var(--bs-duration) var(--bs-easing),
+      border-color var(--bs-duration) var(--bs-easing),
+      color var(--bs-duration) var(--bs-easing);
+  }
+
+  .ls-btn:hover:not(:disabled) {
+    background: var(--bs-surface-muted);
+  }
+
+  .ls-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 
   .ls-btn-primary {
-    @apply border-transparent bg-neutral-900 text-white hover:bg-neutral-700
-           dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200;
+    border-color: transparent;
+    background: var(--bs-primary);
+    color: var(--bs-text-on-primary);
+  }
+
+  .ls-btn-primary:hover:not(:disabled) {
+    background: var(--bs-primary-hover);
+  }
+
+  /* Gold is the single focal point: reserved for the one most important action
+     on a screen. It is never used for status. */
+  .ls-btn-accent {
+    border-color: transparent;
+    background: var(--bs-accent);
+    color: var(--bs-text-on-accent);
+  }
+
+  .ls-btn-accent:hover:not(:disabled) {
+    background: var(--bs-gold-600);
   }
 
   .ls-btn-danger {
-    @apply border-transparent bg-red-600 text-white hover:bg-red-700;
+    border-color: transparent;
+    background: var(--bs-error);
+    color: #fff;
   }
 
   .ls-btn-sm {
-    @apply px-2 py-1 text-xs;
+    min-height: 2rem;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.8125rem;
   }
 
   .ls-input {
-    @apply w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm
-           placeholder:text-neutral-400 disabled:opacity-50
-           dark:border-neutral-700 dark:bg-neutral-950;
+    width: 100%;
+    min-height: 2.75rem;
+    border-radius: var(--bs-radius-control);
+    border: 1px solid var(--bs-border);
+    background: var(--bs-surface);
+    color: var(--bs-text);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    transition: border-color var(--bs-duration) var(--bs-easing);
+  }
+
+  .ls-input::placeholder {
+    color: var(--bs-text-disabled);
+  }
+
+  .ls-input:hover:not(:disabled) {
+    border-color: var(--bs-border-strong);
+  }
+
+  .ls-input:disabled {
+    opacity: 0.5;
+  }
+
+  .ls-input[aria-invalid='true'] {
+    border-color: var(--bs-error);
   }
 
   .ls-label {
-    @apply mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300;
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--bs-text);
   }
 
   .ls-hint {
-    @apply mt-1 text-xs text-neutral-500;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--bs-text-muted);
+  }
+
+  .ls-error {
+    border-radius: var(--bs-radius-control);
+    background: var(--bs-error-bg);
+    color: var(--bs-error);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
   }
 
   .ls-badge {
-    @apply inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium
-           ring-1 ring-inset;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: var(--bs-radius-chip);
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
   }
 
   .ls-table {
-    @apply w-full border-collapse text-sm;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
   }
 
+  /* text-align: start, not left — the table mirrors in Arabic. */
   .ls-table th {
-    @apply border-b border-neutral-200 px-3 py-2 text-left text-xs font-semibold
-           tracking-wide text-neutral-500 uppercase dark:border-neutral-800;
+    border-bottom: 1px solid var(--bs-border);
+    padding: 0.625rem 0.75rem;
+    text-align: start;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--bs-text-muted);
   }
 
   .ls-table td {
-    @apply border-b border-neutral-100 px-3 py-2 align-middle dark:border-neutral-800/60;
+    border-bottom: 1px solid color-mix(in oklab, var(--bs-border) 55%, transparent);
+    padding: 0.625rem 0.75rem;
+    vertical-align: middle;
   }
 
+  /* Figures align to the end of the column and use tabular figures so digits
+     line up down the column in both directions. */
   .ls-num {
-    @apply text-right tabular-nums;
+    text-align: end;
+    font-variant-numeric: tabular-nums;
   }
 
   .ls-nav-link {
-    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium
-           text-neutral-600 transition-colors hover:bg-neutral-100
-           hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800
-           dark:hover:text-neutral-100;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: var(--bs-radius-control);
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--bs-text-muted);
+    transition:
+      background-color var(--bs-duration) var(--bs-easing),
+      color var(--bs-duration) var(--bs-easing);
   }
 
-  .ls-nav-link-active {
-    @apply bg-neutral-900 text-white hover:bg-neutral-900 hover:text-white
-           dark:bg-white dark:text-neutral-900 dark:hover:bg-white dark:hover:text-neutral-900;
+  .ls-nav-link:hover {
+    background: var(--bs-surface-muted);
+    color: var(--bs-text);
+  }
+
+  /* Active navigation is marked with gold, per the navigation guidance. */
+  .ls-nav-link-active,
+  .ls-nav-link-active:hover {
+    background: color-mix(in oklab, var(--bs-accent) 16%, transparent);
+    color: var(--bs-text);
+    box-shadow: inset 3px 0 0 0 var(--bs-accent);
+  }
+
+  [dir='rtl'] .ls-nav-link-active,
+  [dir='rtl'] .ls-nav-link-active:hover {
+    box-shadow: inset -3px 0 0 0 var(--bs-accent);
+  }
+
+  .ls-tab {
+    border-bottom: 2px solid transparent;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--bs-text-muted);
+  }
+
+  .ls-tab:hover {
+    color: var(--bs-text);
+  }
+
+  .ls-tab-active {
+    border-color: var(--bs-accent);
+    color: var(--bs-text);
   }
 }

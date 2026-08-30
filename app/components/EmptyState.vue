@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// Every primary page uses this. An empty state always names one obvious next
-// action rather than leaving the user staring at nothing.
+// Calm and instructive, never apologetic. Anatomy per the brand guidelines:
+// short headline, one line of guidance, one primary action — and gold only on
+// that single action.
 defineProps<{
   title: string
   description?: string
@@ -11,15 +12,15 @@ defineEmits<{ action: [] }>()
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center rounded-xl border border-dashed border-neutral-300 px-6 py-14 text-center dark:border-neutral-700">
-    <p class="text-base font-medium">{{ title }}</p>
-    <p v-if="description" class="mt-1 max-w-sm text-sm text-neutral-500">
+  <div class="flex flex-col items-center justify-center rounded-card border border-dashed border-[var(--bs-border)] px-6 py-14 text-center">
+    <p class="text-base font-semibold">{{ title }}</p>
+    <p v-if="description" class="mt-2 max-w-sm text-sm text-fg-muted">
       {{ description }}
     </p>
     <button
       v-if="actionLabel"
       type="button"
-      class="ls-btn ls-btn-primary mt-5"
+      class="ls-btn ls-btn-accent mt-6"
       @click="$emit('action')"
     >
       {{ actionLabel }}

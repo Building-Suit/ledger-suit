@@ -7,14 +7,7 @@ export interface Toast {
 
 let nextId = 0
 
-/**
- * Minimal notification queue.
- *
- * Errors surfaced here are the *safe* message. Database functions raise
- * prefixed domain errors (UNBALANCED_JOURNAL, BOOKS_LOCKED, …) which are
- * translated in `describeError` — the raw SQLSTATE and any server detail stay
- * in the console for developers.
- */
+/** Notification queue. Messages arrive already translated. */
 export function useToasts() {
   const toasts = useState<Toast[]>('toasts', () => [])
 
@@ -39,43 +32,27 @@ export function useToasts() {
   return { toasts, push, dismiss, success, error }
 }
 
-const DOMAIN_MESSAGES: Record<string, string> = {
-  TENANT_ACCESS_DENIED: 'That record belongs to a different organization.',
-  INSUFFICIENT_PERMISSION: 'Your role does not allow this action.',
-  UNBALANCED_JOURNAL: 'The journal does not balance. Debits must equal credits.',
-  INVALID_TRANSACTION_STATE: 'This transaction is no longer in a state that allows that.',
-  BOOKS_LOCKED: 'The books are closed for that date.',
-  ACCOUNT_ARCHIVED: 'That account is archived and cannot receive postings.',
-  POSTED_RECORD_PROTECTED: 'Posted records cannot be edited. Reverse it and re-enter instead.',
-  SYSTEM_ACCOUNT_PROTECTED: 'That is a system account and cannot be changed.',
-  INVALID_CURRENCY: 'That currency is not supported.',
-  INVALID_EXCHANGE_RATE: 'An exchange rate is required for this currency.',
-  INVALID_AMOUNT: 'Enter an amount greater than zero.',
-  INVALID_ACCOUNT: 'Choose a valid account for this kind of transaction.',
-  INVALID_TRANSFER: 'Check the source and destination accounts.',
-  INVALID_ADJUSTMENT: 'A description and a reason are required.',
-  INVALID_OPENING_BALANCE: 'Enter at least one non-zero opening balance.',
-  MISSING_SYSTEM_ACCOUNT: 'This organization is missing a required system account.',
-  ACCOUNT_HAS_LEDGER_HISTORY: 'That account already has postings against it.',
-  LAST_OWNER_REQUIRED: 'An organization must keep at least one owner.',
-  INVALID_DATE_RANGE: 'The start date must be before the end date.',
-}
+/**
+ * The database raises domain errors with a stable, prefixed code
+ * (`UNBALANCED_JOURNAL: …`). Those codes are the contract; the wording shown to
+ * a user is a translation of the code, never the raw server text — which may
+ * contain table names, SQLSTATEs and internal detail.
+ */
+export function useErrorMessage() {
+  const { t, te } = useI18n()
 
-/** Turns a Postgres/PostgREST error into something safe to show a user. */
-export function describeError(err: unknown): string {
-  const message
-    = typeof err === 'object' && err !== null && 'message' in err
-      ? String((err as { message: unknown }).message)
-      : String(err)
+  return function describeError(err: unknown): string {
+    const message
+      = typeof err === 'object' && err !== null && 'message' in err
+        ? String((err as { message: unknown }).message)
+        : String(err)
 
-  const code = message.match(/^([A-Z_]{4,}):/)?.[1]
-  if (code && DOMAIN_MESSAGES[code]) return DOMAIN_MESSAGES[code]
+    const code = message.match(/\b([A-Z][A-Z_]{3,})\s*:/)?.[1]
 
-  for (const [key, friendly] of Object.entries(DOMAIN_MESSAGES)) {
-    if (message.includes(key)) return friendly
+    if (code && te(`errors.${code}`)) return t(`errors.${code}`)
+
+    // Unrecognised: log the detail for developers, show the safe message.
+    if (import.meta.dev) console.error(err)
+    return t('errors.generic')
   }
-
-  // Never leak a raw SQL error to the interface.
-  if (import.meta.dev) console.error(err)
-  return 'Something went wrong. Please try again.'
 }
