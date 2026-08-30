@@ -24,9 +24,16 @@ declare
   v_user jsonb;
 begin
   for v_user in select * from jsonb_array_elements(v_users) loop
+    -- The token columns must be empty strings, not NULL. GoTrue scans them into
+    -- a non-nullable Go string, so a NULL makes every sign-in fail with
+    -- "Database error querying schema" — which reads like a broken schema
+    -- rather than bad seed data.
     insert into auth.users (
       id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
-      raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+      raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+      confirmation_token, recovery_token, email_change_token_new,
+      email_change_token_current, email_change, phone_change,
+      phone_change_token, reauthentication_token
     )
     values (
       (v_user ->> 'id')::uuid,
@@ -37,7 +44,8 @@ begin
       now(),
       '{"provider":"email","providers":["email"]}'::jsonb,
       jsonb_build_object('full_name', v_user ->> 'name'),
-      now(), now()
+      now(), now(),
+      '', '', '', '', '', '', '', ''
     )
     on conflict (id) do nothing;
   end loop;
