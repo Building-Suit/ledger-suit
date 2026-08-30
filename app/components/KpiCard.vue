@@ -28,7 +28,7 @@ const tone = computed(() => {
   if (change.value === null || props.goodDirection === 'neutral') return 'text-fg-muted'
   if (Math.abs(change.value) < 0.05) return 'text-fg-muted'
   const improving = props.goodDirection === 'up' ? change.value > 0 : change.value < 0
-  return improving ? 'text-[var(--bs-success)]' : 'text-[var(--bs-error)]'
+  return improving ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'
 })
 
 const changeLabel = computed(() => {

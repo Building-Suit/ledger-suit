@@ -247,7 +247,7 @@ function exportBalanceSheet() {
     <section v-if="tab === 'overview'" class="space-y-4" role="tabpanel" :aria-label="t('reports.tabs.overview')">
       <div
         v-if="integrity && integrity.balanced === false"
-        class="rounded-control border border-[var(--bs-error)] bg-[var(--bs-error-bg)] px-4 py-3 text-sm text-[var(--bs-error)]"
+        class="rounded-control border border-[var(--bs-status-error)] bg-[var(--bs-status-error-bg)] px-4 py-3 text-sm text-[var(--bs-status-error)]"
         role="alert"
       >
         <p class="font-bold">{{ t('reports.integrityTitle') }}</p>
@@ -268,7 +268,7 @@ function exportBalanceSheet() {
       <section class="ls-card overflow-hidden" aria-labelledby="tb-heading">
         <div class="flex items-center justify-between px-5 py-4">
           <h2 id="tb-heading" class="text-base font-bold">{{ t('reports.trialBalance') }}</h2>
-          <p class="text-sm font-semibold" :class="trialTotals.debit === trialTotals.credit ? 'text-[var(--bs-success)]' : 'text-[var(--bs-error)]'">
+          <p class="text-sm font-semibold" :class="trialTotals.debit === trialTotals.credit ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'">
             {{ trialTotals.debit === trialTotals.credit ? t('reports.inBalance') : t('reports.outOfBalance') }}
           </p>
         </div>
@@ -374,7 +374,7 @@ function exportBalanceSheet() {
           </table>
         </div>
 
-        <p class="text-sm" :class="assets === liabilities + equity ? 'text-fg-muted' : 'text-[var(--bs-error)]'">
+        <p class="text-sm" :class="assets === liabilities + equity ? 'text-fg-muted' : 'text-[var(--bs-status-error)]'">
           {{ t('reports.equation', {
             assets: formatMoney(assets, baseCurrency, locale),
             liabilities: formatMoney(liabilities, baseCurrency, locale),

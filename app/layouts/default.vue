@@ -88,7 +88,7 @@ async function signOut() {
 
     <div
       v-if="mobileNavOpen"
-      class="fixed inset-0 z-30 bg-black/40 lg:hidden"
+      class="fixed inset-0 z-30 ls-scrim lg:hidden"
       aria-hidden="true"
       @click="mobileNavOpen = false"
     />

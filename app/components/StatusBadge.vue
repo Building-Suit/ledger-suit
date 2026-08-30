@@ -11,12 +11,12 @@ const props = defineProps<{ status: string | null | undefined }>()
 const { t, te } = useI18n()
 
 const TONES: Record<string, string> = {
-  posted: 'bg-[var(--bs-success-bg)] text-[var(--bs-success)]',
-  scheduled: 'bg-[var(--bs-info-bg)] text-[var(--bs-info)]',
-  pending: 'bg-[var(--bs-warning-bg)] text-[var(--bs-warning)]',
-  pending_approval: 'bg-[var(--bs-warning-bg)] text-[var(--bs-warning)]',
-  reversed: 'bg-[var(--bs-info-bg)] text-[var(--bs-info)]',
-  failed: 'bg-[var(--bs-error-bg)] text-[var(--bs-error)]',
+  posted: 'bg-[var(--bs-status-success-bg)] text-[var(--bs-status-success)]',
+  scheduled: 'bg-[var(--bs-status-info-bg)] text-[var(--bs-status-info)]',
+  pending: 'bg-[var(--bs-status-warning-bg)] text-[var(--bs-status-warning)]',
+  pending_approval: 'bg-[var(--bs-status-warning-bg)] text-[var(--bs-status-warning)]',
+  reversed: 'bg-[var(--bs-status-info-bg)] text-[var(--bs-status-info)]',
+  failed: 'bg-[var(--bs-status-error-bg)] text-[var(--bs-status-error)]',
   draft: 'bg-[var(--bs-surface-muted)] text-[var(--bs-text-muted)]',
   voided: 'bg-[var(--bs-surface-muted)] text-[var(--bs-text-muted)]',
 }
