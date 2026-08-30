@@ -2,8 +2,6 @@
 import type { Database } from '~~/types/database.types'
 
 definePageMeta({ layout: 'default' })
-useHead({ title: 'Transactions · Ledger Suit' })
-
 /**
  * The primary operational page.
  *
@@ -15,6 +13,9 @@ useHead({ title: 'Transactions · Ledger Suit' })
 const supabase = useSupabaseClient<Database>()
 const { currentId, can, baseCurrency } = useTenant()
 const { start } = useAddTransaction()
+const { t, locale } = useI18n()
+
+useHead({ title: () => `${t('transactions.title')} · ${t('app.name')}` })
 
 const { data: categories } = await useOrgCategories()
 const { data: accounts } = await useOrgAccounts()
@@ -157,21 +158,19 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
 <template>
   <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-xl font-semibold">Transactions</h1>
-      <p class="text-sm text-neutral-500">
-        {{ total }} {{ total === 1 ? 'transaction' : 'transactions' }}
-      </p>
+      <h1 class="text-2xl font-extrabold">{{ t('transactions.title') }}</h1>
+      <p class="text-sm text-fg-muted">{{ t('transactions.count', total) }}</p>
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
       <div class="min-w-48 flex-1">
-        <label class="sr-only" for="search">Search transactions</label>
+        <label class="sr-only" for="search">{{ t('transactions.searchLabel') }}</label>
         <input
           id="search"
           v-model="filters.search"
           type="search"
           class="ls-input"
-          placeholder="Search description, reference, account or counterparty"
+          :placeholder="t('transactions.searchPlaceholder')"
         >
       </div>
       <button
@@ -180,76 +179,76 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
         :aria-expanded="filtersOpen"
         @click="filtersOpen = !filtersOpen"
       >
-        Filters
-        <span v-if="activeFilterCount" class="ls-badge bg-neutral-900 text-white ring-transparent dark:bg-white dark:text-neutral-900">
+        {{ t('transactions.filters') }}
+        <span v-if="activeFilterCount" class="ls-badge bg-[var(--bs-primary)] text-[var(--bs-text-on-primary)]">
           {{ activeFilterCount }}
         </span>
       </button>
       <button v-if="activeFilterCount || filters.search" type="button" class="ls-btn" @click="clearFilters">
-        Clear
+        {{ t('common.clear') }}
       </button>
     </div>
 
     <div v-if="filtersOpen" class="ls-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
       <div>
-        <label class="ls-label" for="from">From date</label>
+        <label class="ls-label" for="from">{{ t('transactions.fromDate') }}</label>
         <input id="from" v-model="filters.from" type="date" class="ls-input">
       </div>
       <div>
-        <label class="ls-label" for="to">To date</label>
+        <label class="ls-label" for="to">{{ t('transactions.toDate') }}</label>
         <input id="to" v-model="filters.to" type="date" class="ls-input">
       </div>
       <div>
-        <label class="ls-label" for="status">Status</label>
+        <label class="ls-label" for="status">{{ t('transactions.status') }}</label>
         <select id="status" v-model="filters.status" class="ls-input">
-          <option value="">Any</option>
-          <option v-for="s in STATUSES" :key="s" :value="s" class="capitalize">{{ s.replace(/_/g, ' ') }}</option>
+          <option value="">{{ t('common.any') }}</option>
+          <option v-for="s in STATUSES" :key="s" :value="s">{{ t(`status.${s}`) }}</option>
         </select>
       </div>
       <div>
-        <label class="ls-label" for="type">Type</label>
+        <label class="ls-label" for="type">{{ t('transactions.type') }}</label>
         <select id="type" v-model="filters.type" class="ls-input">
-          <option value="">Any</option>
-          <option v-for="t in TYPES" :key="t" :value="t">{{ t.replace(/_/g, ' ') }}</option>
+          <option value="">{{ t('common.any') }}</option>
+          <option v-for="type in TYPES" :key="type" :value="type">{{ t(`types.${type}`) }}</option>
         </select>
       </div>
       <div>
-        <label class="ls-label" for="category">Category</label>
+        <label class="ls-label" for="category">{{ t('transactions.category') }}</label>
         <select id="category" v-model="filters.categoryId" class="ls-input">
-          <option value="">Any</option>
+          <option value="">{{ t('common.any') }}</option>
           <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
       </div>
       <div>
-        <label class="ls-label" for="account">Account</label>
+        <label class="ls-label" for="account">{{ t('transactions.account') }}</label>
         <select id="account" v-model="filters.accountId" class="ls-input">
-          <option value="">Any</option>
+          <option value="">{{ t('common.any') }}</option>
           <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
         </select>
       </div>
       <div>
-        <label class="ls-label" for="min">Min amount</label>
+        <label class="ls-label" for="min">{{ t('transactions.minAmount') }}</label>
         <input id="min" v-model="filters.minAmount" class="ls-input" inputmode="decimal" placeholder="0.00">
       </div>
       <div>
-        <label class="ls-label" for="max">Max amount</label>
+        <label class="ls-label" for="max">{{ t('transactions.maxAmount') }}</label>
         <input id="max" v-model="filters.maxAmount" class="ls-input" inputmode="decimal" placeholder="0.00">
       </div>
     </div>
 
     <EmptyState
       v-if="!pending && rows.length === 0 && !activeFilterCount && !debouncedSearch"
-      title="No transactions yet."
-      description="Record your first income or expense and it will appear here."
-      :action-label="can('transactions.create') ? 'Add a transaction' : undefined"
+      :title="t('transactions.emptyTitle')"
+      :description="t('transactions.emptyHint')"
+      :action-label="can('transactions.create') ? t('transactions.emptyAction') : undefined"
       @action="start('expense')"
     />
 
     <EmptyState
       v-else-if="!pending && rows.length === 0"
-      title="Nothing matches those filters."
-      description="Try widening the date range or clearing a filter."
-      action-label="Clear filters"
+      :title="t('transactions.noMatchTitle')"
+      :description="t('transactions.noMatchHint')"
+      :action-label="t('transactions.noMatchAction')"
       @action="clearFilters"
     />
 
@@ -257,24 +256,24 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
       <!-- Wide financial table on desktop -->
       <div class="hidden overflow-x-auto md:block">
         <table class="ls-table">
-          <caption class="sr-only">Transactions, newest first unless re-sorted</caption>
+          <caption class="sr-only">{{ t('transactions.caption') }}</caption>
           <thead>
             <tr>
               <th scope="col" :aria-sort="ariaSort('transaction_date')">
-                <button type="button" class="hover:underline" @click="toggleSort('transaction_date')">Date</button>
+                <button type="button" class="hover:underline" @click="toggleSort('transaction_date')">{{ t('transactions.date') }}</button>
               </th>
-              <th scope="col">Description</th>
+              <th scope="col">{{ t('transactions.description') }}</th>
               <th scope="col" :aria-sort="ariaSort('type')">
-                <button type="button" class="hover:underline" @click="toggleSort('type')">Type</button>
+                <button type="button" class="hover:underline" @click="toggleSort('type')">{{ t('transactions.type') }}</button>
               </th>
-              <th scope="col">Category</th>
-              <th scope="col">From → To</th>
-              <th scope="col">Counterparty</th>
+              <th scope="col">{{ t('transactions.category') }}</th>
+              <th scope="col">{{ t('transactions.fromTo') }}</th>
+              <th scope="col">{{ t('transactions.counterparty') }}</th>
               <th scope="col" :aria-sort="ariaSort('status')">
-                <button type="button" class="hover:underline" @click="toggleSort('status')">Status</button>
+                <button type="button" class="hover:underline" @click="toggleSort('status')">{{ t('transactions.status') }}</button>
               </th>
-              <th scope="col" class="text-right" :aria-sort="ariaSort('amount')">
-                <button type="button" class="hover:underline" @click="toggleSort('amount')">Amount</button>
+              <th scope="col" class="text-end" :aria-sort="ariaSort('amount')">
+                <button type="button" class="hover:underline" @click="toggleSort('amount')">{{ t('transactions.amount') }}</button>
               </th>
             </tr>
           </thead>
@@ -282,22 +281,22 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
             <tr
               v-for="row in rows"
               :key="row.id"
-              class="cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+              class="cursor-pointer hover:bg-surface-muted"
               @click="selectedId = row.id"
             >
-              <td class="whitespace-nowrap">{{ row.transaction_date }}</td>
+              <td class="whitespace-nowrap">{{ formatDate(row.transaction_date, locale) }}</td>
               <td class="max-w-64">
-                <span class="block truncate">{{ row.description || '—' }}</span>
-                <span v-if="row.reference" class="block text-xs text-neutral-500">{{ row.reference }}</span>
+                <span class="block truncate">{{ row.description || t('common.dash') }}</span>
+                <span v-if="row.reference" class="block text-xs text-fg-muted">{{ row.reference }}</span>
               </td>
-              <td class="whitespace-nowrap capitalize">{{ String(row.type).replace(/_/g, ' ') }}</td>
-              <td>{{ row.category_name || '—' }}</td>
-              <td class="whitespace-nowrap text-neutral-500">
-                {{ row.from_account_name || '—' }} → {{ row.to_account_name || '—' }}
+              <td class="whitespace-nowrap">{{ t(`types.${row.type}`) }}</td>
+              <td>{{ row.category_name || t('common.dash') }}</td>
+              <td class="whitespace-nowrap text-fg-muted">
+                {{ row.from_account_name || t('common.dash') }} → {{ row.to_account_name || t('common.dash') }}
               </td>
-              <td>{{ row.counterparty_name || '—' }}</td>
+              <td>{{ row.counterparty_name || t('common.dash') }}</td>
               <td><StatusBadge :status="row.status" /></td>
-              <td class="ls-num font-medium">
+              <td class="ls-num font-semibold">
                 <MoneyText :amount-minor="row.amount_minor" :currency="row.currency_code" />
               </td>
             </tr>
@@ -306,18 +305,18 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
       </div>
 
       <!-- Compact rows on small screens: a wide table is unusable on a phone -->
-      <ul class="divide-y divide-neutral-100 md:hidden dark:divide-neutral-800">
+      <ul class="divide-y divide-[var(--bs-border)] md:hidden">
         <li v-for="row in rows" :key="row.id">
-          <button type="button" class="w-full px-4 py-3 text-left" @click="selectedId = row.id">
+          <button type="button" class="w-full px-4 py-3 text-start" @click="selectedId = row.id">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <p class="truncate text-sm font-medium">{{ row.description || '—' }}</p>
-                <p class="mt-0.5 text-xs text-neutral-500">
-                  {{ row.transaction_date }} · {{ row.category_name || String(row.type).replace(/_/g, ' ') }}
+                <p class="truncate text-sm font-semibold">{{ row.description || t('common.dash') }}</p>
+                <p class="mt-0.5 text-xs text-fg-muted">
+                  {{ formatDate(row.transaction_date, locale) }} · {{ row.category_name || t(`types.${row.type}`) }}
                 </p>
               </div>
               <div class="shrink-0 text-right">
-                <MoneyText class="text-sm font-medium" :amount-minor="row.amount_minor" :currency="row.currency_code" />
+                <MoneyText class="text-sm font-semibold" :amount-minor="row.amount_minor" :currency="row.currency_code" />
                 <StatusBadge class="mt-1 block" :status="row.status" />
               </div>
             </div>
@@ -325,14 +324,14 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
         </li>
       </ul>
 
-      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-200 px-4 py-3 dark:border-neutral-800">
-        <p class="text-sm text-neutral-500">
-          Showing {{ rangeStart }}–{{ rangeEnd }} of {{ total }}
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--bs-border)] px-4 py-3">
+        <p class="text-sm text-fg-muted">
+          {{ t('transactions.showing', { from: rangeStart, to: rangeEnd, total }) }}
         </p>
         <div class="flex items-center gap-2">
-          <button type="button" class="ls-btn ls-btn-sm" :disabled="page <= 1" @click="page--">Previous</button>
-          <span class="text-sm text-neutral-500">Page {{ page }} of {{ pageCount }}</span>
-          <button type="button" class="ls-btn ls-btn-sm" :disabled="page >= pageCount" @click="page++">Next</button>
+          <button type="button" class="ls-btn ls-btn-sm" :disabled="page <= 1" @click="page--">{{ t('common.previous') }}</button>
+          <span class="text-sm text-fg-muted">{{ t('transactions.page', { page, pages: pageCount }) }}</span>
+          <button type="button" class="ls-btn ls-btn-sm" :disabled="page >= pageCount" @click="page++">{{ t('common.next') }}</button>
         </div>
       </div>
     </div>

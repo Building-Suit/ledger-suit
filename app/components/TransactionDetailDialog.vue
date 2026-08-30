@@ -16,6 +16,8 @@ const emit = defineEmits<{ close: [], changed: [] }>()
 const supabase = useSupabaseClient<Database>()
 const { can } = useTenant()
 const toasts = useToasts()
+const { t, locale } = useI18n()
+const describeError = useErrorMessage()
 
 const reversing = ref(false)
 const reason = ref('')
@@ -59,7 +61,7 @@ const canReverse = computed(
 async function reverse() {
   if (!props.transactionId) return
   if (!reason.value.trim()) {
-    errorMessage.value = 'A reason is required so the correction stays auditable.'
+    errorMessage.value = t('detail.reverseReasonRequired')
     return
   }
 
@@ -73,7 +75,7 @@ async function reverse() {
     })
     if (error) throw error
 
-    toasts.success('Reversed', 'A reversing journal has been posted.')
+    toasts.success(t('detail.reversedTitle'), t('detail.reversedBody'))
     confirming.value = false
     reason.value = ''
     await refresh()
@@ -92,83 +94,83 @@ async function reverse() {
   <Teleport to="body">
     <div
       v-if="transactionId"
-      class="fixed inset-0 z-50 flex justify-end bg-black/40"
+      class="fixed inset-0 z-50 flex justify-end ls-scrim"
       role="dialog"
       aria-modal="true"
       aria-labelledby="transaction-detail-title"
       @click.self="emit('close')"
     >
-      <div class="flex h-full w-full max-w-xl flex-col overflow-hidden border-l border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-        <header class="flex items-start justify-between gap-3 border-b border-neutral-200 px-5 py-4 dark:border-neutral-800">
+      <div class="flex h-full w-full max-w-xl flex-col overflow-hidden border-s border-[var(--bs-border)] bg-surface">
+        <header class="flex items-start justify-between gap-3 border-b border-[var(--bs-border)] px-6 py-4">
           <div class="min-w-0">
-            <h2 id="transaction-detail-title" class="truncate text-base font-semibold">
-              {{ transaction?.description || 'Transaction' }}
+            <h2 id="transaction-detail-title" class="truncate text-base font-bold">
+              {{ transaction?.description || t('detail.title') }}
             </h2>
-            <p class="mt-1 flex items-center gap-2 text-sm text-neutral-500">
+            <p class="mt-1 flex items-center gap-2 text-sm text-fg-muted">
               <StatusBadge v-if="transaction?.status" :status="transaction.status" />
-              <span class="capitalize">{{ transaction?.type?.replace(/_/g, ' ') }}</span>
+              <span v-if="transaction?.type">{{ t(`types.${transaction.type}`) }}</span>
             </p>
           </div>
-          <button type="button" class="ls-btn ls-btn-sm" aria-label="Close" @click="emit('close')">✕</button>
+          <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="emit('close')">✕</button>
         </header>
 
-        <div class="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-4">
+        <div class="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-4">
           <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <div>
-              <dt class="text-neutral-500">Date</dt>
-              <dd>{{ transaction?.transaction_date }}</dd>
+              <dt class="text-fg-muted">{{ t('transactions.date') }}</dt>
+              <dd>{{ formatDate(transaction?.transaction_date, locale) }}</dd>
             </div>
             <div>
-              <dt class="text-neutral-500">Amount</dt>
-              <dd class="font-medium">
+              <dt class="text-fg-muted">{{ t('transactions.amount') }}</dt>
+              <dd class="font-semibold">
                 <MoneyText :amount-minor="transaction?.amount_minor" :currency="transaction?.currency_code ?? undefined" />
               </dd>
             </div>
             <div>
-              <dt class="text-neutral-500">Category</dt>
-              <dd>{{ transaction?.category_name || '—' }}</dd>
+              <dt class="text-fg-muted">{{ t('transactions.category') }}</dt>
+              <dd>{{ transaction?.category_name || t('common.dash') }}</dd>
             </div>
             <div>
-              <dt class="text-neutral-500">Counterparty</dt>
-              <dd>{{ transaction?.counterparty_name || '—' }}</dd>
+              <dt class="text-fg-muted">{{ t('transactions.counterparty') }}</dt>
+              <dd>{{ transaction?.counterparty_name || t('common.dash') }}</dd>
             </div>
             <div>
-              <dt class="text-neutral-500">Reference</dt>
-              <dd>{{ transaction?.reference || '—' }}</dd>
+              <dt class="text-fg-muted">{{ t('transactions.reference') }}</dt>
+              <dd>{{ transaction?.reference || t('common.dash') }}</dd>
             </div>
             <div>
-              <dt class="text-neutral-500">Created by</dt>
-              <dd>{{ transaction?.created_by_name || transaction?.created_by_email || '—' }}</dd>
+              <dt class="text-fg-muted">{{ t('transactions.createdBy') }}</dt>
+              <dd>{{ transaction?.created_by_name || transaction?.created_by_email || t('common.dash') }}</dd>
             </div>
             <div v-if="transaction?.adjustment_reason" class="col-span-2">
-              <dt class="text-neutral-500">Reason</dt>
+              <dt class="text-fg-muted">{{ t('detail.reason') }}</dt>
               <dd>{{ transaction.adjustment_reason }}</dd>
             </div>
           </dl>
 
           <section aria-labelledby="journal-heading">
-            <h3 id="journal-heading" class="mb-2 text-sm font-semibold">Journal</h3>
+            <h3 id="journal-heading" class="mb-2 text-sm font-bold">{{ t('detail.journal') }}</h3>
             <table class="ls-table">
               <thead>
                 <tr>
-                  <th scope="col">Account</th>
-                  <th scope="col" class="text-right">Debit</th>
-                  <th scope="col" class="text-right">Credit</th>
+                  <th scope="col">{{ t('detail.account') }}</th>
+                  <th scope="col" class="text-end">{{ t('detail.debit') }}</th>
+                  <th scope="col" class="text-end">{{ t('detail.credit') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(entry, index) in entries" :key="entry.entry_id ?? index">
                   <td>
                     <span class="block">{{ entry.account_name }}</span>
-                    <span v-if="entry.memo" class="block text-xs text-neutral-500">{{ entry.memo }}</span>
+                    <span v-if="entry.memo" class="block text-xs text-fg-muted">{{ entry.memo }}</span>
                   </td>
                   <td class="ls-num">
                     <MoneyText v-if="entry.side === 'debit'" :amount-minor="entry.amount_minor" :currency="entry.currency_code" />
-                    <span v-else class="text-neutral-300">—</span>
+                    <span v-else class="text-fg-disabled">{{ t('common.dash') }}</span>
                   </td>
                   <td class="ls-num">
                     <MoneyText v-if="entry.side === 'credit'" :amount-minor="entry.amount_minor" :currency="entry.currency_code" />
-                    <span v-else class="text-neutral-300">—</span>
+                    <span v-else class="text-fg-disabled">{{ t('common.dash') }}</span>
                   </td>
                 </tr>
               </tbody>
@@ -177,41 +179,37 @@ async function reverse() {
 
           <p
             v-if="transaction?.reversed_by_transaction_id"
-            class="rounded-lg bg-purple-50 px-3 py-2 text-sm text-purple-800 dark:bg-purple-500/10 dark:text-purple-300"
+            class="rounded-control bg-[var(--bs-status-info-bg)] px-3 py-2 text-sm text-[var(--bs-status-info)]"
           >
-            This transaction has been reversed. Both it and its reversal stay in the
-            ledger so the history remains auditable.
+            {{ t('detail.reversedNotice') }}
           </p>
 
-          <div v-if="confirming" class="ls-card space-y-3 p-4">
-            <p class="text-sm">
-              Reversing posts an equal and opposite journal. The original stays in
-              the ledger — nothing is deleted or edited.
-            </p>
+          <div v-if="confirming" class="ls-card-flat space-y-3 p-4">
+            <p class="text-sm">{{ t('detail.reverseExplain') }}</p>
             <div>
-              <label class="ls-label" for="reverse-reason">Reason</label>
+              <label class="ls-label" for="reverse-reason">{{ t('detail.reverseReason') }}</label>
               <input
                 id="reverse-reason"
                 v-model="reason"
                 class="ls-input"
-                placeholder="Why is this being reversed?"
+                :placeholder="t('detail.reverseReasonPlaceholder')"
               >
             </div>
             <div class="flex justify-end gap-2">
-              <button type="button" class="ls-btn" @click="confirming = false">Cancel</button>
+              <button type="button" class="ls-btn" @click="confirming = false">{{ t('common.cancel') }}</button>
               <button type="button" class="ls-btn ls-btn-danger" :disabled="reversing" @click="reverse">
-                {{ reversing ? 'Reversing…' : 'Reverse transaction' }}
+                {{ reversing ? t('detail.reversing') : t('detail.reverseConfirm') }}
               </button>
             </div>
           </div>
 
-          <p v-if="errorMessage" role="alert" class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-400">
+          <p v-if="errorMessage" role="alert" class="ls-error">
             {{ errorMessage }}
           </p>
         </div>
 
-        <footer v-if="canReverse && !confirming" class="border-t border-neutral-200 px-5 py-4 dark:border-neutral-800">
-          <button type="button" class="ls-btn" @click="confirming = true">Reverse…</button>
+        <footer v-if="canReverse && !confirming" class="border-t border-[var(--bs-border)] px-6 py-4">
+          <button type="button" class="ls-btn" @click="confirming = true">{{ t('detail.reverseAction') }}</button>
         </footer>
       </div>
     </div>

@@ -12,6 +12,8 @@ const props = withDefaults(defineProps<{
   hint: undefined,
 })
 
+const { t, locale } = useI18n()
+
 const current = computed(() => Number(props.amountMinor ?? 0))
 
 // A percentage against a zero base is not a percentage — show nothing rather
@@ -23,30 +25,27 @@ const change = computed(() => {
 })
 
 const tone = computed(() => {
-  if (change.value === null || props.goodDirection === 'neutral') {
-    return 'text-neutral-500'
-  }
+  if (change.value === null || props.goodDirection === 'neutral') return 'text-fg-muted'
+  if (Math.abs(change.value) < 0.05) return 'text-fg-muted'
   const improving = props.goodDirection === 'up' ? change.value > 0 : change.value < 0
-  if (Math.abs(change.value) < 0.05) return 'text-neutral-500'
-  return improving
-    ? 'text-emerald-700 dark:text-emerald-400'
-    : 'text-red-700 dark:text-red-400'
+  return improving ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'
 })
 
 const changeLabel = computed(() => {
   if (change.value === null) return null
-  const sign = change.value > 0 ? '+' : ''
-  return `${sign}${change.value.toFixed(1)}% vs last month`
+  return t('dashboard.changeVsLastMonth', {
+    change: formatPercent(change.value, locale.value),
+  })
 })
 </script>
 
 <template>
-  <article class="ls-card p-4">
-    <p class="text-sm text-neutral-500">{{ title }}</p>
-    <p class="mt-2 text-2xl font-semibold">
+  <article class="ls-card p-5">
+    <p class="text-sm text-fg-muted">{{ title }}</p>
+    <p class="mt-2 text-2xl font-extrabold">
       <MoneyText :amount-minor="current" />
     </p>
-    <p v-if="changeLabel" class="mt-1 text-xs" :class="tone">{{ changeLabel }}</p>
-    <p v-else-if="hint" class="mt-1 text-xs text-neutral-500">{{ hint }}</p>
+    <p v-if="changeLabel" class="mt-1 text-xs font-medium" :class="tone">{{ changeLabel }}</p>
+    <p v-else-if="hint" class="mt-1 text-xs text-fg-muted">{{ hint }}</p>
   </article>
 </template>

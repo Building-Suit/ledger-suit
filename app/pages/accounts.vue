@@ -2,8 +2,6 @@
 import type { Database } from '~~/types/database.types'
 
 definePageMeta({ layout: 'default' })
-useHead({ title: 'Accounts · Ledger Suit' })
-
 /**
  * Called "Accounts" for the user; internally this is the chart of accounts.
  * Balances come from public.account_balances, which derives them from posted
@@ -12,6 +10,9 @@ useHead({ title: 'Accounts · Ledger Suit' })
 
 const supabase = useSupabaseClient<Database>()
 const { currentId } = useTenant()
+const { t } = useI18n()
+
+useHead({ title: () => `${t('accounts.title')} · ${t('app.name')}` })
 
 const showArchived = ref(false)
 
@@ -42,12 +43,8 @@ const { data: balances } = await useAsyncData<BalanceRow[]>('org:account-balance
   return (data ?? []) as BalanceRow[]
 }, { watch: [currentId], default: () => [] })
 
-const GROUPS: Array<{ type: BalanceRow['type'], label: string }> = [
-  { type: 'asset', label: 'Assets' },
-  { type: 'liability', label: 'Liabilities' },
-  { type: 'equity', label: 'Equity' },
-  { type: 'revenue', label: 'Revenue' },
-  { type: 'expense', label: 'Expenses' },
+const GROUP_TYPES: Array<BalanceRow['type']> = [
+  'asset', 'liability', 'equity', 'revenue', 'expense',
 ]
 
 const visible = computed(() =>
@@ -55,8 +52,8 @@ const visible = computed(() =>
 )
 
 const groups = computed(() =>
-  GROUPS.map((group) => {
-    const rows = visible.value.filter(a => a.type === group.type)
+  GROUP_TYPES.map((type) => {
+    const rows = visible.value.filter(a => a.type === type)
     // Parents are headings; their own balance would double-count the children
     // beneath them, so the group total sums leaves only.
     const parentIds = new Set(rows.map(r => r.parent_account_id).filter(Boolean) as string[])
@@ -64,7 +61,7 @@ const groups = computed(() =>
       .filter(r => !parentIds.has(r.account_id))
       .reduce((sum, r) => sum + Number(r.balance_minor), 0)
 
-    return { ...group, rows, parentIds, total }
+    return { type, label: t(`accounts.groups.${type}`), rows, parentIds, total }
   }),
 )
 
@@ -74,17 +71,17 @@ const hasAccounts = computed(() => (balances.value?.length ?? 0) > 0)
 <template>
   <div class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-xl font-semibold">Accounts</h1>
-      <label class="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
-        <input v-model="showArchived" type="checkbox" class="rounded border-neutral-300">
-        Show archived
+      <h1 class="text-2xl font-extrabold">{{ t('accounts.title') }}</h1>
+      <label class="flex items-center gap-2 text-sm text-fg-muted">
+        <input v-model="showArchived" type="checkbox" class="rounded-sm border-[var(--bs-border)]">
+        {{ t('accounts.showArchived') }}
       </label>
     </div>
 
     <EmptyState
       v-if="!hasAccounts"
-      title="Your default chart of accounts is ready."
-      description="Accounts appear here as soon as your organization is set up."
+      :title="t('accounts.emptyTitle')"
+      :description="t('accounts.emptyHint')"
     />
 
     <div v-else class="space-y-5">
@@ -94,39 +91,39 @@ const hasAccounts = computed(() => (balances.value?.length ?? 0) > 0)
         class="ls-card overflow-hidden"
         :aria-labelledby="`group-${group.type}`"
       >
-        <div class="flex items-center justify-between border-b border-neutral-200 px-5 py-3 dark:border-neutral-800">
-          <h2 :id="`group-${group.type}`" class="text-sm font-semibold">{{ group.label }}</h2>
-          <MoneyText class="text-sm font-semibold" :amount-minor="group.total" />
+        <div class="flex items-center justify-between border-b border-[var(--bs-border)] px-6 py-3">
+          <h2 :id="`group-${group.type}`" class="text-sm font-bold">{{ group.label }}</h2>
+          <MoneyText class="text-sm font-bold" :amount-minor="group.total" />
         </div>
 
         <div class="overflow-x-auto">
           <table class="ls-table">
-            <caption class="sr-only">{{ group.label }} accounts and their balances</caption>
+            <caption class="sr-only">{{ t('accounts.caption', { group: group.label }) }}</caption>
             <thead>
               <tr>
-                <th scope="col">Code</th>
-                <th scope="col">Account</th>
-                <th scope="col">Currency</th>
-                <th scope="col" class="text-right">Entries</th>
-                <th scope="col" class="text-right">Balance</th>
+                <th scope="col">{{ t('accounts.code') }}</th>
+                <th scope="col">{{ t('accounts.account') }}</th>
+                <th scope="col">{{ t('accounts.currency') }}</th>
+                <th scope="col" class="text-end">{{ t('accounts.entries') }}</th>
+                <th scope="col" class="text-end">{{ t('accounts.balance') }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="account in group.rows" :key="account.account_id">
-                <td class="font-mono text-xs text-neutral-500">{{ account.code || '—' }}</td>
+                <td class="font-mono text-xs text-fg-muted" dir="ltr">{{ account.code || t('common.dash') }}</td>
                 <td>
-                  <span :class="{ 'pl-4': account.parent_account_id, 'font-medium': group.parentIds.has(account.account_id) }">
+                  <span :class="{ 'ps-4': account.parent_account_id, 'font-semibold': group.parentIds.has(account.account_id) }">
                     {{ account.name }}
                   </span>
-                  <span v-if="account.is_archived" class="ls-badge ml-2 bg-neutral-100 text-neutral-500 ring-neutral-500/20">
-                    Archived
+                  <span v-if="account.is_archived" class="ls-badge ms-2 bg-[var(--bs-surface-muted)] text-fg-muted">
+                    {{ t('accounts.archived') }}
                   </span>
-                  <span v-else-if="account.is_liquid" class="ls-badge ml-2 bg-blue-50 text-blue-700 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400">
-                    Liquid
+                  <span v-else-if="account.is_liquid" class="ls-badge ms-2 bg-[var(--bs-status-info-bg)] text-[var(--bs-status-info)]">
+                    {{ t('accounts.liquid') }}
                   </span>
                 </td>
-                <td class="text-neutral-500">{{ account.currency }}</td>
-                <td class="ls-num text-neutral-500">{{ account.entry_count }}</td>
+                <td class="text-fg-muted" dir="ltr">{{ account.currency }}</td>
+                <td class="ls-num text-fg-muted">{{ account.entry_count }}</td>
                 <td class="ls-num">
                   <MoneyText :amount-minor="account.balance_minor" />
                 </td>

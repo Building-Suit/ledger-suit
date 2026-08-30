@@ -14,6 +14,8 @@ const supabase = useSupabaseClient<Database>()
 const { currentId, baseCurrency, can } = useTenant()
 const { open, flow, close } = useAddTransaction()
 const toasts = useToasts()
+const { t } = useI18n()
+const describeError = useErrorMessage()
 
 const { data: accounts } = await useOrgAccounts()
 const { data: categories } = await useOrgCategories()
@@ -28,7 +30,7 @@ const postableAccounts = useAccountsOfType(accounts, ['asset', 'liability', 'equ
 const incomeCategories = computed(() => categories.value.filter(c => c.kind === 'income'))
 const expenseCategories = computed(() => categories.value.filter(c => c.kind === 'expense'))
 
-const availableFlows = computed(() => ADD_FLOWS.filter(f => can(FLOW_CAPABILITY[f.key])))
+const availableFlows = computed(() => ADD_FLOWS.filter(f => can(FLOW_CAPABILITY[f])))
 
 interface JournalLine {
   accountId: string
@@ -105,17 +107,17 @@ function toMinor(input: string, label: string): number | null {
   try {
     const minor = parseMoneyToMinor(input, baseCurrency.value)
     if (minor <= 0n) {
-      fieldError.value = `${label} must be greater than zero.`
+      fieldError.value = t('add.validation.amountPositive', { field: label })
       return null
     }
     if (minor > BigInt(Number.MAX_SAFE_INTEGER)) {
-      fieldError.value = `${label} is too large.`
+      fieldError.value = t('add.validation.amountTooLarge', { field: label })
       return null
     }
     return Number(minor)
   }
   catch {
-    fieldError.value = `${label} is not a valid amount.`
+    fieldError.value = t('add.validation.amountInvalid', { field: label })
     return null
   }
 }
@@ -170,7 +172,7 @@ async function submit() {
 
     switch (flow.value) {
       case 'income': {
-        const amount = toMinor(form.amount, 'Amount')
+        const amount = toMinor(form.amount, t('transactions.amount'))
         if (amount === null) return
         rpc = { fn: 'record_income', args: {
           ...shared,
@@ -183,7 +185,7 @@ async function submit() {
       }
 
       case 'expense': {
-        const amount = toMinor(form.amount, 'Amount')
+        const amount = toMinor(form.amount, t('transactions.amount'))
         if (amount === null) return
         rpc = { fn: 'record_expense', args: {
           ...shared,
@@ -196,9 +198,9 @@ async function submit() {
       }
 
       case 'transfer': {
-        const amount = toMinor(form.amount, 'Amount')
+        const amount = toMinor(form.amount, t('transactions.amount'))
         if (amount === null) return
-        const fee = optionalMinor(form.feeAmount, 'Fee')
+        const fee = optionalMinor(form.feeAmount, t('add.transferFee'))
         if (fee === null) return
         rpc = { fn: 'record_transfer', args: {
           ...shared,
@@ -211,7 +213,7 @@ async function submit() {
       }
 
       case 'asset_purchase': {
-        const amount = toMinor(form.amount, 'Amount')
+        const amount = toMinor(form.amount, t('transactions.amount'))
         if (amount === null) return
         rpc = { fn: 'record_asset_purchase', args: {
           ...shared,
@@ -225,7 +227,7 @@ async function submit() {
       }
 
       case 'liability_created': {
-        const amount = toMinor(form.amount, 'Amount')
+        const amount = toMinor(form.amount, t('transactions.amount'))
         if (amount === null) return
         rpc = { fn: 'record_liability_created', args: {
           ...shared,
@@ -239,12 +241,12 @@ async function submit() {
       }
 
       case 'liability_payment': {
-        const principal = optionalMinor(form.principal, 'Principal')
-        const interest = optionalMinor(form.interest, 'Interest')
-        const fees = optionalMinor(form.fees, 'Fees')
+        const principal = optionalMinor(form.principal, t('add.principal'))
+        const interest = optionalMinor(form.interest, t('add.interest'))
+        const fees = optionalMinor(form.fees, t('add.fees'))
         if (principal === null || interest === null || fees === null) return
         if ((principal ?? 0) + (interest ?? 0) + (fees ?? 0) <= 0) {
-          fieldError.value = 'Enter a principal, interest or fee amount.'
+          fieldError.value = t('add.validation.paymentRequired')
           return
         }
         rpc = { fn: 'record_liability_payment', args: {
@@ -260,7 +262,7 @@ async function submit() {
       }
 
       case 'owner_contribution': {
-        const amount = toMinor(form.amount, 'Amount')
+        const amount = toMinor(form.amount, t('transactions.amount'))
         if (amount === null) return
         rpc = { fn: 'record_owner_contribution', args: {
           ...shared,
@@ -272,7 +274,7 @@ async function submit() {
       }
 
       case 'owner_withdrawal': {
-        const amount = toMinor(form.amount, 'Amount')
+        const amount = toMinor(form.amount, t('transactions.amount'))
         if (amount === null) return
         rpc = { fn: 'record_owner_withdrawal', args: {
           ...shared,
@@ -285,11 +287,11 @@ async function submit() {
 
       case 'adjustment': {
         if (!adjustmentTotals.value.balanced) {
-          fieldError.value = 'Debits must equal credits before this can be posted.'
+          fieldError.value = t('add.validation.mustBalance')
           return
         }
         if (!form.description.trim() || !form.reason.trim()) {
-          fieldError.value = 'A description and a reason are both required.'
+          fieldError.value = t('add.validation.descriptionAndReason')
           return
         }
 
@@ -318,7 +320,7 @@ async function submit() {
     const { error } = await supabase.rpc(rpc.fn as never, rpc.args as never)
     if (error) throw error
 
-    toasts.success('Saved', 'The transaction has been posted.')
+    toasts.success(t('add.savedTitle'), t('add.savedBody'))
     close()
     await refreshNuxtData()
   }
@@ -330,66 +332,64 @@ async function submit() {
   }
 }
 
-const titles: Record<AddFlow, string> = Object.fromEntries(
-  ADD_FLOWS.map(f => [f.key, f.label]),
-) as Record<AddFlow, string>
+
 </script>
 
 <template>
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+      class="fixed inset-0 z-50 flex items-end justify-center ls-scrim p-0 sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-transaction-title"
       @click.self="close()"
     >
-      <div class="ls-card flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-b-none sm:rounded-xl">
-        <header class="flex items-center justify-between border-b border-neutral-200 px-5 py-4 dark:border-neutral-800">
-          <h2 id="add-transaction-title" class="text-base font-semibold">
-            {{ titles[flow] }}
+      <div class="ls-card flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-b-none shadow-overlay sm:rounded-modal">
+        <header class="flex items-center justify-between border-b border-[var(--bs-border)] px-6 py-4">
+          <h2 id="add-transaction-title" class="text-base font-bold">
+            {{ t(`add.flows.${flow}`) }}
           </h2>
-          <button type="button" class="ls-btn ls-btn-sm" aria-label="Close" @click="close()">
+          <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="close()">
             ✕
           </button>
         </header>
 
-        <div class="border-b border-neutral-200 px-5 py-3 dark:border-neutral-800">
-          <label class="ls-label" for="flow">What are you recording?</label>
+        <div class="border-b border-[var(--bs-border)] px-6 py-3">
+          <label class="ls-label" for="flow">{{ t('add.whatAreYouRecording') }}</label>
           <select id="flow" v-model="flow" class="ls-input">
-            <option v-for="f in availableFlows" :key="f.key" :value="f.key">
-              {{ f.label }} — {{ f.hint }}
+            <option v-for="f in availableFlows" :key="f" :value="f">
+              {{ t(`add.flows.${f}`) }} — {{ t(`add.hints.${f}`) }}
             </option>
           </select>
         </div>
 
-        <form class="min-h-0 flex-1 overflow-y-auto px-5 py-4" @submit.prevent="submit">
+        <form class="min-h-0 flex-1 overflow-y-auto px-6 py-4" @submit.prevent="submit">
           <div class="grid gap-4 sm:grid-cols-2">
             <!-- Amount: every flow except the split ones -->
             <div v-if="!['liability_payment', 'adjustment'].includes(flow)">
-              <label class="ls-label" for="amount">Amount ({{ baseCurrency }})</label>
+              <label class="ls-label" for="amount">{{ t('add.amount', { currency: baseCurrency }) }}</label>
               <input id="amount" v-model="form.amount" class="ls-input" inputmode="decimal" placeholder="0.00" required>
             </div>
 
             <div>
-              <label class="ls-label" for="date">Date</label>
+              <label class="ls-label" for="date">{{ t('add.date') }}</label>
               <input id="date" v-model="form.date" type="date" class="ls-input" required>
             </div>
 
             <!-- Income -->
             <template v-if="flow === 'income'">
               <div>
-                <label class="ls-label" for="dest">Received into</label>
+                <label class="ls-label" for="dest">{{ t('add.receivedInto') }}</label>
                 <select id="dest" v-model="form.destinationAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in paymentAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="cat">Category</label>
+                <label class="ls-label" for="cat">{{ t('add.category') }}</label>
                 <select id="cat" v-model="form.categoryId" class="ls-input" required>
-                  <option value="" disabled>Choose a category</option>
+                  <option value="" disabled>{{ t('add.chooseCategory') }}</option>
                   <option v-for="c in incomeCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
                 </select>
               </div>
@@ -398,16 +398,16 @@ const titles: Record<AddFlow, string> = Object.fromEntries(
             <!-- Expense -->
             <template v-if="flow === 'expense'">
               <div>
-                <label class="ls-label" for="src">Paid from</label>
+                <label class="ls-label" for="src">{{ t('add.paidFrom') }}</label>
                 <select id="src" v-model="form.sourceAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in paymentAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="cat">Category</label>
+                <label class="ls-label" for="cat">{{ t('add.category') }}</label>
                 <select id="cat" v-model="form.categoryId" class="ls-input" required>
-                  <option value="" disabled>Choose a category</option>
+                  <option value="" disabled>{{ t('add.chooseCategory') }}</option>
                   <option v-for="c in expenseCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
                 </select>
               </div>
@@ -416,67 +416,67 @@ const titles: Record<AddFlow, string> = Object.fromEntries(
             <!-- Transfer -->
             <template v-if="flow === 'transfer'">
               <div>
-                <label class="ls-label" for="src">From</label>
+                <label class="ls-label" for="src">{{ t('add.from') }}</label>
                 <select id="src" v-model="form.sourceAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in paymentAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="dest">To</label>
+                <label class="ls-label" for="dest">{{ t('add.to') }}</label>
                 <select id="dest" v-model="form.destinationAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in paymentAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="fee">Transfer fee (optional)</label>
+                <label class="ls-label" for="fee">{{ t('add.transferFee') }} ({{ t('common.optional') }})</label>
                 <input id="fee" v-model="form.feeAmount" class="ls-input" inputmode="decimal" placeholder="0.00">
-                <p class="ls-hint">Posted to Bank Fees, not to the destination account.</p>
+                <p class="ls-hint">{{ t('add.transferFeeHint') }}</p>
               </div>
             </template>
 
             <!-- Asset purchase -->
             <template v-if="flow === 'asset_purchase'">
               <div>
-                <label class="ls-label" for="asset">Asset account</label>
+                <label class="ls-label" for="asset">{{ t('add.assetAccount') }}</label>
                 <select id="asset" v-model="form.assetAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in assetAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="src">Paid from</label>
+                <label class="ls-label" for="src">{{ t('add.paidFrom') }}</label>
                 <select id="src" v-model="form.sourceAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in paymentAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="life">Useful life in months (optional)</label>
+                <label class="ls-label" for="life">{{ t('add.usefulLife') }} ({{ t('common.optional') }})</label>
                 <input id="life" v-model="form.usefulLifeMonths" type="number" min="1" class="ls-input">
-                <p class="ls-hint">Recorded for future depreciation. Nothing is depreciated yet.</p>
+                <p class="ls-hint">{{ t('add.usefulLifeHint') }}</p>
               </div>
             </template>
 
             <!-- Liability created -->
             <template v-if="flow === 'liability_created'">
               <div>
-                <label class="ls-label" for="liab">Liability account</label>
+                <label class="ls-label" for="liab">{{ t('add.liabilityAccount') }}</label>
                 <select id="liab" v-model="form.liabilityAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in liabilityAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="dest">Received into</label>
+                <label class="ls-label" for="dest">{{ t('add.receivedInto') }}</label>
                 <select id="dest" v-model="form.destinationAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in paymentAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="due">Due date (optional)</label>
+                <label class="ls-label" for="due">{{ t('add.dueDate') }} ({{ t('common.optional') }})</label>
                 <input id="due" v-model="form.dueDate" type="date" class="ls-input">
               </div>
             </template>
@@ -484,47 +484,47 @@ const titles: Record<AddFlow, string> = Object.fromEntries(
             <!-- Liability payment -->
             <template v-if="flow === 'liability_payment'">
               <div>
-                <label class="ls-label" for="liab">Liability</label>
+                <label class="ls-label" for="liab">{{ t('add.liability') }}</label>
                 <select id="liab" v-model="form.liabilityAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in liabilityAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="src">Paid from</label>
+                <label class="ls-label" for="src">{{ t('add.paidFrom') }}</label>
                 <select id="src" v-model="form.sourceAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in paymentAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="principal">Principal</label>
+                <label class="ls-label" for="principal">{{ t('add.principal') }}</label>
                 <input id="principal" v-model="form.principal" class="ls-input" inputmode="decimal" placeholder="0.00">
               </div>
               <div>
-                <label class="ls-label" for="interest">Interest</label>
+                <label class="ls-label" for="interest">{{ t('add.interest') }}</label>
                 <input id="interest" v-model="form.interest" class="ls-input" inputmode="decimal" placeholder="0.00">
               </div>
               <div>
-                <label class="ls-label" for="fees">Fees</label>
+                <label class="ls-label" for="fees">{{ t('add.fees') }}</label>
                 <input id="fees" v-model="form.fees" class="ls-input" inputmode="decimal" placeholder="0.00">
-                <p class="ls-hint">Interest and fees become expenses; only the principal reduces the debt.</p>
+                <p class="ls-hint">{{ t('add.liabilityPaymentHint') }}</p>
               </div>
             </template>
 
             <!-- Owner contribution -->
             <template v-if="flow === 'owner_contribution'">
               <div>
-                <label class="ls-label" for="dest">Received into</label>
+                <label class="ls-label" for="dest">{{ t('add.receivedInto') }}</label>
                 <select id="dest" v-model="form.destinationAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in paymentAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="equity">Equity account (optional)</label>
+                <label class="ls-label" for="equity">{{ t('add.equityAccount') }} ({{ t('common.optional') }})</label>
                 <select id="equity" v-model="form.equityAccountId" class="ls-input">
-                  <option value="">Owner Capital (default)</option>
+                  <option value="">{{ t('add.ownerCapitalDefault') }}</option>
                   <option v-for="a in equityAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
@@ -533,16 +533,16 @@ const titles: Record<AddFlow, string> = Object.fromEntries(
             <!-- Owner withdrawal -->
             <template v-if="flow === 'owner_withdrawal'">
               <div>
-                <label class="ls-label" for="src">Taken from</label>
+                <label class="ls-label" for="src">{{ t('add.takenFrom') }}</label>
                 <select id="src" v-model="form.sourceAccountId" class="ls-input" required>
-                  <option value="" disabled>Choose an account</option>
+                  <option value="" disabled>{{ t('add.chooseAccount') }}</option>
                   <option v-for="a in paymentAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
               <div>
-                <label class="ls-label" for="equity">Drawings account (optional)</label>
+                <label class="ls-label" for="equity">{{ t('add.drawingsAccount') }} ({{ t('common.optional') }})</label>
                 <select id="equity" v-model="form.equityAccountId" class="ls-input">
-                  <option value="">Owner Drawings (default)</option>
+                  <option value="">{{ t('add.ownerDrawingsDefault') }}</option>
                   <option v-for="a in equityAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                 </select>
               </div>
@@ -550,40 +550,40 @@ const titles: Record<AddFlow, string> = Object.fromEntries(
 
             <!-- Counterparty, where it means something -->
             <div v-if="['income', 'expense', 'asset_purchase', 'liability_created', 'liability_payment'].includes(flow)">
-              <label class="ls-label" for="cp">Counterparty (optional)</label>
+              <label class="ls-label" for="cp">{{ t('add.counterparty') }} ({{ t('common.optional') }})</label>
               <select id="cp" v-model="form.counterpartyId" class="ls-input">
-                <option value="">None</option>
+                <option value="">{{ t('common.none') }}</option>
                 <option v-for="c in counterparties" :key="c.id" :value="c.id">{{ c.name }}</option>
               </select>
             </div>
 
             <div :class="flow === 'adjustment' ? 'sm:col-span-2' : ''">
-              <label class="ls-label" for="descr">Description</label>
+              <label class="ls-label" for="descr">{{ t('add.description') }}</label>
               <input
                 id="descr"
                 v-model="form.description"
                 class="ls-input"
                 :required="flow === 'adjustment'"
-                placeholder="What was this for?"
+                :placeholder="t('add.descriptionPlaceholder')"
               >
             </div>
 
             <div v-if="flow !== 'adjustment'">
-              <label class="ls-label" for="ref">Reference (optional)</label>
-              <input id="ref" v-model="form.reference" class="ls-input" placeholder="Invoice or receipt number">
+              <label class="ls-label" for="ref">{{ t('add.reference') }} ({{ t('common.optional') }})</label>
+              <input id="ref" v-model="form.reference" class="ls-input" :placeholder="t('add.referencePlaceholder')">
             </div>
 
             <div v-if="flow === 'adjustment'" class="sm:col-span-2">
-              <label class="ls-label" for="reason">Reason for the adjustment</label>
-              <input id="reason" v-model="form.reason" class="ls-input" required placeholder="Why is this journal being made?">
+              <label class="ls-label" for="reason">{{ t('add.adjustmentReason') }}</label>
+              <input id="reason" v-model="form.reason" class="ls-input" required :placeholder="t('add.adjustmentReasonPlaceholder')">
             </div>
           </div>
 
           <!-- Manual journal -->
           <div v-if="flow === 'adjustment'" class="mt-6">
             <div class="mb-2 flex items-center justify-between">
-              <h3 class="text-sm font-semibold">Journal lines</h3>
-              <button type="button" class="ls-btn ls-btn-sm" @click="addLine">Add line</button>
+              <h3 class="text-sm font-bold">{{ t('add.journalLines') }}</h3>
+              <button type="button" class="ls-btn ls-btn-sm" @click="addLine">{{ t('add.addLine') }}</button>
             </div>
 
             <div class="space-y-2">
@@ -593,30 +593,30 @@ const titles: Record<AddFlow, string> = Object.fromEntries(
                 class="grid grid-cols-[1fr_7rem_8rem_2rem] items-end gap-2"
               >
                 <div>
-                  <label class="sr-only" :for="`line-account-${index}`">Account</label>
+                  <label class="sr-only" :for="`line-account-${index}`">{{ t('detail.account') }}</label>
                   <select :id="`line-account-${index}`" v-model="line.accountId" class="ls-input">
-                    <option value="" disabled>Account</option>
+                    <option value="" disabled>{{ t('detail.account') }}</option>
                     <option v-for="a in postableAccounts" :key="a.id" :value="a.id">
                       {{ a.code ? `${a.code} · ` : '' }}{{ a.name }}
                     </option>
                   </select>
                 </div>
                 <div>
-                  <label class="sr-only" :for="`line-side-${index}`">Side</label>
+                  <label class="sr-only" :for="`line-side-${index}`">{{ t('add.side') }}</label>
                   <select :id="`line-side-${index}`" v-model="line.side" class="ls-input">
-                    <option value="debit">Debit</option>
-                    <option value="credit">Credit</option>
+                    <option value="debit">{{ t('add.debit') }}</option>
+                    <option value="credit">{{ t('add.credit') }}</option>
                   </select>
                 </div>
                 <div>
-                  <label class="sr-only" :for="`line-amount-${index}`">Amount</label>
+                  <label class="sr-only" :for="`line-amount-${index}`">{{ t('transactions.amount') }}</label>
                   <input :id="`line-amount-${index}`" v-model="line.amount" class="ls-input" inputmode="decimal" placeholder="0.00">
                 </div>
                 <button
                   type="button"
                   class="ls-btn ls-btn-sm h-9"
                   :disabled="form.lines.length <= 2"
-                  :aria-label="`Remove line ${index + 1}`"
+                  :aria-label="t('add.removeLine', { index: index + 1 })"
                   @click="removeLine(index)"
                 >
                   ✕
@@ -624,31 +624,34 @@ const titles: Record<AddFlow, string> = Object.fromEntries(
               </div>
             </div>
 
-            <div class="mt-3 flex items-center justify-between rounded-lg bg-neutral-100 px-3 py-2 text-sm dark:bg-neutral-800">
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-control bg-surface-muted px-3 py-2 text-sm">
               <span>
-                Debits <MoneyText :amount-minor="Number(adjustmentTotals.debit)" />
-                · Credits <MoneyText :amount-minor="Number(adjustmentTotals.credit)" />
+                {{ t('add.debitsTotal') }} <MoneyText :amount-minor="Number(adjustmentTotals.debit)" />
+                · {{ t('add.creditsTotal') }} <MoneyText :amount-minor="Number(adjustmentTotals.credit)" />
               </span>
-              <span :class="adjustmentTotals.balanced ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'">
-                {{ adjustmentTotals.balanced ? 'Balanced' : 'Not balanced' }}
+              <span
+                class="font-semibold"
+                :class="adjustmentTotals.balanced ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'"
+              >
+                {{ adjustmentTotals.balanced ? t('add.balanced') : t('add.notBalanced') }}
               </span>
             </div>
           </div>
 
-          <p v-if="fieldError" role="alert" class="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-400">
+          <p v-if="fieldError" role="alert" class="ls-error mt-4">
             {{ fieldError }}
           </p>
         </form>
 
-        <footer class="flex items-center justify-end gap-2 border-t border-neutral-200 px-5 py-4 dark:border-neutral-800">
-          <button type="button" class="ls-btn" @click="close()">Cancel</button>
+        <footer class="flex items-center justify-end gap-2 border-t border-[var(--bs-border)] px-6 py-4">
+          <button type="button" class="ls-btn" @click="close()">{{ t('common.cancel') }}</button>
           <button
             type="button"
-            class="ls-btn ls-btn-primary"
+            class="ls-btn ls-btn-accent"
             :disabled="submitting"
             @click="submit"
           >
-            {{ submitting ? 'Saving…' : 'Save' }}
+            {{ submitting ? t('common.saving') : t('common.save') }}
           </button>
         </footer>
       </div>

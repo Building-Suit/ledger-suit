@@ -3,20 +3,23 @@
 // (categories, members, currencies, audit log, subscription) belongs in
 // Settings or a contextual panel — see spec section 4.
 const NAV = [
-  { to: '/', label: 'Dashboard', icon: '◧' },
-  { to: '/transactions', label: 'Transactions', icon: '≡' },
-  { to: '/accounts', label: 'Accounts', icon: '▤' },
-  { to: '/reports', label: 'Reports', icon: '◔' },
+  { to: '/', key: 'dashboard', icon: '◧' },
+  { to: '/transactions', key: 'transactions', icon: '≡' },
+  { to: '/accounts', key: 'accounts', icon: '▤' },
+  { to: '/reports', key: 'reports', icon: '◔' },
 ]
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const route = useRoute()
+const { t } = useI18n()
 const { current, loadOrganizations, loading } = useTenant()
+const { restore } = useTheme()
 
 const mobileNavOpen = ref(false)
 
 await loadOrganizations()
+onMounted(restore)
 
 // Collapse the mobile drawer on navigation, otherwise it covers the page the
 // user just asked for.
@@ -34,21 +37,23 @@ async function signOut() {
 
 <template>
   <div class="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
-    <!-- Sidebar -->
     <!-- Shown/hidden rather than slid off-screen with a transform: a translate
          utility that silently fails to apply leaves the drawer sitting on top
          of the page on every phone, which is exactly what happened here. -->
     <aside
-      class="fixed inset-y-0 left-0 z-40 w-64 border-r border-neutral-200 bg-white lg:static lg:block dark:border-neutral-800 dark:bg-neutral-900"
+      class="fixed inset-y-0 start-0 z-40 w-64 border-e border-[var(--bs-border)] bg-surface lg:static lg:block"
       :class="mobileNavOpen ? 'block' : 'hidden'"
     >
-      <div class="flex h-full flex-col gap-4 p-4">
+      <div class="flex h-full flex-col gap-6 p-4">
         <div class="flex items-center justify-between">
-          <NuxtLink to="/" class="text-base font-semibold">Ledger Suit</NuxtLink>
+          <!-- The product name stays Latin even in Arabic copy. -->
+          <NuxtLink to="/" class="text-base font-extrabold tracking-tight" dir="ltr">
+            {{ t('app.name') }}
+          </NuxtLink>
           <button
             type="button"
             class="ls-btn ls-btn-sm lg:hidden"
-            aria-label="Close navigation"
+            :aria-label="t('nav.close')"
             @click="mobileNavOpen = false"
           >
             ✕
@@ -57,7 +62,7 @@ async function signOut() {
 
         <OrganizationSwitcher />
 
-        <nav aria-label="Primary" class="flex flex-col gap-1">
+        <nav :aria-label="t('nav.primary')" class="flex flex-col gap-1">
           <NuxtLink
             v-for="item in NAV"
             :key="item.to"
@@ -67,14 +72,15 @@ async function signOut() {
             :aria-current="isActive(item.to) ? 'page' : undefined"
           >
             <span aria-hidden="true" class="w-4 text-center">{{ item.icon }}</span>
-            <span>{{ item.label }}</span>
+            <span>{{ t(`nav.${item.key}`) }}</span>
           </NuxtLink>
         </nav>
 
-        <div class="mt-auto border-t border-neutral-200 pt-3 dark:border-neutral-800">
-          <p class="truncate text-xs text-neutral-500">{{ user?.email }}</p>
-          <button type="button" class="ls-btn ls-btn-sm mt-2 w-full" @click="signOut">
-            Sign out
+        <div class="mt-auto space-y-2 border-t border-[var(--bs-border)] pt-3">
+          <SettingsMenu />
+          <p class="truncate px-1 text-xs text-fg-muted">{{ user?.email }}</p>
+          <button type="button" class="ls-btn ls-btn-sm w-full" @click="signOut">
+            {{ t('common.signOut') }}
           </button>
         </div>
       </div>
@@ -82,37 +88,36 @@ async function signOut() {
 
     <div
       v-if="mobileNavOpen"
-      class="fixed inset-0 z-30 bg-black/40 lg:hidden"
+      class="fixed inset-0 z-30 ls-scrim lg:hidden"
       aria-hidden="true"
       @click="mobileNavOpen = false"
     />
 
-    <!-- Content -->
     <div class="flex min-w-0 flex-col">
-      <header class="sticky top-0 z-20 flex items-center gap-3 border-b border-neutral-200 bg-neutral-50/90 px-4 py-3 backdrop-blur lg:px-8 dark:border-neutral-800 dark:bg-neutral-950/90">
+      <header class="sticky top-0 z-20 flex items-center gap-3 border-b border-[var(--bs-border)] bg-background/90 px-4 py-3 backdrop-blur lg:px-8">
         <button
           type="button"
           class="ls-btn ls-btn-sm lg:hidden"
-          aria-label="Open navigation"
+          :aria-label="t('nav.open')"
           @click="mobileNavOpen = true"
         >
           ☰
         </button>
 
         <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-medium">{{ current?.name }}</p>
+          <p class="truncate text-sm font-semibold">{{ current?.name }}</p>
         </div>
 
         <AddMenu />
       </header>
 
-      <main class="min-w-0 flex-1 px-4 py-6 lg:px-8">
-        <div v-if="loading" class="text-sm text-neutral-500">Loading…</div>
+      <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 lg:px-8">
+        <div v-if="loading" class="text-sm text-fg-muted">{{ t('app.loading') }}</div>
 
         <EmptyState
           v-else-if="!current"
-          title="You are not a member of any organization yet."
-          description="Ask an owner to invite you, or create one to start tracking your finances."
+          :title="t('org.notMember')"
+          :description="t('org.notMemberHint')"
         />
 
         <slot v-else />
