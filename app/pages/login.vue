@@ -1,4 +1,8 @@
 <script setup lang="ts">
+// No layout: the app shell assumes a signed-in user with an organization.
+definePageMeta({ layout: false })
+useHead({ title: 'Sign in · Ledger Suit' })
+
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 
