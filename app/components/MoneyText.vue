@@ -19,23 +19,25 @@ const props = withDefaults(defineProps<{
 })
 
 const { baseCurrency } = useTenant()
+const { locale } = useI18n()
 
 const value = computed(() => Number(props.amountMinor ?? 0))
 const code = computed(() => props.currency ?? baseCurrency.value)
 
 const formatted = computed(() => {
-  const text = formatMoney(value.value, code.value)
+  const text = formatMoney(value.value, code.value, locale.value)
   return props.explicitSign && value.value > 0 ? `+${text}` : text
 })
 
 const tone = computed(() => {
   if (!props.signed || value.value === 0) return ''
-  return value.value > 0
-    ? 'text-emerald-700 dark:text-emerald-400'
-    : 'text-red-700 dark:text-red-400'
+  return value.value > 0 ? 'text-[var(--bs-success)]' : 'text-[var(--bs-error)]'
 })
 </script>
 
 <template>
-  <span class="tabular-nums" :class="tone">{{ formatted }}</span>
+  <!-- Amounts stay left-to-right even in Arabic: a currency figure is a single
+       LTR run, and letting it reorder would put the minus sign or currency
+       symbol on the wrong end. -->
+  <span class="tabular-nums" :class="tone" dir="ltr">{{ formatted }}</span>
 </template>

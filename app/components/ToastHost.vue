@@ -1,10 +1,11 @@
 <script setup lang="ts">
 const { toasts, dismiss } = useToasts()
+const { t } = useI18n()
 
 const tones: Record<string, string> = {
-  success: 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200',
-  error: 'border-red-300 bg-red-50 text-red-900 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200',
-  info: 'border-neutral-300 bg-white text-neutral-900 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100',
+  success: 'border-[var(--bs-success)] bg-[var(--bs-success-bg)] text-[var(--bs-success)]',
+  error: 'border-[var(--bs-error)] bg-[var(--bs-error-bg)] text-[var(--bs-error)]',
+  info: 'border-[var(--bs-border)] bg-[var(--bs-surface)] text-fg',
 }
 </script>
 
@@ -17,12 +18,12 @@ const tones: Record<string, string> = {
     <div
       v-for="toast in toasts"
       :key="toast.id"
-      class="pointer-events-auto w-full max-w-sm rounded-lg border px-4 py-3 shadow-lg"
+      class="pointer-events-auto w-full max-w-sm rounded-control border px-4 py-3 shadow-overlay"
       :class="tones[toast.tone]"
     >
       <div class="flex items-start gap-3">
         <div class="min-w-0 flex-1">
-          <p class="text-sm font-medium">{{ toast.title }}</p>
+          <p class="text-sm font-semibold">{{ toast.title }}</p>
           <p v-if="toast.description" class="mt-0.5 text-sm opacity-80">
             {{ toast.description }}
           </p>
@@ -30,7 +31,7 @@ const tones: Record<string, string> = {
         <button
           type="button"
           class="shrink-0 text-sm opacity-60 hover:opacity-100"
-          aria-label="Dismiss"
+          :aria-label="t('common.dismiss')"
           @click="dismiss(toast.id)"
         >
           ✕

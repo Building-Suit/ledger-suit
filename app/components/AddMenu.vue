@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { can } = useTenant()
 const { start } = useAddTransaction()
+const { t } = useI18n()
 
 const open = ref(false)
 const root = ref<HTMLElement | null>(null)
@@ -9,7 +10,7 @@ useClickOutside(root, () => (open.value = false))
 
 // Only offer what the caller is actually allowed to do. The database refuses it
 // regardless; hiding it just avoids inviting a failure.
-const flows = computed(() => ADD_FLOWS.filter(f => can(FLOW_CAPABILITY[f.key])))
+const flows = computed(() => ADD_FLOWS.filter(flow => can(FLOW_CAPABILITY[flow])))
 
 function choose(flow: AddFlow) {
   open.value = false
@@ -18,33 +19,34 @@ function choose(flow: AddFlow) {
 </script>
 
 <template>
+  <!-- The one gold action on the screen. -->
   <div v-if="flows.length" ref="root" class="relative">
     <button
       type="button"
-      class="ls-btn ls-btn-primary"
+      class="ls-btn ls-btn-accent"
       :aria-expanded="open"
       aria-haspopup="menu"
       @click="open = !open"
     >
       <span aria-hidden="true">+</span>
-      <span>Add</span>
+      <span>{{ t('add.title') }}</span>
     </button>
 
     <div
       v-if="open"
-      class="ls-card absolute right-0 z-30 mt-1 w-64 p-1 shadow-lg"
+      class="ls-card absolute end-0 z-30 mt-1 w-64 p-1 shadow-overlay"
       role="menu"
     >
       <button
         v-for="flow in flows"
-        :key="flow.key"
+        :key="flow"
         type="button"
         role="menuitem"
-        class="w-full rounded-md px-3 py-2 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800"
-        @click="choose(flow.key)"
+        class="w-full rounded-chip px-3 py-2 text-start hover:bg-surface-muted"
+        @click="choose(flow)"
       >
-        <span class="block text-sm font-medium">{{ flow.label }}</span>
-        <span class="block text-xs text-neutral-500">{{ flow.hint }}</span>
+        <span class="block text-sm font-semibold">{{ t(`add.flows.${flow}`) }}</span>
+        <span class="block text-xs text-fg-muted">{{ t(`add.hints.${flow}`) }}</span>
       </button>
     </div>
   </div>

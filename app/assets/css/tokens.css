@@ -1,0 +1,165 @@
+/*
+ * Building Suit — design tokens.
+ *
+ * Mirrored from the brand guidelines
+ * (building-suit/.docs/building-suit-brand-guidelines/07-design-tokens/colors.css).
+ * Treat that repository as the source of truth: change a value there first, then
+ * bring it across here. Do not invent new brand colours locally.
+ *
+ * Two layers:
+ *   1. Brand palette — fixed values, identical in both themes.
+ *   2. Role tokens   — semantic roles that remap between light and dark.
+ *
+ * The primary action colour deliberately flips by mode: gold fails text
+ * contrast on light backgrounds (~2.5:1), so light mode uses Building Navy and
+ * only dark mode promotes gold to primary.
+ */
+
+:root {
+  /* ---- Brand palette (fixed) ---------------------------------------- */
+  --bs-building-navy: #16293b;
+  --bs-deep-structure-navy: #0d1b28;
+  --bs-midnight-background: #0a111a;
+  --bs-navy-surface: #14233a;
+  --bs-navy-surface-raised: #1b2e47;
+  --bs-steel-border: #2e3f52;
+
+  --bs-premium-gold: #d89b42;
+  --bs-highlight-gold: #ebb45a;
+  --bs-gold-700: #a86c1c;
+  --bs-gold-600: #c8902f;
+  --bs-gold-300: #f4ce86;
+
+  --bs-pearl-white: #f7f8fa;
+  --bs-soft-silver: #e2e5ea;
+  --bs-cloud-gray: #cbd2db;
+  --bs-white: #ffffff;
+
+  --bs-slate-blue: #36506e;
+  --bs-sky-steel: #7e97b3;
+  --bs-pale-sky: #dce6f1;
+
+  --bs-graphite-text: #232b33;
+  --bs-slate-gray: #5a6573;
+  --bs-steel-gray: #9aa6b4;
+
+  --bs-gradient-navy: linear-gradient(160deg, #16293b 0%, #0d1b28 100%);
+
+  /* ---- Role tokens — light mode (default) --------------------------- */
+  --bs-background: var(--bs-pearl-white);
+  --bs-surface: var(--bs-white);
+  --bs-surface-muted: var(--bs-soft-silver);
+  --bs-surface-raised: var(--bs-white);
+
+  --bs-text: var(--bs-graphite-text);
+  --bs-text-muted: var(--bs-slate-gray);
+  --bs-text-disabled: var(--bs-steel-gray);
+  --bs-text-on-primary: var(--bs-pearl-white);
+  --bs-text-on-accent: var(--bs-deep-structure-navy);
+
+  --bs-border: var(--bs-cloud-gray);
+  --bs-border-strong: var(--bs-slate-gray);
+
+  --bs-primary: var(--bs-building-navy);
+  --bs-primary-hover: var(--bs-deep-structure-navy);
+  --bs-accent: var(--bs-premium-gold);
+  --bs-link: var(--bs-slate-blue);
+  --bs-focus-ring: var(--bs-premium-gold);
+
+  --bs-success: #2e9e6b;
+  --bs-success-bg: #e4f4ec;
+  --bs-warning: #e1841f;
+  --bs-warning-bg: #fbeedd;
+  --bs-error: #d14b4b;
+  --bs-error-bg: #f8e3e3;
+  --bs-info: #2f77c9;
+  --bs-info-bg: #dce6f1;
+
+  --bs-shadow-1: 0 2px 8px rgb(13 27 40 / 0.08);
+  --bs-shadow-2: 0 4px 16px rgb(13 27 40 / 0.12);
+  --bs-shadow-3: 0 8px 24px rgb(13 27 40 / 0.16);
+
+  /* ---- Radii (keep to this small set) ------------------------------- */
+  --bs-radius-chip: 8px;
+  --bs-radius-control: 12px;
+  --bs-radius-card: 16px;
+  --bs-radius-modal: 20px;
+
+  /* ---- Motion ------------------------------------------------------- */
+  --bs-duration: 160ms;
+  --bs-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- Role tokens — dark mode --------------------------------------- */
+[data-theme='dark'] {
+  --bs-background: var(--bs-midnight-background);
+  --bs-surface: var(--bs-navy-surface);
+  --bs-surface-muted: var(--bs-deep-structure-navy);
+  --bs-surface-raised: var(--bs-navy-surface-raised);
+
+  --bs-text: var(--bs-pearl-white);
+  --bs-text-muted: var(--bs-sky-steel);
+  --bs-text-disabled: #4a5a6e;
+  --bs-text-on-primary: var(--bs-deep-structure-navy);
+  --bs-text-on-accent: var(--bs-deep-structure-navy);
+
+  --bs-border: var(--bs-steel-border);
+  --bs-border-strong: var(--bs-sky-steel);
+
+  --bs-primary: var(--bs-premium-gold);
+  --bs-primary-hover: var(--bs-highlight-gold);
+  --bs-accent: var(--bs-highlight-gold);
+  --bs-link: var(--bs-sky-steel);
+  --bs-focus-ring: var(--bs-highlight-gold);
+
+  --bs-success: #46b383;
+  --bs-success-bg: #18352a;
+  --bs-warning: #f09a3c;
+  --bs-warning-bg: #3a2a14;
+  --bs-error: #e26a6a;
+  --bs-error-bg: #3a1e1e;
+  --bs-info: #4f92dd;
+  --bs-info-bg: #15263a;
+
+  --bs-shadow-1: 0 2px 8px rgb(0 0 0 / 0.32);
+  --bs-shadow-2: 0 4px 16px rgb(0 0 0 / 0.4);
+  --bs-shadow-3: 0 8px 24px rgb(0 0 0 / 0.48);
+}
+
+/* Users who never touch the theme toggle still get their OS preference. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bs-background: var(--bs-midnight-background);
+    --bs-surface: var(--bs-navy-surface);
+    --bs-surface-muted: var(--bs-deep-structure-navy);
+    --bs-surface-raised: var(--bs-navy-surface-raised);
+
+    --bs-text: var(--bs-pearl-white);
+    --bs-text-muted: var(--bs-sky-steel);
+    --bs-text-disabled: #4a5a6e;
+    --bs-text-on-primary: var(--bs-deep-structure-navy);
+    --bs-text-on-accent: var(--bs-deep-structure-navy);
+
+    --bs-border: var(--bs-steel-border);
+    --bs-border-strong: var(--bs-sky-steel);
+
+    --bs-primary: var(--bs-premium-gold);
+    --bs-primary-hover: var(--bs-highlight-gold);
+    --bs-accent: var(--bs-highlight-gold);
+    --bs-link: var(--bs-sky-steel);
+    --bs-focus-ring: var(--bs-highlight-gold);
+
+    --bs-success: #46b383;
+    --bs-success-bg: #18352a;
+    --bs-warning: #f09a3c;
+    --bs-warning-bg: #3a2a14;
+    --bs-error: #e26a6a;
+    --bs-error-bg: #3a1e1e;
+    --bs-info: #4f92dd;
+    --bs-info-bg: #15263a;
+
+    --bs-shadow-1: 0 2px 8px rgb(0 0 0 / 0.32);
+    --bs-shadow-2: 0 4px 16px rgb(0 0 0 / 0.4);
+    --bs-shadow-3: 0 8px 24px rgb(0 0 0 / 0.48);
+  }
+}

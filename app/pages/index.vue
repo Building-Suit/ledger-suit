@@ -3,11 +3,13 @@ import type { Database } from '~~/types/database.types'
 import type { SeriesPoint } from '~/components/RevenueExpenseChart.vue'
 
 definePageMeta({ layout: 'default' })
-useHead({ title: 'Dashboard · Ledger Suit' })
 
 const supabase = useSupabaseClient<Database>()
-const { currentId, can } = useTenant()
+const { currentId, can, baseCurrency } = useTenant()
 const { start } = useAddTransaction()
+const { t, locale } = useI18n()
+
+useHead({ title: () => `${t('dashboard.title')} · ${t('app.name')}` })
 
 const months = ref(6)
 
@@ -71,62 +73,66 @@ const { data: recent } = await useAsyncData('org:recent-transactions', async () 
 }, { watch: [currentId], default: () => [] })
 
 const hasActivity = computed(() => (recent.value?.length ?? 0) > 0)
+
+const payableHint = computed(() =>
+  t('dashboard.payableHint', {
+    amount: formatMoney(summary.value?.accounts_payable_minor ?? 0, baseCurrency.value, locale.value),
+  }),
+)
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-xl font-semibold">Dashboard</h1>
-    </div>
+  <div class="space-y-8">
+    <h1 class="text-2xl font-extrabold">{{ t('dashboard.title') }}</h1>
 
     <EmptyState
       v-if="!hasActivity"
-      title="Add your first transaction to start seeing your financial overview."
-      description="Record an expense or some income and the figures here fill in immediately."
-      :action-label="can('transactions.create') ? 'Add a transaction' : undefined"
+      :title="t('dashboard.emptyTitle')"
+      :description="t('dashboard.emptyHint')"
+      :action-label="can('transactions.create') ? t('dashboard.emptyAction') : undefined"
       @action="start('expense')"
     />
 
     <template v-else>
       <section aria-labelledby="kpis" class="space-y-3">
-        <h2 id="kpis" class="sr-only">Key figures</h2>
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard title="Total assets" :amount-minor="summary?.total_assets_minor" good-direction="neutral" />
-          <KpiCard title="Total liabilities" :amount-minor="summary?.total_liabilities_minor" good-direction="neutral" />
-          <KpiCard title="Net worth" :amount-minor="summary?.net_worth_minor" good-direction="neutral" hint="Assets − liabilities" />
-          <KpiCard title="Cash and bank" :amount-minor="summary?.cash_and_bank_minor" good-direction="neutral" />
+        <h2 id="kpis" class="sr-only">{{ t('dashboard.kpis') }}</h2>
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard :title="t('dashboard.totalAssets')" :amount-minor="summary?.total_assets_minor" good-direction="neutral" />
+          <KpiCard :title="t('dashboard.totalLiabilities')" :amount-minor="summary?.total_liabilities_minor" good-direction="neutral" />
+          <KpiCard :title="t('dashboard.netWorth')" :amount-minor="summary?.net_worth_minor" good-direction="neutral" :hint="t('dashboard.netWorthHint')" />
+          <KpiCard :title="t('dashboard.cashAndBank')" :amount-minor="summary?.cash_and_bank_minor" good-direction="neutral" />
           <KpiCard
-            title="Revenue this month"
+            :title="t('dashboard.revenueThisMonth')"
             :amount-minor="summary?.revenue_this_month_minor"
             :previous-minor="summary?.revenue_previous_month_minor"
             good-direction="up"
           />
           <KpiCard
-            title="Expenses this month"
+            :title="t('dashboard.expensesThisMonth')"
             :amount-minor="summary?.expenses_this_month_minor"
             :previous-minor="summary?.expenses_previous_month_minor"
             good-direction="down"
           />
           <KpiCard
-            title="Net profit this month"
+            :title="t('dashboard.netProfitThisMonth')"
             :amount-minor="summary?.net_profit_this_month_minor"
             :previous-minor="summary?.net_profit_previous_month_minor"
             good-direction="up"
           />
           <KpiCard
-            title="Receivable / payable"
+            :title="t('dashboard.receivable')"
             :amount-minor="summary?.accounts_receivable_minor"
             good-direction="neutral"
-            :hint="`Owed to you. Payable: ${formatMoney(summary?.accounts_payable_minor ?? 0, summary?.base_currency ?? 'EGP')}`"
+            :hint="payableHint"
           />
         </div>
       </section>
 
       <div class="grid gap-6 xl:grid-cols-3">
-        <section class="ls-card p-5 xl:col-span-2" aria-labelledby="chart-heading">
+        <section class="ls-card min-w-0 p-6 xl:col-span-2" aria-labelledby="chart-heading">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 id="chart-heading" class="text-base font-semibold">Revenue vs expenses</h2>
-            <div class="flex gap-1" role="group" aria-label="Chart range">
+            <h2 id="chart-heading" class="text-base font-bold">{{ t('dashboard.revenueVsExpenses') }}</h2>
+            <div class="flex gap-1" role="group" :aria-label="t('dashboard.chartRange')">
               <button
                 v-for="option in [3, 6, 12]"
                 :key="option"
@@ -136,17 +142,17 @@ const hasActivity = computed(() => (recent.value?.length ?? 0) > 0)
                 :aria-pressed="months === option"
                 @click="months = option"
               >
-                {{ option }}m
+                {{ t('dashboard.months', { count: option }) }}
               </button>
             </div>
           </div>
           <RevenueExpenseChart :series="series ?? []" />
         </section>
 
-        <section class="ls-card p-5" aria-labelledby="cash-heading">
-          <h2 id="cash-heading" class="mb-4 text-base font-semibold">Cash position</h2>
+        <section class="ls-card min-w-0 p-6" aria-labelledby="cash-heading">
+          <h2 id="cash-heading" class="mb-4 text-base font-bold">{{ t('dashboard.cashPosition') }}</h2>
           <table v-if="liquid?.length" class="ls-table">
-            <caption class="sr-only">Balances of cash, bank and wallet accounts</caption>
+            <caption class="sr-only">{{ t('dashboard.cashPositionCaption') }}</caption>
             <tbody>
               <tr v-for="(account, index) in liquid" :key="account.account_id ?? index">
                 <td>{{ account.name }}</td>
@@ -156,35 +162,35 @@ const hasActivity = computed(() => (recent.value?.length ?? 0) > 0)
               </tr>
             </tbody>
           </table>
-          <p v-else class="text-sm text-neutral-500">No liquid accounts yet.</p>
+          <p v-else class="text-sm text-fg-muted">{{ t('dashboard.noLiquidAccounts') }}</p>
         </section>
       </div>
 
       <section class="ls-card overflow-hidden" aria-labelledby="recent-heading">
-        <div class="flex items-center justify-between px-5 py-4">
-          <h2 id="recent-heading" class="text-base font-semibold">Recent transactions</h2>
-          <NuxtLink to="/transactions" class="text-sm text-accent-700 hover:underline dark:text-accent-100">
-            View all
+        <div class="flex items-center justify-between px-6 py-4">
+          <h2 id="recent-heading" class="text-base font-bold">{{ t('dashboard.recent') }}</h2>
+          <NuxtLink to="/transactions" class="text-sm font-semibold text-link hover:underline">
+            {{ t('dashboard.viewAll') }}
           </NuxtLink>
         </div>
         <div class="overflow-x-auto">
           <table class="ls-table">
             <thead>
               <tr>
-                <th scope="col">Date</th>
-                <th scope="col">Description</th>
-                <th scope="col">Category</th>
-                <th scope="col">Account</th>
-                <th scope="col">Status</th>
-                <th scope="col" class="text-right">Amount</th>
+                <th scope="col">{{ t('transactions.date') }}</th>
+                <th scope="col">{{ t('transactions.description') }}</th>
+                <th scope="col">{{ t('transactions.category') }}</th>
+                <th scope="col">{{ t('transactions.account') }}</th>
+                <th scope="col">{{ t('transactions.status') }}</th>
+                <th scope="col" class="text-end">{{ t('transactions.amount') }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="row in recent" :key="row.id">
-                <td class="whitespace-nowrap">{{ row.transaction_date }}</td>
-                <td class="max-w-64 truncate">{{ row.description || '—' }}</td>
-                <td>{{ row.category_name || '—' }}</td>
-                <td class="whitespace-nowrap text-neutral-500">
+                <td class="whitespace-nowrap">{{ formatDate(row.transaction_date, locale) }}</td>
+                <td class="max-w-64 truncate">{{ row.description || t('common.dash') }}</td>
+                <td>{{ row.category_name || t('common.dash') }}</td>
+                <td class="whitespace-nowrap text-fg-muted">
                   {{ row.from_account_name }} → {{ row.to_account_name }}
                 </td>
                 <td><StatusBadge :status="row.status" /></td>

@@ -9,9 +9,10 @@ export interface SeriesPoint {
 const props = defineProps<{ series: SeriesPoint[] }>()
 
 const { baseCurrency } = useTenant()
+const { t, locale } = useI18n()
 
-// Hand-drawn SVG rather than a charting library: it keeps the bundle small and
-// the markup accessible, and a paired bar chart needs nothing more.
+// Hand-drawn rather than a charting library: it keeps the bundle small and the
+// markup accessible, and a paired bar chart needs nothing more.
 const CHART_HEIGHT = 160
 
 const max = computed(() =>
@@ -27,7 +28,7 @@ const bars = computed(() =>
     const expense = Number(point.expense_minor)
     return {
       month: point.month,
-      label: new Date(point.month).toLocaleDateString('en', { month: 'short' }),
+      label: formatMonth(point.month, locale.value),
       revenue,
       expense,
       net: Number(point.net_minor),
@@ -40,57 +41,70 @@ const bars = computed(() =>
 
 <template>
   <div>
-    <div class="mb-3 flex items-center gap-4 text-xs text-neutral-500">
+    <div class="mb-4 flex items-center gap-4 text-xs text-fg-muted">
       <span class="flex items-center gap-1.5">
-        <span class="inline-block size-2.5 rounded-sm bg-emerald-500" aria-hidden="true" />
-        Revenue
+        <span class="inline-block size-2.5 rounded-sm bg-[var(--bs-success)]" aria-hidden="true" />
+        {{ t('dashboard.revenue') }}
       </span>
       <span class="flex items-center gap-1.5">
-        <span class="inline-block size-2.5 rounded-sm bg-neutral-400" aria-hidden="true" />
-        Expenses
+        <span class="inline-block size-2.5 rounded-sm bg-[var(--bs-sky-steel)]" aria-hidden="true" />
+        {{ t('dashboard.expenses') }}
       </span>
     </div>
 
+    <!-- Bars and axis labels share one scroll container. Two separate scrollers
+         would let the labels drift out of alignment with the bars they name,
+         and a label row without a scroller overflows the page on narrow
+         screens — which is exactly what it did. -->
     <div class="overflow-x-auto">
-      <div class="flex min-w-full items-end gap-4" :style="{ height: `${CHART_HEIGHT + 8}px` }">
-        <div
-          v-for="bar in bars"
-          :key="bar.month"
-          class="flex min-w-12 flex-1 flex-col justify-end"
-        >
-          <div class="flex items-end justify-center gap-1" :style="{ height: `${CHART_HEIGHT}px` }">
-            <div
-              class="w-4 rounded-t bg-emerald-500"
-              :style="{ height: `${bar.revenueHeight}px` }"
-              :title="`Revenue ${formatMoney(bar.revenue, baseCurrency)}`"
-            />
-            <div
-              class="w-4 rounded-t bg-neutral-400"
-              :style="{ height: `${bar.expenseHeight}px` }"
-              :title="`Expenses ${formatMoney(bar.expense, baseCurrency)}`"
-            />
+      <div class="min-w-max">
+        <div class="flex items-end gap-4" :style="{ height: `${CHART_HEIGHT + 8}px` }">
+          <div
+            v-for="bar in bars"
+            :key="bar.month"
+            class="flex min-w-12 flex-1 flex-col justify-end"
+          >
+            <div class="flex items-end justify-center gap-1" :style="{ height: `${CHART_HEIGHT}px` }">
+              <div
+                class="w-4 rounded-t-chip bg-[var(--bs-success)]"
+                :style="{ height: `${bar.revenueHeight}px` }"
+                :title="`${t('dashboard.revenue')} ${formatMoney(bar.revenue, baseCurrency, locale)}`"
+              />
+              <div
+                class="w-4 rounded-t-chip bg-[var(--bs-sky-steel)]"
+                :style="{ height: `${bar.expenseHeight}px` }"
+                :title="`${t('dashboard.expenses')} ${formatMoney(bar.expense, baseCurrency, locale)}`"
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="mt-2 flex gap-4">
-      <div v-for="bar in bars" :key="`${bar.month}-label`" class="min-w-12 flex-1 text-center text-xs text-neutral-500">
-        {{ bar.label }}
+        <div class="mt-2 flex gap-4">
+          <div
+            v-for="bar in bars"
+            :key="`${bar.month}-label`"
+            class="min-w-12 flex-1 text-center text-xs text-fg-muted"
+          >
+            {{ bar.label }}
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- The same numbers, readable by a screen reader and by anyone who prefers
          a table to a chart. -->
     <details class="mt-4">
-      <summary class="cursor-pointer text-xs text-neutral-500">Show as a table</summary>
-      <table class="ls-table mt-2">
+      <summary class="cursor-pointer text-xs text-fg-muted">{{ t('common.showAsTable') }}</summary>
+      <!-- Its own scroll container: wide content must never make the page
+           scroll horizontally, and Arabic headers are wider than the English. -->
+      <div class="mt-2 overflow-x-auto">
+        <table class="ls-table">
         <thead>
           <tr>
-            <th scope="col">Month</th>
-            <th scope="col" class="text-right">Revenue</th>
-            <th scope="col" class="text-right">Expenses</th>
-            <th scope="col" class="text-right">Net</th>
+            <th scope="col">{{ t('dashboard.month') }}</th>
+            <th scope="col" class="text-end">{{ t('dashboard.revenue') }}</th>
+            <th scope="col" class="text-end">{{ t('dashboard.expenses') }}</th>
+            <th scope="col" class="text-end">{{ t('dashboard.net') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -99,9 +113,10 @@ const bars = computed(() =>
             <td class="ls-num"><MoneyText :amount-minor="bar.revenue" /></td>
             <td class="ls-num"><MoneyText :amount-minor="bar.expense" /></td>
             <td class="ls-num"><MoneyText :amount-minor="bar.net" signed /></td>
-          </tr>
-        </tbody>
-      </table>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </details>
   </div>
 </template>
