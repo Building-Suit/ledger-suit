@@ -1,0 +1,6 @@
+# Native postinstall scripts we explicitly allow to run. Both are build-time
+# only (esbuild is Vite's bundler, unrs-resolver backs the ESLint resolver);
+# neither ships in the deployed bundle.
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
