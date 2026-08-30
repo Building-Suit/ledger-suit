@@ -1,12 +1,28 @@
+# Dependencies
 node_modules
+
+# Nuxt build artefacts
 .nuxt
 .output
 .data
 dist
+.nitro
+.cache
+
+# Environment — only .env.example is ever committed
 .env
 .env.*
 !.env.example
+
+# Supabase CLI local state
+supabase/.branches
+supabase/.temp
+
+# Logs and editor state
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 .DS_Store
 .vscode
 .idea
