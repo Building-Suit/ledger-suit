@@ -1312,6 +1312,13 @@ export type Database = {
             foreignKeyName: "transaction_entries_transaction_same_org"
             columns: ["transaction_id", "organization_id"]
             isOneToOne: false
+            referencedRelation: "transaction_summaries"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transaction_entries_transaction_same_org"
+            columns: ["transaction_id", "organization_id"]
+            isOneToOne: false
             referencedRelation: "transactions"
             referencedColumns: ["id", "organization_id"]
           },
@@ -1352,6 +1359,13 @@ export type Database = {
             columns: ["tag_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "tags"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transaction_tags_transaction_same_org"
+            columns: ["transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_summaries"
             referencedColumns: ["id", "organization_id"]
           },
           {
@@ -1475,6 +1489,13 @@ export type Database = {
             foreignKeyName: "transactions_correction_of_same_org"
             columns: ["correction_of_transaction_id", "organization_id"]
             isOneToOne: false
+            referencedRelation: "transaction_summaries"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transactions_correction_of_same_org"
+            columns: ["correction_of_transaction_id", "organization_id"]
+            isOneToOne: false
             referencedRelation: "transactions"
             referencedColumns: ["id", "organization_id"]
           },
@@ -1503,6 +1524,13 @@ export type Database = {
             foreignKeyName: "transactions_duplicate_of_same_org"
             columns: ["duplicate_of_transaction_id", "organization_id"]
             isOneToOne: false
+            referencedRelation: "transaction_summaries"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transactions_duplicate_of_same_org"
+            columns: ["duplicate_of_transaction_id", "organization_id"]
+            isOneToOne: false
             referencedRelation: "transactions"
             referencedColumns: ["id", "organization_id"]
           },
@@ -1524,7 +1552,21 @@ export type Database = {
             foreignKeyName: "transactions_reversed_by_same_org"
             columns: ["reversed_by_transaction_id", "organization_id"]
             isOneToOne: false
+            referencedRelation: "transaction_summaries"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transactions_reversed_by_same_org"
+            columns: ["reversed_by_transaction_id", "organization_id"]
+            isOneToOne: false
             referencedRelation: "transactions"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transactions_reverses_same_org"
+            columns: ["reverses_transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_summaries"
             referencedColumns: ["id", "organization_id"]
           },
           {
@@ -1664,6 +1706,13 @@ export type Database = {
             foreignKeyName: "transaction_entries_transaction_same_org"
             columns: ["transaction_id", "organization_id"]
             isOneToOne: false
+            referencedRelation: "transaction_summaries"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transaction_entries_transaction_same_org"
+            columns: ["transaction_id", "organization_id"]
+            isOneToOne: false
             referencedRelation: "transactions"
             referencedColumns: ["id", "organization_id"]
           },
@@ -1673,6 +1722,119 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_summaries: {
+        Row: {
+          adjustment_reason: string | null
+          amount_minor: number | null
+          attachment_count: number | null
+          base_amount_minor: number | null
+          category_id: string | null
+          category_name: string | null
+          counterparty_id: string | null
+          counterparty_name: string | null
+          created_at: string | null
+          created_by: string | null
+          created_by_email: string | null
+          created_by_name: string | null
+          currency_code: string | null
+          description: string | null
+          exchange_rate: number | null
+          from_account_id: string | null
+          from_account_name: string | null
+          id: string | null
+          line_count: number | null
+          memo: string | null
+          organization_id: string | null
+          possible_duplicate: boolean | null
+          posted_at: string | null
+          posted_by: string | null
+          posting_date: string | null
+          reference: string | null
+          reversed_by_transaction_id: string | null
+          reverses_transaction_id: string | null
+          source: Database["public"]["Enums"]["transaction_source"] | null
+          status: Database["public"]["Enums"]["transaction_status"] | null
+          tag_ids: string[] | null
+          tags: string[] | null
+          to_account_id: string | null
+          to_account_name: string | null
+          transaction_date: string | null
+          type: Database["public"]["Enums"]["transaction_type"] | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_category_same_org"
+            columns: ["category_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transactions_counterparty_same_org"
+            columns: ["counterparty_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "transactions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_posted_by_fkey"
+            columns: ["posted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_reversed_by_same_org"
+            columns: ["reversed_by_transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_summaries"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transactions_reversed_by_same_org"
+            columns: ["reversed_by_transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transactions_reverses_same_org"
+            columns: ["reverses_transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_summaries"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "transactions_reverses_same_org"
+            columns: ["reverses_transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id", "organization_id"]
           },
         ]
       }
@@ -1924,6 +2086,19 @@ export type Database = {
           transaction_id: string
         }[]
       }
+      report_monthly_series: {
+        Args: {
+          p_as_of_date?: string
+          p_months?: number
+          p_organization_id: string
+        }
+        Returns: {
+          expense_minor: number
+          month: string
+          net_minor: number
+          revenue_minor: number
+        }[]
+      }
       report_profit_and_loss: {
         Args: {
           p_from_date: string
@@ -1956,6 +2131,48 @@ export type Database = {
           p_transaction_id: string
         }
         Returns: string
+      }
+      search_transactions: {
+        Args: {
+          p_account_ids?: string[]
+          p_category_ids?: string[]
+          p_counterparty_ids?: string[]
+          p_created_by_ids?: string[]
+          p_direction?: string
+          p_from_date?: string
+          p_limit?: number
+          p_max_amount_minor?: number
+          p_min_amount_minor?: number
+          p_offset?: number
+          p_organization_id: string
+          p_search?: string
+          p_sort?: string
+          p_statuses?: Database["public"]["Enums"]["transaction_status"][]
+          p_tag_ids?: string[]
+          p_to_date?: string
+          p_types?: Database["public"]["Enums"]["transaction_type"][]
+        }
+        Returns: {
+          amount_minor: number
+          attachment_count: number
+          base_amount_minor: number
+          category_name: string
+          counterparty_name: string
+          created_by_name: string
+          currency_code: string
+          description: string
+          from_account_name: string
+          id: string
+          possible_duplicate: boolean
+          reference: string
+          reversed_by_transaction_id: string
+          status: Database["public"]["Enums"]["transaction_status"]
+          tags: string[]
+          to_account_name: string
+          total_count: number
+          transaction_date: string
+          type: Database["public"]["Enums"]["transaction_type"]
+        }[]
       }
       void_transaction: {
         Args: { p_reason?: string; p_transaction_id: string }

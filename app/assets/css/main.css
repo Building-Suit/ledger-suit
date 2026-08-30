@@ -2,6 +2,14 @@
 
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* One accent, used sparingly. Financial state is carried by positive /
+     negative colours, which are never the only cue — every status also has a
+     text label, so the UI stays readable without colour vision. */
+  --color-accent-50: oklch(0.97 0.02 256);
+  --color-accent-100: oklch(0.93 0.04 256);
+  --color-accent-600: oklch(0.52 0.18 256);
+  --color-accent-700: oklch(0.45 0.17 256);
 }
 
 :root {
@@ -10,4 +18,83 @@
 
 body {
   @apply bg-neutral-50 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+}
+
+/* Focus is always visible. Never remove it. */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-accent-600;
+}
+
+@layer components {
+  .ls-card {
+    @apply rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900;
+  }
+
+  .ls-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-neutral-300
+           px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors
+           hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50
+           dark:border-neutral-700 dark:hover:bg-neutral-800;
+  }
+
+  .ls-btn-primary {
+    @apply border-transparent bg-neutral-900 text-white hover:bg-neutral-700
+           dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200;
+  }
+
+  .ls-btn-danger {
+    @apply border-transparent bg-red-600 text-white hover:bg-red-700;
+  }
+
+  .ls-btn-sm {
+    @apply px-2 py-1 text-xs;
+  }
+
+  .ls-input {
+    @apply w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm
+           placeholder:text-neutral-400 disabled:opacity-50
+           dark:border-neutral-700 dark:bg-neutral-950;
+  }
+
+  .ls-label {
+    @apply mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300;
+  }
+
+  .ls-hint {
+    @apply mt-1 text-xs text-neutral-500;
+  }
+
+  .ls-badge {
+    @apply inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium
+           ring-1 ring-inset;
+  }
+
+  .ls-table {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .ls-table th {
+    @apply border-b border-neutral-200 px-3 py-2 text-left text-xs font-semibold
+           tracking-wide text-neutral-500 uppercase dark:border-neutral-800;
+  }
+
+  .ls-table td {
+    @apply border-b border-neutral-100 px-3 py-2 align-middle dark:border-neutral-800/60;
+  }
+
+  .ls-num {
+    @apply text-right tabular-nums;
+  }
+
+  .ls-nav-link {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium
+           text-neutral-600 transition-colors hover:bg-neutral-100
+           hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800
+           dark:hover:text-neutral-100;
+  }
+
+  .ls-nav-link-active {
+    @apply bg-neutral-900 text-white hover:bg-neutral-900 hover:text-white
+           dark:bg-white dark:text-neutral-900 dark:hover:bg-white dark:hover:text-neutral-900;
+  }
 }
