@@ -414,6 +414,220 @@ export type Database = {
           },
         ]
       }
+      commitment_settlements: {
+        Row: {
+          amount_minor: number
+          commitment_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          settled_on: string
+          transaction_id: string
+        }
+        Insert: {
+          amount_minor: number
+          commitment_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          settled_on: string
+          transaction_id: string
+        }
+        Update: {
+          amount_minor?: number
+          commitment_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          settled_on?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commitment_settlements_commitment_same_org"
+            columns: ["commitment_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "commitment_states"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitment_settlements_commitment_same_org"
+            columns: ["commitment_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "commitments"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitment_settlements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commitment_settlements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commitment_settlements_transaction_same_org"
+            columns: ["transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_summaries"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitment_settlements_transaction_same_org"
+            columns: ["transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      commitments: {
+        Row: {
+          amount_minor: number
+          auto_convert: boolean
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          counterparty_id: string | null
+          created_at: string
+          created_by: string | null
+          currency_code: string
+          description: string | null
+          due_date: string
+          id: string
+          linked_account_id: string | null
+          linked_category_id: string | null
+          metadata: Json
+          notes: string | null
+          organization_id: string
+          original_due_date: string | null
+          recurring_rule_id: string | null
+          reminder_days_before: number
+          settled_amount_minor: number
+          status: Database["public"]["Enums"]["commitment_status"]
+          title: string
+          type: Database["public"]["Enums"]["commitment_type"]
+          updated_at: string
+        }
+        Insert: {
+          amount_minor: number
+          auto_convert?: boolean
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          counterparty_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency_code: string
+          description?: string | null
+          due_date: string
+          id?: string
+          linked_account_id?: string | null
+          linked_category_id?: string | null
+          metadata?: Json
+          notes?: string | null
+          organization_id: string
+          original_due_date?: string | null
+          recurring_rule_id?: string | null
+          reminder_days_before?: number
+          settled_amount_minor?: number
+          status?: Database["public"]["Enums"]["commitment_status"]
+          title: string
+          type: Database["public"]["Enums"]["commitment_type"]
+          updated_at?: string
+        }
+        Update: {
+          amount_minor?: number
+          auto_convert?: boolean
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
+          counterparty_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          linked_account_id?: string | null
+          linked_category_id?: string | null
+          metadata?: Json
+          notes?: string | null
+          organization_id?: string
+          original_due_date?: string | null
+          recurring_rule_id?: string | null
+          reminder_days_before?: number
+          settled_amount_minor?: number
+          status?: Database["public"]["Enums"]["commitment_status"]
+          title?: string
+          type?: Database["public"]["Enums"]["commitment_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commitments_account_same_org"
+            columns: ["linked_account_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "account_balances"
+            referencedColumns: ["account_id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitments_account_same_org"
+            columns: ["linked_account_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitments_category_same_org"
+            columns: ["linked_category_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitments_counterparty_same_org"
+            columns: ["counterparty_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commitments_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "commitments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commitments_rule_same_org"
+            columns: ["recurring_rule_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_rules"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
       counterparties: {
         Row: {
           archived_at: string | null
@@ -856,6 +1070,155 @@ export type Database = {
           {
             foreignKeyName: "profiles_default_organization_id_fkey"
             columns: ["default_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_occurrences: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          occurrence_date: string
+          organization_id: string
+          posted_at: string | null
+          rule_id: string
+          status: Database["public"]["Enums"]["occurrence_status"]
+          transaction_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          occurrence_date: string
+          organization_id: string
+          posted_at?: string | null
+          rule_id: string
+          status?: Database["public"]["Enums"]["occurrence_status"]
+          transaction_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          occurrence_date?: string
+          organization_id?: string
+          posted_at?: string | null
+          rule_id?: string
+          status?: Database["public"]["Enums"]["occurrence_status"]
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_occurrences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_occurrences_rule_same_org"
+            columns: ["rule_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_rules"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "recurring_occurrences_transaction_same_org"
+            columns: ["transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_summaries"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "recurring_occurrences_transaction_same_org"
+            columns: ["transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      recurring_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          failure_count: number
+          frequency: Database["public"]["Enums"]["recurrence_frequency"]
+          id: string
+          interval_count: number
+          last_error: string | null
+          max_occurrences: number | null
+          mode: Database["public"]["Enums"]["recurring_mode"]
+          name: string
+          next_run_on: string | null
+          occurrences_created: number
+          organization_id: string
+          previous_run_on: string | null
+          start_date: string
+          status: Database["public"]["Enums"]["recurring_status"]
+          template: Json
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          failure_count?: number
+          frequency: Database["public"]["Enums"]["recurrence_frequency"]
+          id?: string
+          interval_count?: number
+          last_error?: string | null
+          max_occurrences?: number | null
+          mode?: Database["public"]["Enums"]["recurring_mode"]
+          name: string
+          next_run_on?: string | null
+          occurrences_created?: number
+          organization_id: string
+          previous_run_on?: string | null
+          start_date: string
+          status?: Database["public"]["Enums"]["recurring_status"]
+          template: Json
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          failure_count?: number
+          frequency?: Database["public"]["Enums"]["recurrence_frequency"]
+          id?: string
+          interval_count?: number
+          last_error?: string | null
+          max_occurrences?: number | null
+          mode?: Database["public"]["Enums"]["recurring_mode"]
+          name?: string
+          next_run_on?: string | null
+          occurrences_created?: number
+          organization_id?: string
+          previous_run_on?: string | null
+          start_date?: string
+          status?: Database["public"]["Enums"]["recurring_status"]
+          template?: Json
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_rules_organization_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -1636,6 +1999,97 @@ export type Database = {
           },
         ]
       }
+      commitment_states: {
+        Row: {
+          amount_minor: number | null
+          auto_convert: boolean | null
+          cancelled_at: string | null
+          cancelled_reason: string | null
+          counterparty_id: string | null
+          created_at: string | null
+          created_by: string | null
+          currency_code: string | null
+          days_until_due: number | null
+          description: string | null
+          display_status: string | null
+          due_date: string | null
+          id: string | null
+          linked_account_id: string | null
+          linked_category_id: string | null
+          metadata: Json | null
+          notes: string | null
+          organization_id: string | null
+          organization_timezone: string | null
+          organization_today: string | null
+          original_due_date: string | null
+          outstanding_minor: number | null
+          recurring_rule_id: string | null
+          reminder_days_before: number | null
+          settled_amount_minor: number | null
+          status: Database["public"]["Enums"]["commitment_status"] | null
+          title: string | null
+          type: Database["public"]["Enums"]["commitment_type"] | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commitments_account_same_org"
+            columns: ["linked_account_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "account_balances"
+            referencedColumns: ["account_id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitments_account_same_org"
+            columns: ["linked_account_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitments_category_same_org"
+            columns: ["linked_category_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitments_counterparty_same_org"
+            columns: ["counterparty_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "counterparties"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commitments_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "commitments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commitments_rule_same_org"
+            columns: ["recurring_rule_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_rules"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
       ledger_entries: {
         Row: {
           account_code: string | null
@@ -1844,9 +2298,17 @@ export type Database = {
         Args: { p_feature_key: string; p_organization_id: string }
         Returns: boolean
       }
+      cancel_commitment: {
+        Args: { p_commitment_id: string; p_reason?: string }
+        Returns: string
+      }
       check_balance_sheet_integrity: {
         Args: { p_as_of_date?: string; p_organization_id: string }
         Returns: Json
+      }
+      confirm_recurring_occurrence: {
+        Args: { p_occurrence_id: string }
+        Returns: string
       }
       create_adjustment: {
         Args: {
@@ -1858,6 +2320,24 @@ export type Database = {
           p_organization_id: string
           p_reason: string
           p_transaction_date: string
+        }
+        Returns: string
+      }
+      create_commitment: {
+        Args: {
+          p_amount_minor: number
+          p_auto_convert?: boolean
+          p_counterparty_id?: string
+          p_currency_code?: string
+          p_description?: string
+          p_due_date: string
+          p_linked_account_id?: string
+          p_linked_category_id?: string
+          p_notes?: string
+          p_organization_id: string
+          p_reminder_days_before?: number
+          p_title: string
+          p_type: Database["public"]["Enums"]["commitment_type"]
         }
         Returns: string
       }
@@ -1892,6 +2372,21 @@ export type Database = {
         }
         Returns: string
       }
+      create_recurring_rule: {
+        Args: {
+          p_end_date?: string
+          p_frequency: Database["public"]["Enums"]["recurrence_frequency"]
+          p_interval_count?: number
+          p_max_occurrences?: number
+          p_mode?: Database["public"]["Enums"]["recurring_mode"]
+          p_name: string
+          p_organization_id: string
+          p_start_date: string
+          p_template: Json
+          p_transaction_type: Database["public"]["Enums"]["transaction_type"]
+        }
+        Returns: string
+      }
       dashboard_summary: {
         Args: { p_as_of_date?: string; p_organization_id: string }
         Returns: Json
@@ -1904,6 +2399,10 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: string[]
       }
+      notify_due_commitments: {
+        Args: { p_organization_id: string }
+        Returns: number
+      }
       post_opening_balance: {
         Args: {
           p_as_of_date: string
@@ -1915,6 +2414,14 @@ export type Database = {
         Returns: string
       }
       post_transaction: { Args: { p_transaction_id: string }; Returns: string }
+      postpone_commitment: {
+        Args: {
+          p_commitment_id: string
+          p_new_due_date: string
+          p_reason?: string
+        }
+        Returns: string
+      }
       record_asset_purchase: {
         Args: {
           p_amount_minor: number
@@ -2132,6 +2639,16 @@ export type Database = {
         }
         Returns: string
       }
+      run_recurring_schedule: {
+        Args: { p_organization_id: string; p_through_date?: string }
+        Returns: {
+          message: string
+          occurrence_date: string
+          rule_id: string
+          status: Database["public"]["Enums"]["occurrence_status"]
+          transaction_id: string
+        }[]
+      }
       search_transactions: {
         Args: {
           p_account_ids?: string[]
@@ -2173,6 +2690,29 @@ export type Database = {
           transaction_date: string
           type: Database["public"]["Enums"]["transaction_type"]
         }[]
+      }
+      set_recurring_rule_status: {
+        Args: {
+          p_rule_id: string
+          p_status: Database["public"]["Enums"]["recurring_status"]
+        }
+        Returns: string
+      }
+      settle_commitment: {
+        Args: {
+          p_amount_minor?: number
+          p_commitment_id: string
+          p_description?: string
+          p_idempotency_key?: string
+          p_payment_account_id: string
+          p_reference?: string
+          p_settled_on?: string
+        }
+        Returns: string
+      }
+      skip_recurring_occurrence: {
+        Args: { p_occurrence_id: string; p_reason?: string }
+        Returns: string
       }
       void_transaction: {
         Args: { p_reason?: string; p_transaction_id: string }
@@ -2230,6 +2770,17 @@ export type Database = {
         | "cancelled"
       cash_flow_section: "operating" | "investing" | "financing" | "none"
       category_kind: "income" | "expense" | "asset" | "liability" | "other"
+      commitment_status:
+        | "draft"
+        | "upcoming"
+        | "partially_paid"
+        | "paid"
+        | "cancelled"
+      commitment_type:
+        | "payable"
+        | "receivable"
+        | "scheduled_expense"
+        | "scheduled_income"
       counterparty_type:
         | "customer"
         | "vendor"
@@ -2241,6 +2792,7 @@ export type Database = {
       invitation_status: "pending" | "accepted" | "revoked" | "expired"
       membership_status: "active" | "suspended"
       normal_balance: "debit" | "credit"
+      occurrence_status: "pending" | "posted" | "skipped" | "failed"
       organization_role:
         | "owner"
         | "admin"
@@ -2254,6 +2806,14 @@ export type Database = {
         | "suspended"
         | "cancelled"
         | "archived"
+      recurrence_frequency:
+        | "daily"
+        | "weekly"
+        | "monthly"
+        | "quarterly"
+        | "yearly"
+      recurring_mode: "auto_post" | "requires_confirmation"
+      recurring_status: "active" | "paused" | "completed" | "failed"
       saved_view_visibility: "private" | "organization"
       transaction_source:
         | "manual"
@@ -2466,6 +3026,19 @@ export const Constants = {
       ],
       cash_flow_section: ["operating", "investing", "financing", "none"],
       category_kind: ["income", "expense", "asset", "liability", "other"],
+      commitment_status: [
+        "draft",
+        "upcoming",
+        "partially_paid",
+        "paid",
+        "cancelled",
+      ],
+      commitment_type: [
+        "payable",
+        "receivable",
+        "scheduled_expense",
+        "scheduled_income",
+      ],
       counterparty_type: [
         "customer",
         "vendor",
@@ -2478,6 +3051,7 @@ export const Constants = {
       invitation_status: ["pending", "accepted", "revoked", "expired"],
       membership_status: ["active", "suspended"],
       normal_balance: ["debit", "credit"],
+      occurrence_status: ["pending", "posted", "skipped", "failed"],
       organization_role: [
         "owner",
         "admin",
@@ -2493,6 +3067,15 @@ export const Constants = {
         "cancelled",
         "archived",
       ],
+      recurrence_frequency: [
+        "daily",
+        "weekly",
+        "monthly",
+        "quarterly",
+        "yearly",
+      ],
+      recurring_mode: ["auto_post", "requires_confirmation"],
+      recurring_status: ["active", "paused", "completed", "failed"],
       saved_view_visibility: ["private", "organization"],
       transaction_source: [
         "manual",
