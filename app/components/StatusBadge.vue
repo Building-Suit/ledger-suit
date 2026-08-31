@@ -12,13 +12,22 @@ const { t, te } = useI18n()
 
 const TONES: Record<string, string> = {
   posted: 'bg-[var(--bs-status-success-bg)] text-[var(--bs-status-success)]',
+  paid: 'bg-[var(--bs-status-success-bg)] text-[var(--bs-status-success)]',
+  active: 'bg-[var(--bs-status-success-bg)] text-[var(--bs-status-success)]',
   scheduled: 'bg-[var(--bs-status-info-bg)] text-[var(--bs-status-info)]',
   pending: 'bg-[var(--bs-status-warning-bg)] text-[var(--bs-status-warning)]',
   pending_approval: 'bg-[var(--bs-status-warning-bg)] text-[var(--bs-status-warning)]',
+  due: 'bg-[var(--bs-status-warning-bg)] text-[var(--bs-status-warning)]',
+  due_soon: 'bg-[var(--bs-status-warning-bg)] text-[var(--bs-status-warning)]',
+  partially_paid: 'bg-[var(--bs-status-warning-bg)] text-[var(--bs-status-warning)]',
   reversed: 'bg-[var(--bs-status-info-bg)] text-[var(--bs-status-info)]',
   failed: 'bg-[var(--bs-status-error-bg)] text-[var(--bs-status-error)]',
+  overdue: 'bg-[var(--bs-status-error-bg)] text-[var(--bs-status-error)]',
   draft: 'bg-[var(--bs-surface-muted)] text-[var(--bs-text-muted)]',
   voided: 'bg-[var(--bs-surface-muted)] text-[var(--bs-text-muted)]',
+  cancelled: 'bg-[var(--bs-surface-muted)] text-[var(--bs-text-muted)]',
+  paused: 'bg-[var(--bs-surface-muted)] text-[var(--bs-text-muted)]',
+  skipped: 'bg-[var(--bs-surface-muted)] text-[var(--bs-text-muted)]',
 }
 
 const key = computed(() => props.status ?? 'unknown')

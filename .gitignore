@@ -8,6 +8,8 @@ node_modules
 dist
 .nitro
 .cache
+test-results
+playwright-report
 
 # Environment — only .env.example is ever committed
 .env

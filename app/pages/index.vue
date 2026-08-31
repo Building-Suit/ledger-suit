@@ -7,11 +7,21 @@ definePageMeta({ layout: 'default' })
 const supabase = useSupabaseClient<Database>()
 const { currentId, can, baseCurrency } = useTenant()
 const { start } = useAddTransaction()
+const { show: showOperations } = useOperationsCenter()
 const { t, locale } = useI18n()
 
 useHead({ title: () => `${t('dashboard.title')} · ${t('app.name')}` })
 
 const months = ref(6)
+const customRange = ref(false)
+const customFrom = ref(new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1).toISOString().slice(0, 10))
+const customTo = ref(new Date().toISOString().slice(0, 10))
+const seriesMonths = computed(() => {
+  if (!customRange.value) return months.value
+  const from = new Date(`${customFrom.value}T00:00:00`)
+  const to = new Date(`${customTo.value}T00:00:00`)
+  return Math.max(1, Math.min(60, (to.getFullYear() - from.getFullYear()) * 12 + to.getMonth() - from.getMonth() + 1))
+})
 
 interface Summary {
   base_currency: string
@@ -44,11 +54,12 @@ const { data: series } = await useAsyncData<SeriesPoint[]>('org:dashboard-series
   if (!currentId.value) return []
   const { data, error } = await supabase.rpc('report_monthly_series', {
     p_organization_id: currentId.value,
-    p_months: months.value,
+    p_months: seriesMonths.value,
+    p_as_of_date: customRange.value ? customTo.value : undefined,
   })
   if (error) throw error
   return (data ?? []) as unknown as SeriesPoint[]
-}, { watch: [currentId, months], default: () => [] })
+}, { watch: [currentId, months, customRange, customFrom, customTo], default: () => [] })
 
 const { data: liquid } = await useAsyncData('org:cash-position', async () => {
   if (!currentId.value) return []
@@ -73,6 +84,16 @@ const { data: recent } = await useAsyncData('org:recent-transactions', async () 
 }, { watch: [currentId], default: () => [] })
 
 const hasActivity = computed(() => (recent.value?.length ?? 0) > 0)
+
+const { data: commitments } = await useAsyncData('org:dashboard-commitments', async () => {
+  if (!currentId.value || !can('commitments.read')) return []
+  const { data, error } = await supabase.from('commitment_states').select('id,title,due_date,display_status,outstanding_minor,currency_code').eq('organization_id', currentId.value).in('display_status', ['due', 'due_soon', 'overdue', 'partially_paid']).order('due_date').limit(8)
+  if (error) throw error
+  return data ?? []
+}, { watch: [currentId], default: () => [] })
+
+const upcomingCommitments = computed(() => commitments.value.filter(c => c.display_status !== 'overdue').reduce((sum, c) => sum + Number(c.outstanding_minor ?? 0), 0))
+const overdueCommitments = computed(() => commitments.value.filter(c => c.display_status === 'overdue').reduce((sum, c) => sum + Number(c.outstanding_minor ?? 0), 0))
 
 const payableHint = computed(() =>
   t('dashboard.payableHint', {
@@ -125,6 +146,8 @@ const payableHint = computed(() =>
             good-direction="neutral"
             :hint="payableHint"
           />
+          <KpiCard v-if="can('commitments.read')" :title="t('dashboard.upcomingCommitments')" :amount-minor="upcomingCommitments" good-direction="neutral" />
+          <KpiCard v-if="can('commitments.read')" :title="t('dashboard.overdueCommitments')" :amount-minor="overdueCommitments" good-direction="down" />
         </div>
       </section>
 
@@ -140,12 +163,14 @@ const payableHint = computed(() =>
                 class="ls-btn ls-btn-sm"
                 :class="{ 'ls-btn-primary': months === option }"
                 :aria-pressed="months === option"
-                @click="months = option"
+                @click="months = option; customRange = false"
               >
                 {{ t('dashboard.months', { count: option }) }}
               </button>
+              <button type="button" class="ls-btn ls-btn-sm" :class="{ 'ls-btn-primary': customRange }" @click="customRange = !customRange">{{ t('dashboard.custom') }}</button>
             </div>
           </div>
+          <div v-if="customRange" class="mb-4 flex flex-wrap gap-2"><input v-model="customFrom" type="date" class="ls-input w-auto"><input v-model="customTo" type="date" class="ls-input w-auto"></div>
           <RevenueExpenseChart :series="series ?? []" />
         </section>
 
@@ -165,6 +190,12 @@ const payableHint = computed(() =>
           <p v-else class="text-sm text-fg-muted">{{ t('dashboard.noLiquidAccounts') }}</p>
         </section>
       </div>
+
+      <section v-if="can('commitments.read')" class="ls-card overflow-hidden" aria-labelledby="commitments-heading">
+        <div class="flex items-center justify-between px-6 py-4"><h2 id="commitments-heading" class="text-base font-bold">{{ t('dashboard.commitments') }}</h2><button class="ls-btn ls-btn-sm" @click="showOperations('commitments')">{{ t('dashboard.manage') }}</button></div>
+        <div v-if="commitments.length" class="overflow-x-auto"><table class="ls-table"><tbody><tr v-for="(item, index) in commitments" :key="item.id ?? index"><td>{{ item.title }}</td><td>{{ formatDate(item.due_date, locale) }}</td><td><StatusBadge :status="item.display_status ?? 'unknown'" /></td><td class="ls-num"><MoneyText :amount-minor="item.outstanding_minor ?? 0" :currency="item.currency_code ?? undefined" /></td></tr></tbody></table></div>
+        <p v-else class="px-6 pb-5 text-sm text-fg-muted">{{ t('dashboard.noCommitments') }}</p>
+      </section>
 
       <section class="ls-card overflow-hidden" aria-labelledby="recent-heading">
         <div class="flex items-center justify-between px-6 py-4">

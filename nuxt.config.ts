@@ -23,6 +23,7 @@ export default defineNuxtConfig({
   },
 
   i18n: {
+    baseUrl: import.meta.env.APP_BASE_URL || 'http://localhost:3000',
     defaultLocale: 'en',
     // No URL prefix: this is an application, not a marketing site, and the
     // chosen language is a user preference rather than a route.

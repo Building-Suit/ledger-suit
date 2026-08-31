@@ -3,10 +3,10 @@
 Multi-tenant financial management SaaS. Simpler than a spreadsheet to operate,
 backed by a real double-entry ledger.
 
-This repository currently contains **Phase 1 — the accounting foundation**:
-schema, tenancy, authorization, the posting engine, row level security,
-reporting RPCs, seed data and an automated test suite. The four product pages
-(Dashboard, Transactions, Accounts, Reports) arrive in Phase 2.
+This repository contains **Phases 1–3**: the multi-tenant accounting
+foundation, the four core-finance product pages, and the operational workflows
+for commitments, recurring transactions, counterparties, tags, attachments,
+notifications, organizations and team invitations.
 
 ---
 
@@ -60,6 +60,7 @@ development rather than only in the test suite.
 | `pnpm build` | Production build |
 | `pnpm typecheck` | `vue-tsc` over the whole app |
 | `pnpm lint` | ESLint |
+| `pnpm test:e2e` | Playwright journeys against local Supabase |
 | `pnpm db:start` / `pnpm db:stop` | Local Supabase stack |
 | `pnpm db:reset` | Drop, replay all migrations, apply `supabase/seed.sql` |
 | `pnpm db:test` | pgTAP suite (`supabase/tests/`) |
@@ -105,9 +106,9 @@ types/database.types.ts Generated from the schema; do not hand-edit
 
 ---
 
-## What Phase 1 guarantees
+## What Phases 1–3 guarantee
 
-Verified by `pnpm db:test` (45 assertions, all passing):
+Verified by `pnpm db:test` (81 assertions) and `pnpm test:e2e`:
 
 - every posting produces balanced ledger entries — `SUM(debits) = SUM(credits)`
 - reversals return the affected accounts to exactly their prior balance
@@ -119,6 +120,12 @@ Verified by `pnpm db:test` (45 assertions, all passing):
 - a foreign account id cannot be smuggled into your own organization's posting
 - posting into a locked period is refused without `books.override_lock`
 - retrying a posting with the same idempotency key returns the original record
+- commitments support full/partial settlement, postponement, cancellation,
+  reminders and controlled automatic conversion into real ledger transactions
+- recurring occurrences are idempotent, confirmable, skippable and retryable
+- organization invitations are created and accepted through controlled RPCs
+- direct client mutation cannot bypass financial or notification workflows
+- the Dashboard, Transactions, Accounts and Reports journeys run end-to-end
 
 See [docs/architecture.md](docs/architecture.md) for how.
 
@@ -129,3 +136,4 @@ See [docs/architecture.md](docs/architecture.md) for how.
 - [Architecture](docs/architecture.md) — tenancy, ledger design, posting engine
 - [Environment variables](docs/environment.md)
 - [Deployment](docs/deployment.md)
+- [Phase 1–3 status](docs/phase-1-to-3-status.md)
