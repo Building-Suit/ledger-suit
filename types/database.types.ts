@@ -494,6 +494,7 @@ export type Database = {
         Row: {
           amount_minor: number
           auto_convert: boolean
+          auto_payment_account_id: string | null
           cancelled_at: string | null
           cancelled_reason: string | null
           counterparty_id: string | null
@@ -520,6 +521,7 @@ export type Database = {
         Insert: {
           amount_minor: number
           auto_convert?: boolean
+          auto_payment_account_id?: string | null
           cancelled_at?: string | null
           cancelled_reason?: string | null
           counterparty_id?: string | null
@@ -546,6 +548,7 @@ export type Database = {
         Update: {
           amount_minor?: number
           auto_convert?: boolean
+          auto_payment_account_id?: string | null
           cancelled_at?: string | null
           cancelled_reason?: string | null
           counterparty_id?: string | null
@@ -580,6 +583,20 @@ export type Database = {
           {
             foreignKeyName: "commitments_account_same_org"
             columns: ["linked_account_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitments_auto_payment_account_same_org"
+            columns: ["auto_payment_account_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "account_balances"
+            referencedColumns: ["account_id", "organization_id"]
+          },
+          {
+            foreignKeyName: "commitments_auto_payment_account_same_org"
+            columns: ["auto_payment_account_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id", "organization_id"]
@@ -1078,9 +1095,11 @@ export type Database = {
       }
       recurring_occurrences: {
         Row: {
+          attempt_count: number
           created_at: string
           error_message: string | null
           id: string
+          last_attempt_at: string | null
           occurrence_date: string
           organization_id: string
           posted_at: string | null
@@ -1089,9 +1108,11 @@ export type Database = {
           transaction_id: string | null
         }
         Insert: {
+          attempt_count?: number
           created_at?: string
           error_message?: string | null
           id?: string
+          last_attempt_at?: string | null
           occurrence_date: string
           organization_id: string
           posted_at?: string | null
@@ -1100,9 +1121,11 @@ export type Database = {
           transaction_id?: string | null
         }
         Update: {
+          attempt_count?: number
           created_at?: string
           error_message?: string | null
           id?: string
+          last_attempt_at?: string | null
           occurrence_date?: string
           organization_id?: string
           posted_at?: string | null
@@ -2294,6 +2317,11 @@ export type Database = {
       }
     }
     Functions: {
+      accept_organization_invitation: {
+        Args: { p_token: string }
+        Returns: string
+      }
+      archive_account: { Args: { p_account_id: string }; Returns: string }
       can_use_feature: {
         Args: { p_feature_key: string; p_organization_id: string }
         Returns: boolean
@@ -2308,6 +2336,18 @@ export type Database = {
       }
       confirm_recurring_occurrence: {
         Args: { p_occurrence_id: string }
+        Returns: string
+      }
+      create_account: {
+        Args: {
+          p_code?: string
+          p_currency?: string
+          p_name: string
+          p_organization_id: string
+          p_parent_account_id?: string
+          p_subtype: Database["public"]["Enums"]["account_subtype"]
+          p_type: Database["public"]["Enums"]["account_type"]
+        }
         Returns: string
       }
       create_adjustment: {
@@ -2372,6 +2412,17 @@ export type Database = {
         }
         Returns: string
       }
+      create_organization_invitation: {
+        Args: {
+          p_email: string
+          p_organization_id: string
+          p_role?: Database["public"]["Enums"]["organization_role"]
+        }
+        Returns: {
+          invitation_id: string
+          invitation_token: string
+        }[]
+      }
       create_recurring_rule: {
         Args: {
           p_end_date?: string
@@ -2394,6 +2445,14 @@ export type Database = {
       get_limit: {
         Args: { p_limit_key: string; p_organization_id: string }
         Returns: number
+      }
+      mark_all_notifications_read: {
+        Args: { p_organization_id: string }
+        Returns: number
+      }
+      mark_notification_read: {
+        Args: { p_notification_id: string; p_read?: boolean }
+        Returns: string
       }
       my_capabilities: {
         Args: { p_organization_id: string }
@@ -2631,6 +2690,14 @@ export type Database = {
           type: Database["public"]["Enums"]["account_type"]
         }[]
       }
+      retry_recurring_occurrence: {
+        Args: { p_occurrence_id: string }
+        Returns: {
+          message: string
+          status: Database["public"]["Enums"]["occurrence_status"]
+          transaction_id: string
+        }[]
+      }
       reverse_transaction: {
         Args: {
           p_reason: string
@@ -2638,6 +2705,15 @@ export type Database = {
           p_transaction_id: string
         }
         Returns: string
+      }
+      run_due_commitment_conversions: {
+        Args: { p_organization_id: string; p_through_date?: string }
+        Returns: {
+          commitment_id: string
+          message: string
+          status: string
+          transaction_id: string
+        }[]
       }
       run_recurring_schedule: {
         Args: { p_organization_id: string; p_through_date?: string }
@@ -2712,6 +2788,26 @@ export type Database = {
       }
       skip_recurring_occurrence: {
         Args: { p_occurrence_id: string; p_reason?: string }
+        Returns: string
+      }
+      update_account: {
+        Args: { p_account_id: string; p_code?: string; p_name: string }
+        Returns: string
+      }
+      update_commitment: {
+        Args: {
+          p_amount_minor?: number
+          p_auto_convert?: boolean
+          p_auto_payment_account_id?: string
+          p_commitment_id: string
+          p_counterparty_id?: string
+          p_description?: string
+          p_linked_account_id?: string
+          p_linked_category_id?: string
+          p_notes?: string
+          p_reminder_days_before?: number
+          p_title: string
+        }
         Returns: string
       }
       void_transaction: {

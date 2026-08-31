@@ -14,6 +14,8 @@ const user = useSupabaseUser()
 const route = useRoute()
 const { t } = useI18n()
 const { current, loadOrganizations, loading } = useTenant()
+const { can } = useTenant()
+const { show: showOperations } = useOperationsCenter()
 const { restore } = useTheme()
 
 const mobileNavOpen = ref(false)
@@ -77,6 +79,7 @@ async function signOut() {
         </nav>
 
         <div class="mt-auto space-y-2 border-t border-[var(--bs-border)] pt-3">
+          <TeamMenu />
           <SettingsMenu />
           <p class="truncate px-1 text-xs text-fg-muted">{{ user?.email }}</p>
           <button type="button" class="ls-btn ls-btn-sm w-full" @click="signOut">
@@ -108,23 +111,25 @@ async function signOut() {
           <p class="truncate text-sm font-semibold">{{ current?.name }}</p>
         </div>
 
+        <button
+          v-if="can('commitments.read') || can('recurring.read')"
+          type="button" class="ls-btn ls-btn-sm" @click="showOperations('commitments')"
+        >{{ t('operations.title') }}</button>
+        <NotificationMenu />
         <AddMenu />
       </header>
 
       <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 lg:px-8">
         <div v-if="loading" class="text-sm text-fg-muted">{{ t('app.loading') }}</div>
 
-        <EmptyState
-          v-else-if="!current"
-          :title="t('org.notMember')"
-          :description="t('org.notMemberHint')"
-        />
+        <OrganizationSetup v-else-if="!current" />
 
         <slot v-else />
       </main>
     </div>
 
     <AddTransactionDialog />
+    <OperationsCenter />
     <ToastHost />
   </div>
 </template>

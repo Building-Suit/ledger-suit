@@ -71,6 +71,10 @@ Required at runtime: `SUPABASE_URL` and `SUPABASE_KEY`. See
 [environment.md](environment.md). The service role key must never be part of a
 client bundle.
 
+The committed CI workflow runs lint, strict type checking, the production
+build, a clean local migration replay, all pgTAP tests, schema linting and the
+Chromium end-to-end journeys on pull requests and pushes to `main` or `dev`.
+
 ---
 
 ## Branching
