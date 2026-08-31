@@ -308,4 +308,124 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------------
+-- Commitments and recurring rules for Alpha Trading
+-- ---------------------------------------------------------------------------
+-- Deliberately spans overdue, due-soon, part-paid and settled so the dashboard
+-- widget has every state to render rather than one happy case.
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}',
+  false
+);
+
+do $$
+declare
+  v_org       uuid;
+  v_bank      uuid;
+  v_today     date;
+  v_overdue   uuid;
+  v_partial   uuid;
+begin
+  select id into v_org from public.organizations where name = 'Alpha Trading';
+  select id into v_bank from public.accounts
+  where organization_id = v_org and system_key = 'bank';
+
+  v_today := app.org_today(v_org);
+
+  -- Overdue payable.
+  v_overdue := public.create_commitment(
+    p_organization_id    => v_org,
+    p_type               => 'payable',
+    p_title              => 'Q3 professional fees',
+    p_amount_minor       => 2200000,
+    p_due_date           => v_today - 12,
+    p_linked_category_id => (select id from public.categories
+                             where organization_id = v_org and name = 'Other Expenses'),
+    p_counterparty_id    => (select id from public.counterparties
+                             where organization_id = v_org and name = 'Cairo Property Holdings')
+  );
+
+  -- Due soon, inside the reminder window.
+  perform public.create_commitment(
+    p_organization_id    => v_org,
+    p_type               => 'payable',
+    p_title              => 'Monthly office rent',
+    p_amount_minor       => 1500000,
+    p_due_date           => v_today + 2,
+    p_linked_category_id => (select id from public.categories
+                             where organization_id = v_org and name = 'Rent'),
+    p_counterparty_id    => (select id from public.counterparties
+                             where organization_id = v_org and name = 'Cairo Property Holdings')
+  );
+
+  -- Receivable, part-settled.
+  v_partial := public.create_commitment(
+    p_organization_id    => v_org,
+    p_type               => 'receivable',
+    p_title              => 'Invoice 2026-114 — Nile Logistics',
+    p_amount_minor       => 6000000,
+    p_due_date           => v_today + 21,
+    p_linked_category_id => (select id from public.categories
+                             where organization_id = v_org and name = 'Sales'),
+    p_counterparty_id    => (select id from public.counterparties
+                             where organization_id = v_org and name = 'Nile Logistics')
+  );
+
+  perform public.settle_commitment(
+    p_commitment_id      => v_partial,
+    p_payment_account_id => v_bank,
+    p_amount_minor       => 2000000,
+    p_settled_on         => v_today - 3,
+    p_description        => 'Part payment against invoice 2026-114'
+  );
+
+  -- Well ahead of its due date.
+  perform public.create_commitment(
+    p_organization_id => v_org,
+    p_type            => 'scheduled_expense',
+    p_title           => 'Annual software renewal',
+    p_amount_minor    => 4500000,
+    p_due_date        => v_today + 75,
+    p_linked_category_id => (select id from public.categories
+                             where organization_id = v_org and name = 'Software')
+  );
+
+  -- One rule per mode, so both scheduler paths are represented.
+  perform public.create_recurring_rule(
+    p_organization_id  => v_org,
+    p_name             => 'Office rent (standing order)',
+    p_transaction_type => 'expense',
+    p_template         => jsonb_build_object(
+      'amount_minor', 1500000,
+      'source_account_id', v_bank,
+      'category_id', (select id from public.categories
+                      where organization_id = v_org and name = 'Rent'),
+      'description', 'Office rent'
+    ),
+    p_frequency        => 'monthly',
+    p_start_date       => date '2026-09-01',
+    p_mode             => 'auto_post'
+  );
+
+  perform public.create_recurring_rule(
+    p_organization_id  => v_org,
+    p_name             => 'Quarterly maintenance retainer',
+    p_transaction_type => 'income',
+    p_template         => jsonb_build_object(
+      'amount_minor', 2500000,
+      'destination_account_id', v_bank,
+      'category_id', (select id from public.categories
+                      where organization_id = v_org and name = 'Services'),
+      'description', 'Maintenance retainer'
+    ),
+    p_frequency        => 'quarterly',
+    p_start_date       => date '2026-09-15',
+    p_mode             => 'requires_confirmation'
+  );
+
+  perform public.notify_due_commitments(v_org);
+end;
+$$;
+
 select set_config('request.jwt.claims', null, false);
