@@ -9,7 +9,8 @@ Copy `.env.example` to `.env` and fill it in. `.env` is gitignored; only
 |---|---|---|---|
 | `SUPABASE_URL` | yes | client + server | Project API URL. Local: `http://127.0.0.1:54321` |
 | `SUPABASE_KEY` | yes | client + server | Publishable (anon) key. Safe in the browser — every table it can reach is behind RLS |
-| `SUPABASE_SERVICE_KEY` | no (Phase 1) | **server only** | Bypasses RLS entirely. Never import it into anything the bundler can reach |
+| `SUPABASE_SERVICE_KEY` | no | **server only** | Bypasses RLS entirely. Never import it into anything the bundler can reach |
+| `APP_BASE_URL` | yes in deployed environments | build/server | Public application origin used for locale metadata and future invitation links |
 
 `@nuxtjs/supabase` reads `SUPABASE_URL` and `SUPABASE_KEY` by convention.
 
@@ -22,7 +23,7 @@ It bypasses row level security completely. Rules:
 - never logged, never committed, never sent to an analytics or error tracker
 - rotate it if it is ever printed anywhere
 
-Phase 1 needs no server-side privileged access, so leave it unset until a
+Phases 1–3 need no server-side privileged access, so leave it unset until a
 background job or webhook handler actually requires it.
 
 ## Local development
@@ -47,4 +48,3 @@ These are named here so the shape is agreed before the code lands:
 |---|---|---|
 | `BILLING_PROVIDER` | 4 | Which adapter to load (`stripe`, `paymob`, …) |
 | `BILLING_WEBHOOK_SECRET` | 4 | Webhook signature verification |
-| `APP_BASE_URL` | 2 | Absolute URLs in invitation and notification emails |

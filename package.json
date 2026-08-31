@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "lint": "eslint .",
+    "test:e2e": "playwright test",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
@@ -24,11 +25,12 @@
     "@nuxtjs/supabase": "^1.4.6",
     "nuxt": "^4.0.3",
     "vue": "^3.5.18",
-    "vue-router": "^4.5.1",
+    "vue-router": "^5.3.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.6.0",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.1.11",
     "eslint": "^9.32.0",
     "supabase": "^2.33.9",

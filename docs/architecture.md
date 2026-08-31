@@ -258,6 +258,30 @@ public.get_limit(organization_id, limit_key)   -- NULL = unlimited, 0 = denied
 `billing_events` is unique on `(provider, provider_event_id)`, which is what
 makes webhook processing idempotent no matter how often a provider retries.
 
+---
+
+## 9. Operational workflows
+
+Commitments remain outside the ledger until settlement. Full and partial
+settlements call the same income/expense posting functions as manual entries;
+postponement and cancellation preserve audit history. Automatic conversion is
+a controlled batch RPC that independently authorizes and validates each due
+record.
+
+Recurring rules store a validated posting template and materialize unique
+occurrences. A unique `(rule_id, occurrence_date)` constraint and deterministic
+posting key prevent duplicate journals. Failed occurrences record their error
+and attempt count and can be retried without advancing or destroying the rule.
+
+Counterparties and tags are lightweight tenant-scoped dimensions. Attachments
+use a private bucket, tenant-prefixed object keys and signed URLs. Notifications
+can only have their read state changed by the intended recipient through a
+controlled function; clients cannot rewrite notification content or routing.
+
+Organization invitations return a one-time token, store only its SHA-256 hash,
+verify the signed-in user's email on acceptance, and create membership in the
+same database transaction.
+
 A suspended or cancelled subscription switches features off but never destroys
 financial history.
 

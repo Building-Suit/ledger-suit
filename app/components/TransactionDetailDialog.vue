@@ -14,7 +14,7 @@ const props = defineProps<{ transactionId: string | null }>()
 const emit = defineEmits<{ close: [], changed: [] }>()
 
 const supabase = useSupabaseClient<Database>()
-const { can } = useTenant()
+const { can, currentId } = useTenant()
 const toasts = useToasts()
 const { t, locale } = useI18n()
 const describeError = useErrorMessage()
@@ -23,6 +23,76 @@ const reversing = ref(false)
 const reason = ref('')
 const confirming = ref(false)
 const errorMessage = ref<string | null>(null)
+const selectedTagId = ref('')
+const uploading = ref(false)
+
+const { data: tags } = await useAsyncData('org:detail-tags', async () => {
+  if (!currentId.value) return []
+  const { data, error } = await supabase.from('tags').select('id,name,color').eq('organization_id', currentId.value).order('name')
+  if (error) throw error
+  return data ?? []
+}, { watch: [currentId], default: () => [] })
+
+const { data: assignedTags, refresh: refreshTags } = await useAsyncData('transaction-detail-tags', async () => {
+  if (!props.transactionId) return []
+  const { data, error } = await supabase.from('transaction_tags').select('tag_id,tags(id,name,color)').eq('transaction_id', props.transactionId)
+  if (error) throw error
+  return data ?? []
+}, { watch: [() => props.transactionId], default: () => [] })
+
+const { data: attachments, refresh: refreshAttachments } = await useAsyncData('transaction-detail-attachments', async () => {
+  if (!props.transactionId) return []
+  const { data, error } = await supabase.from('attachments').select('*').eq('entity_type', 'transaction').eq('entity_id', props.transactionId).order('created_at')
+  if (error) throw error
+  return data ?? []
+}, { watch: [() => props.transactionId], default: () => [] })
+
+async function assignTag() {
+  if (!props.transactionId || !currentId.value || !selectedTagId.value) return
+  const { data: user } = await supabase.auth.getUser()
+  const { error } = await supabase.from('transaction_tags').insert({ organization_id: currentId.value, transaction_id: props.transactionId, tag_id: selectedTagId.value, created_by: user.user?.id })
+  if (error && error.code !== '23505') return (errorMessage.value = describeError(error))
+  selectedTagId.value = ''; await refreshTags(); emit('changed')
+}
+
+async function removeTag(tagId: string) {
+  if (!props.transactionId) return
+  const { error } = await supabase.from('transaction_tags').delete().eq('transaction_id', props.transactionId).eq('tag_id', tagId)
+  if (error) return (errorMessage.value = describeError(error))
+  await refreshTags(); emit('changed')
+}
+
+async function uploadAttachment(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file || !props.transactionId || !currentId.value) return
+  uploading.value = true; errorMessage.value = null
+  try {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
+    const key = `${currentId.value}/transaction/${props.transactionId}/${crypto.randomUUID()}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('attachments').upload(key, file)
+    if (uploadError) throw uploadError
+    const { data: user } = await supabase.auth.getUser()
+    const { error } = await supabase.from('attachments').insert({ organization_id: currentId.value, entity_type: 'transaction', entity_id: props.transactionId, file_name: file.name, mime_type: file.type, size_bytes: file.size, storage_key: key, uploaded_by: user.user?.id })
+    if (error) { await supabase.storage.from('attachments').remove([key]); throw error }
+    await refreshAttachments(); emit('changed')
+  }
+  catch (error) { errorMessage.value = describeError(error) }
+  finally { uploading.value = false; (event.target as HTMLInputElement).value = '' }
+}
+
+async function downloadAttachment(item: NonNullable<typeof attachments.value>[number]) {
+  const { data, error } = await supabase.storage.from(item.storage_bucket).createSignedUrl(item.storage_key, 60)
+  if (error) return (errorMessage.value = describeError(error))
+  if (data.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
+}
+
+async function deleteAttachment(item: NonNullable<typeof attachments.value>[number]) {
+  const { error: storageError } = await supabase.storage.from(item.storage_bucket).remove([item.storage_key])
+  if (storageError) return (errorMessage.value = describeError(storageError))
+  const { error } = await supabase.from('attachments').delete().eq('id', item.id)
+  if (error) return (errorMessage.value = describeError(error))
+  await refreshAttachments(); emit('changed')
+}
 
 const { data: detail, refresh } = await useAsyncData(
   'transaction-detail',
@@ -175,6 +245,17 @@ async function reverse() {
                 </tr>
               </tbody>
             </table>
+          </section>
+
+          <section aria-labelledby="tags-heading">
+            <h3 id="tags-heading" class="mb-2 text-sm font-bold">{{ t('operations.tabs.tags') }}</h3>
+            <div class="mb-2 flex flex-wrap gap-2"><span v-for="row in assignedTags" :key="row.tag_id" class="ls-badge bg-surface-muted"><span class="me-1 inline-block h-2 w-2 rounded-full" :style="{ backgroundColor: row.tags?.color ?? '#64748b' }" />{{ row.tags?.name }}<button v-if="can('transactions.create')" class="ms-1" :aria-label="t('common.dismiss')" @click="removeTag(row.tag_id)">×</button></span></div>
+            <div v-if="can('transactions.create')" class="flex gap-2"><select v-model="selectedTagId" class="ls-input"><option value="">{{ t('common.none') }}</option><option v-for="tag in tags" :key="tag.id" :value="tag.id">{{ tag.name }}</option></select><button class="ls-btn" @click="assignTag">{{ t('operations.assign') }}</button></div>
+          </section>
+
+          <section aria-labelledby="attachments-heading">
+            <div class="mb-2 flex items-center justify-between"><h3 id="attachments-heading" class="text-sm font-bold">{{ t('operations.attachments') }}</h3><label v-if="can('attachments.create')" class="ls-btn ls-btn-sm cursor-pointer">{{ uploading ? t('common.saving') : t('operations.upload') }}<input type="file" class="sr-only" accept="application/pdf,image/png,image/jpeg,image/webp" :disabled="uploading" @change="uploadAttachment"></label></div>
+            <div v-if="attachments.length" class="space-y-2"><div v-for="item in attachments" :key="item.id" class="flex items-center justify-between rounded-control bg-surface-muted px-3 py-2 text-sm"><button class="truncate text-link" @click="downloadAttachment(item)">{{ item.file_name }}</button><button v-if="can('attachments.delete')" class="ls-btn ls-btn-sm" @click="deleteAttachment(item)">×</button></div></div><p v-else class="text-sm text-fg-muted">{{ t('operations.noAttachments') }}</p>
           </section>
 
           <p
