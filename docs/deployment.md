@@ -93,6 +93,19 @@ External provider configuration is necessarily separate from database schema:
 5. Store the two scheduler values in Supabase Vault using the exact names in
    the environment guide. The versioned Cron job detects them automatically.
 
+The current sandbox provider configuration is:
+
+- Stripe product: `prod_VBCRr1dyVPbpBx`
+- monthly EGP 600 price: `price_1UAq2LJmxtT9ICNehCkS6Fzx`
+- yearly EGP 4,800 price: `price_1UAq2RJmxtT9ICNeLZcFGmKt`
+- Stripe webhook: `we_1UAq2fJmxtT9ICNeuGEzlqrY`
+- application origin: `https://ledger-suit.vercel.app`
+- Resend sender: `notification@building-suit.com`
+
+These identifiers are sandbox-only. Create a separate live catalog and webhook
+when production billing is approved; never reuse test-mode identifiers in live
+configuration.
+
 No remote migration command is needed. The linked Git workflow applies the
 schema migration; Stripe and Resend credentials remain external secrets by
 design.

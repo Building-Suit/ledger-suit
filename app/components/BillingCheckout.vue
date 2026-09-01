@@ -43,6 +43,9 @@ async function checkout() {
         </label>
       </div>
     </fieldset>
+    <p class="text-center text-xl font-bold text-fg">
+      {{ interval === 'monthly' ? t('billing.monthlyPrice') : t('billing.yearlyPrice') }}
+    </p>
     <p class="text-sm text-fg-muted">{{ t('billing.priceAtCheckout') }}</p>
     <button type="button" class="ls-btn ls-btn-accent w-full" :disabled="pending" @click="checkout">
       {{ pending ? t('billing.openingCheckout') : t('billing.startTrial') }}

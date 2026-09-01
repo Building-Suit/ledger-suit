@@ -35,16 +35,17 @@ and must never be prefixed with `NUXT_PUBLIC_` or exposed to browser code.
 | `STRIPE_MONTHLY_PRICE_ID` | Monthly price for the one Ledger Suit product |
 | `STRIPE_YEARLY_PRICE_ID` | Yearly price for the same product |
 | `RESEND_API_KEY` | Sends invitation and operational notification emails |
-| `RESEND_FROM_EMAIL` | Verified sender, for example `Ledger Suit <billing@example.com>` |
+| `RESEND_FROM_EMAIL` | Verified sender: `notification@building-suit.com` |
 | `APP_BASE_URL` | Checkout/portal return URL and email-link origin |
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are supplied
 to deployed Supabase Edge Functions by the platform. The service role key is
 used only by the verified Stripe webhook and scheduled email worker.
 
-The actual subscription amount and currency live in Stripe Price objects. The
-application deliberately does not duplicate or guess them; Checkout displays
-the authoritative amount before confirmation.
+The sandbox Stripe catalog uses one Ledger Suit product with EGP 600 monthly
+and EGP 4,800 yearly recurring prices. Their Stripe Price objects remain the
+authoritative checkout values; the UI displays the configured amounts and
+Checkout confirms them before the customer starts the trial.
 
 ## Supabase Vault scheduler secrets
 
