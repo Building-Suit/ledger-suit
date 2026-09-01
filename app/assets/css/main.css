@@ -109,8 +109,7 @@ body {
   letter-spacing: normal;
 }
 
-/* Focus is a 2px Premium Gold ring with an offset, on every interactive
-   element, in both themes. Never remove it. */
+/* Every interactive element keeps a visible, theme-aware focus ring. */
 :focus-visible {
   outline: var(--bs-focus-ring-style);
   outline-offset: var(--bs-focus-ring-offset);
@@ -218,8 +217,7 @@ body {
     color: var(--bs-primary);
   }
 
-  /* Gold is the single focal point: reserved for the one most important action
-     on a screen. It is never used for status. */
+  /* Accent actions remain monochrome in the Building Suit palette. */
   .ls-btn-accent {
     border-color: transparent;
     background: var(--bs-accent);
@@ -265,13 +263,12 @@ body {
     border-color: var(--bs-border-strong);
   }
 
-  /* Focused fields get the gold ring plus the soft gold glow the prototype
-     uses, rather than the generic focus outline. */
+  /* Focused fields use a neutral halo drawn from the theme foreground. */
   .ls-input:focus,
   .ls-input:focus-visible {
     border-color: var(--bs-focus-ring);
     outline: none;
-    box-shadow: 0 0 0 3px rgb(216 155 66 / 0.15);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--bs-focus-ring) 16%, transparent);
   }
 
   .ls-input:disabled {
@@ -372,7 +369,7 @@ body {
     color: var(--bs-text);
   }
 
-  /* Active navigation is marked with gold, per the navigation guidance. */
+  /* Active navigation uses a restrained graphite rail. */
   .ls-nav-link-active,
   .ls-nav-link-active:hover {
     background: color-mix(in oklab, var(--bs-accent) 16%, transparent);
@@ -399,7 +396,7 @@ body {
     color: var(--bs-text);
   }
 
-  /* Active tab indicator is gold, per the component guide. */
+  /* Active tabs use the monochrome accent role. */
   .ls-tab-active {
     border-color: var(--bs-accent);
     color: var(--bs-text);
@@ -409,4 +406,11 @@ body {
   .ls-scrim {
     background: var(--bs-scrim);
   }
+}
+
+.ls-hero-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--bs-gray-500) 13%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--bs-gray-500) 13%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
 }

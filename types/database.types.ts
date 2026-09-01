@@ -1002,6 +1002,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           base_currency: string
+          business_type: Database["public"]["Enums"]["organization_business_type"]
           country_code: string
           created_at: string
           created_by: string
@@ -1019,6 +1020,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           base_currency: string
+          business_type?: Database["public"]["Enums"]["organization_business_type"]
           country_code?: string
           created_at?: string
           created_by: string
@@ -1036,6 +1038,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           base_currency?: string
+          business_type?: Database["public"]["Enums"]["organization_business_type"]
           country_code?: string
           created_at?: string
           created_by?: string
@@ -1075,7 +1078,10 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          job_title: string | null
           locale: string
+          onboarding_completed_at: string | null
+          phone: string | null
           timezone: string
           updated_at: string
         }
@@ -1086,7 +1092,10 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          job_title?: string | null
           locale?: string
+          onboarding_completed_at?: string | null
+          phone?: string | null
           timezone?: string
           updated_at?: string
         }
@@ -1097,7 +1106,10 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          job_title?: string | null
           locale?: string
+          onboarding_completed_at?: string | null
+          phone?: string | null
           timezone?: string
           updated_at?: string
         }
@@ -2420,6 +2432,22 @@ export type Database = {
           subject: string
         }[]
       }
+      complete_account_onboarding: {
+        Args: {
+          p_base_currency: string
+          p_business_type: Database["public"]["Enums"]["organization_business_type"]
+          p_country_code: string
+          p_fiscal_year_start_month: number
+          p_full_name: string
+          p_job_title: string
+          p_legal_name: string
+          p_organization_name: string
+          p_phone: string
+          p_tax_identifier?: string
+          p_timezone: string
+        }
+        Returns: string
+      }
       complete_notification_email: {
         Args: {
           p_error?: string
@@ -2987,6 +3015,13 @@ export type Database = {
       membership_status: "active" | "suspended"
       normal_balance: "debit" | "credit"
       occurrence_status: "pending" | "posted" | "skipped" | "failed"
+      organization_business_type:
+        | "sole_proprietorship"
+        | "partnership"
+        | "limited_liability"
+        | "corporation"
+        | "nonprofit"
+        | "other"
       organization_role:
         | "owner"
         | "admin"
@@ -3246,6 +3281,14 @@ export const Constants = {
       membership_status: ["active", "suspended"],
       normal_balance: ["debit", "credit"],
       occurrence_status: ["pending", "posted", "skipped", "failed"],
+      organization_business_type: [
+        "sole_proprietorship",
+        "partnership",
+        "limited_liability",
+        "corporation",
+        "nonprofit",
+        "other",
+      ],
       organization_role: [
         "owner",
         "admin",

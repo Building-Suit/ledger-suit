@@ -1,238 +1,110 @@
 <script setup lang="ts">
-import type { Database } from '~~/types/database.types'
-import type { SeriesPoint } from '~/components/RevenueExpenseChart.vue'
+definePageMeta({ layout: false })
 
-definePageMeta({ layout: 'default' })
+const { t } = useI18n()
+const user = useSupabaseUser()
+const { restore } = useTheme()
 
-const supabase = useSupabaseClient<Database>()
-const { currentId, can, baseCurrency } = useTenant()
-const { start } = useAddTransaction()
-const { show: showOperations } = useOperationsCenter()
-const { t, locale } = useI18n()
+onMounted(restore)
+useHead({ title: () => `${t('landing.title')} · ${t('app.name')}` })
 
-useHead({ title: () => `${t('dashboard.title')} · ${t('app.name')}` })
-
-const months = ref(6)
-const customRange = ref(false)
-const customFrom = ref(new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1).toISOString().slice(0, 10))
-const customTo = ref(new Date().toISOString().slice(0, 10))
-const seriesMonths = computed(() => {
-  if (!customRange.value) return months.value
-  const from = new Date(`${customFrom.value}T00:00:00`)
-  const to = new Date(`${customTo.value}T00:00:00`)
-  return Math.max(1, Math.min(60, (to.getFullYear() - from.getFullYear()) * 12 + to.getMonth() - from.getMonth() + 1))
-})
-
-interface Summary {
-  base_currency: string
-  total_assets_minor: number
-  total_liabilities_minor: number
-  net_worth_minor: number
-  cash_and_bank_minor: number
-  accounts_receivable_minor: number
-  accounts_payable_minor: number
-  revenue_this_month_minor: number
-  expenses_this_month_minor: number
-  net_profit_this_month_minor: number
-  revenue_previous_month_minor: number
-  expenses_previous_month_minor: number
-  net_profit_previous_month_minor: number
-}
-
-// Every figure below is computed by the database. Nothing on this page
-// recalculates a total from rows it fetched.
-const { data: summary } = await useAsyncData<Summary | null>('org:dashboard', async () => {
-  if (!currentId.value) return null
-  const { data, error } = await supabase.rpc('dashboard_summary', {
-    p_organization_id: currentId.value,
-  })
-  if (error) throw error
-  return data as unknown as Summary
-}, { watch: [currentId] })
-
-const { data: series } = await useAsyncData<SeriesPoint[]>('org:dashboard-series', async () => {
-  if (!currentId.value) return []
-  const { data, error } = await supabase.rpc('report_monthly_series', {
-    p_organization_id: currentId.value,
-    p_months: seriesMonths.value,
-    p_as_of_date: customRange.value ? customTo.value : undefined,
-  })
-  if (error) throw error
-  return (data ?? []) as unknown as SeriesPoint[]
-}, { watch: [currentId, months, customRange, customFrom, customTo], default: () => [] })
-
-const { data: liquid } = await useAsyncData('org:cash-position', async () => {
-  if (!currentId.value) return []
-  const { data, error } = await supabase
-    .from('account_balances')
-    .select('account_id, name, currency, balance_minor, subtype')
-    .eq('organization_id', currentId.value)
-    .eq('is_liquid', true)
-    .eq('is_archived', false)
-  if (error) throw error
-  return data ?? []
-}, { watch: [currentId], default: () => [] })
-
-const { data: recent } = await useAsyncData('org:recent-transactions', async () => {
-  if (!currentId.value) return []
-  const { data, error } = await supabase.rpc('search_transactions', {
-    p_organization_id: currentId.value,
-    p_limit: 8,
-  })
-  if (error) throw error
-  return data ?? []
-}, { watch: [currentId], default: () => [] })
-
-const hasActivity = computed(() => (recent.value?.length ?? 0) > 0)
-
-const { data: commitments } = await useAsyncData('org:dashboard-commitments', async () => {
-  if (!currentId.value || !can('commitments.read')) return []
-  const { data, error } = await supabase.from('commitment_states').select('id,title,due_date,display_status,outstanding_minor,currency_code').eq('organization_id', currentId.value).in('display_status', ['due', 'due_soon', 'overdue', 'partially_paid']).order('due_date').limit(8)
-  if (error) throw error
-  return data ?? []
-}, { watch: [currentId], default: () => [] })
-
-const upcomingCommitments = computed(() => commitments.value.filter(c => c.display_status !== 'overdue').reduce((sum, c) => sum + Number(c.outstanding_minor ?? 0), 0))
-const overdueCommitments = computed(() => commitments.value.filter(c => c.display_status === 'overdue').reduce((sum, c) => sum + Number(c.outstanding_minor ?? 0), 0))
-
-const payableHint = computed(() =>
-  t('dashboard.payableHint', {
-    amount: formatMoney(summary.value?.accounts_payable_minor ?? 0, baseCurrency.value, locale.value),
-  }),
-)
+const features = [
+  { icon: '↗', key: 'cashflow' },
+  { icon: '◎', key: 'ledger' },
+  { icon: '◫', key: 'commitments' },
+  { icon: '↻', key: 'automation' },
+  { icon: '⌁', key: 'reports' },
+  { icon: '◇', key: 'team' },
+]
 </script>
 
 <template>
-  <div class="space-y-8">
-    <h1 class="text-2xl font-extrabold">{{ t('dashboard.title') }}</h1>
+  <div class="min-h-dvh bg-background text-fg">
+    <header class="sticky top-0 z-30 border-b border-[var(--bs-border)] bg-background/90 backdrop-blur-xl">
+      <div class="mx-auto flex min-h-16 max-w-7xl items-center gap-4 px-4 lg:px-8">
+        <NuxtLink to="/" class="text-lg font-black tracking-[-0.04em]" dir="ltr">Ledger Suit</NuxtLink>
+        <nav class="ms-auto hidden items-center gap-6 text-sm text-fg-muted md:flex" :aria-label="t('landing.navigation')">
+          <a href="#features" class="hover:text-fg">{{ t('landing.navFeatures') }}</a>
+          <a href="#workflow" class="hover:text-fg">{{ t('landing.navWorkflow') }}</a>
+          <a href="#pricing" class="hover:text-fg">{{ t('landing.navPricing') }}</a>
+        </nav>
+        <SettingsMenu />
+        <NuxtLink :to="user ? '/dashboard' : '/login'" class="ls-btn ls-btn-sm">{{ user ? t('landing.openApp') : t('auth.signIn') }}</NuxtLink>
+        <NuxtLink v-if="!user" to="/signup" class="ls-btn ls-btn-primary ls-btn-sm">{{ t('landing.startTrial') }}</NuxtLink>
+      </div>
+    </header>
 
-    <EmptyState
-      v-if="!hasActivity"
-      :title="t('dashboard.emptyTitle')"
-      :description="t('dashboard.emptyHint')"
-      :action-label="can('transactions.create') ? t('dashboard.emptyAction') : undefined"
-      @action="start('expense')"
-    />
+    <main>
+      <section class="relative overflow-hidden border-b border-[var(--bs-border)]">
+        <div class="ls-hero-grid absolute inset-0 opacity-40" aria-hidden="true" />
+        <div class="relative mx-auto grid max-w-7xl items-center gap-14 px-4 py-20 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-28">
+          <div class="max-w-3xl">
+            <p class="mb-5 text-xs font-bold uppercase tracking-[.22em] text-fg-muted">{{ t('landing.eyebrow') }}</p>
+            <h1 class="text-4xl font-black leading-[1.08] tracking-[-.055em] sm:text-6xl">{{ t('landing.heroTitle') }}</h1>
+            <p class="mt-6 max-w-2xl text-lg leading-8 text-fg-muted">{{ t('landing.heroBody') }}</p>
+            <div class="mt-8 flex flex-wrap gap-3">
+              <NuxtLink to="/signup" class="ls-btn ls-btn-primary">{{ t('landing.createWorkspace') }} <span aria-hidden="true">→</span></NuxtLink>
+              <a href="#features" class="ls-btn">{{ t('landing.explore') }}</a>
+            </div>
+            <p class="mt-4 text-xs text-fg-muted">{{ t('landing.trialNote') }}</p>
+          </div>
 
-    <template v-else>
-      <section aria-labelledby="kpis" class="space-y-3">
-        <h2 id="kpis" class="sr-only">{{ t('dashboard.kpis') }}</h2>
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard :title="t('dashboard.totalAssets')" :amount-minor="summary?.total_assets_minor" good-direction="neutral" />
-          <KpiCard :title="t('dashboard.totalLiabilities')" :amount-minor="summary?.total_liabilities_minor" good-direction="neutral" />
-          <KpiCard :title="t('dashboard.netWorth')" :amount-minor="summary?.net_worth_minor" good-direction="neutral" :hint="t('dashboard.netWorthHint')" />
-          <KpiCard :title="t('dashboard.cashAndBank')" :amount-minor="summary?.cash_and_bank_minor" good-direction="neutral" />
-          <KpiCard
-            :title="t('dashboard.revenueThisMonth')"
-            :amount-minor="summary?.revenue_this_month_minor"
-            :previous-minor="summary?.revenue_previous_month_minor"
-            good-direction="up"
-          />
-          <KpiCard
-            :title="t('dashboard.expensesThisMonth')"
-            :amount-minor="summary?.expenses_this_month_minor"
-            :previous-minor="summary?.expenses_previous_month_minor"
-            good-direction="down"
-          />
-          <KpiCard
-            :title="t('dashboard.netProfitThisMonth')"
-            :amount-minor="summary?.net_profit_this_month_minor"
-            :previous-minor="summary?.net_profit_previous_month_minor"
-            good-direction="up"
-          />
-          <KpiCard
-            :title="t('dashboard.receivable')"
-            :amount-minor="summary?.accounts_receivable_minor"
-            good-direction="neutral"
-            :hint="payableHint"
-          />
-          <KpiCard v-if="can('commitments.read')" :title="t('dashboard.upcomingCommitments')" :amount-minor="upcomingCommitments" good-direction="neutral" />
-          <KpiCard v-if="can('commitments.read')" :title="t('dashboard.overdueCommitments')" :amount-minor="overdueCommitments" good-direction="down" />
-        </div>
-      </section>
-
-      <div class="grid gap-6 xl:grid-cols-3">
-        <section class="ls-card min-w-0 p-6 xl:col-span-2" aria-labelledby="chart-heading">
-          <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 id="chart-heading" class="text-base font-bold">{{ t('dashboard.revenueVsExpenses') }}</h2>
-            <div class="flex gap-1" role="group" :aria-label="t('dashboard.chartRange')">
-              <button
-                v-for="option in [3, 6, 12]"
-                :key="option"
-                type="button"
-                class="ls-btn ls-btn-sm"
-                :class="{ 'ls-btn-primary': months === option }"
-                :aria-pressed="months === option"
-                @click="months = option; customRange = false"
-              >
-                {{ t('dashboard.months', { count: option }) }}
-              </button>
-              <button type="button" class="ls-btn ls-btn-sm" :class="{ 'ls-btn-primary': customRange }" @click="customRange = !customRange">{{ t('dashboard.custom') }}</button>
+          <div class="relative">
+            <div class="ls-card overflow-hidden p-3 shadow-overlay">
+              <div class="flex items-center gap-2 border-b border-[var(--bs-border)] px-3 pb-3 text-xs text-fg-muted">
+                <span class="h-2.5 w-2.5 rounded-full bg-fg" /><span class="h-2.5 w-2.5 rounded-full bg-[var(--bs-border-strong)]" /><span class="h-2.5 w-2.5 rounded-full bg-[var(--bs-border)]" />
+                <span class="ms-auto">{{ t('landing.previewLabel') }}</span>
+              </div>
+              <div class="grid gap-3 p-3 sm:grid-cols-2">
+                <div v-for="metric in ['cash','revenue','expenses','profit']" :key="metric" class="rounded-card border border-[var(--bs-border)] bg-surface-muted p-4">
+                  <p class="text-xs text-fg-muted">{{ t(`landing.metrics.${metric}`) }}</p>
+                  <p class="mt-2 text-2xl font-black" dir="ltr">{{ metric === 'cash' ? 'EGP 482,400' : metric === 'revenue' ? 'EGP 96,800' : metric === 'expenses' ? 'EGP 51,200' : 'EGP 45,600' }}</p>
+                </div>
+              </div>
+              <div class="mx-3 mb-3 rounded-card border border-[var(--bs-border)] p-4">
+                <div class="mb-5 flex items-center justify-between"><span class="font-bold">{{ t('landing.cashflowPreview') }}</span><span class="text-xs text-fg-muted">6 {{ t('landing.months') }}</span></div>
+                <div class="flex h-32 items-end gap-3" aria-hidden="true">
+                  <div v-for="height in [42, 68, 52, 84, 73, 96]" :key="height" class="flex flex-1 items-end gap-1"><span class="w-1/2 rounded-t-sm bg-fg" :style="{ height: `${height}%` }" /><span class="w-1/2 rounded-t-sm bg-[var(--bs-border-strong)]" :style="{ height: `${Math.max(24, height - 25)}%` }" /></div>
+                </div>
+              </div>
             </div>
           </div>
-          <div v-if="customRange" class="mb-4 flex flex-wrap gap-2"><input v-model="customFrom" type="date" class="ls-input w-auto"><input v-model="customTo" type="date" class="ls-input w-auto"></div>
-          <RevenueExpenseChart :series="series ?? []" />
-        </section>
-
-        <section class="ls-card min-w-0 p-6" aria-labelledby="cash-heading">
-          <h2 id="cash-heading" class="mb-4 text-base font-bold">{{ t('dashboard.cashPosition') }}</h2>
-          <table v-if="liquid?.length" class="ls-table">
-            <caption class="sr-only">{{ t('dashboard.cashPositionCaption') }}</caption>
-            <tbody>
-              <tr v-for="(account, index) in liquid" :key="account.account_id ?? index">
-                <td>{{ account.name }}</td>
-                <td class="ls-num">
-                  <MoneyText :amount-minor="account.balance_minor" :currency="account.currency" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-else class="text-sm text-fg-muted">{{ t('dashboard.noLiquidAccounts') }}</p>
-        </section>
-      </div>
-
-      <section v-if="can('commitments.read')" class="ls-card overflow-hidden" aria-labelledby="commitments-heading">
-        <div class="flex items-center justify-between px-6 py-4"><h2 id="commitments-heading" class="text-base font-bold">{{ t('dashboard.commitments') }}</h2><button class="ls-btn ls-btn-sm" @click="showOperations('commitments')">{{ t('dashboard.manage') }}</button></div>
-        <div v-if="commitments.length" class="overflow-x-auto"><table class="ls-table"><tbody><tr v-for="(item, index) in commitments" :key="item.id ?? index"><td>{{ item.title }}</td><td>{{ formatDate(item.due_date, locale) }}</td><td><StatusBadge :status="item.display_status ?? 'unknown'" /></td><td class="ls-num"><MoneyText :amount-minor="item.outstanding_minor ?? 0" :currency="item.currency_code ?? undefined" /></td></tr></tbody></table></div>
-        <p v-else class="px-6 pb-5 text-sm text-fg-muted">{{ t('dashboard.noCommitments') }}</p>
-      </section>
-
-      <section class="ls-card overflow-hidden" aria-labelledby="recent-heading">
-        <div class="flex items-center justify-between px-6 py-4">
-          <h2 id="recent-heading" class="text-base font-bold">{{ t('dashboard.recent') }}</h2>
-          <NuxtLink to="/transactions" class="text-sm font-semibold text-link hover:underline">
-            {{ t('dashboard.viewAll') }}
-          </NuxtLink>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="ls-table">
-            <thead>
-              <tr>
-                <th scope="col">{{ t('transactions.date') }}</th>
-                <th scope="col">{{ t('transactions.description') }}</th>
-                <th scope="col">{{ t('transactions.category') }}</th>
-                <th scope="col">{{ t('transactions.account') }}</th>
-                <th scope="col">{{ t('transactions.status') }}</th>
-                <th scope="col" class="text-end">{{ t('transactions.amount') }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in recent" :key="row.id">
-                <td class="whitespace-nowrap">{{ formatDate(row.transaction_date, locale) }}</td>
-                <td class="max-w-64 truncate">{{ row.description || t('common.dash') }}</td>
-                <td>{{ row.category_name || t('common.dash') }}</td>
-                <td class="whitespace-nowrap text-fg-muted">
-                  {{ row.from_account_name }} → {{ row.to_account_name }}
-                </td>
-                <td><StatusBadge :status="row.status" /></td>
-                <td class="ls-num">
-                  <MoneyText :amount-minor="row.amount_minor" :currency="row.currency_code" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </section>
-    </template>
+
+      <section id="features" class="mx-auto max-w-7xl px-4 py-20 lg:px-8">
+        <div class="max-w-2xl"><p class="text-xs font-bold uppercase tracking-[.2em] text-fg-muted">{{ t('landing.featuresEyebrow') }}</p><h2 class="mt-3 text-3xl font-black tracking-[-.04em]">{{ t('landing.featuresTitle') }}</h2><p class="mt-4 text-base text-fg-muted">{{ t('landing.featuresBody') }}</p></div>
+        <div class="mt-10 grid gap-px overflow-hidden rounded-modal border border-[var(--bs-border)] bg-[var(--bs-border)] md:grid-cols-2 lg:grid-cols-3">
+          <article v-for="feature in features" :key="feature.key" class="bg-surface p-7">
+            <span class="grid h-10 w-10 place-items-center rounded-control bg-surface-muted text-lg" aria-hidden="true">{{ feature.icon }}</span>
+            <h3 class="mt-5 text-lg font-bold">{{ t(`landing.features.${feature.key}.title`) }}</h3>
+            <p class="mt-2 text-sm leading-6 text-fg-muted">{{ t(`landing.features.${feature.key}.body`) }}</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="workflow" class="border-y border-[var(--bs-border)] bg-surface-muted">
+        <div class="mx-auto max-w-7xl px-4 py-20 lg:px-8">
+          <div class="grid gap-10 lg:grid-cols-3">
+            <div><p class="text-xs font-bold uppercase tracking-[.2em] text-fg-muted">{{ t('landing.workflowEyebrow') }}</p><h2 class="mt-3 text-3xl font-black tracking-[-.04em]">{{ t('landing.workflowTitle') }}</h2></div>
+            <ol class="grid gap-5 lg:col-span-2 sm:grid-cols-3">
+              <li v-for="step in 3" :key="step" class="ls-card p-6"><span class="text-xs font-black text-fg-muted">0{{ step }}</span><h3 class="mt-4 font-bold">{{ t(`landing.workflow.${step}.title`) }}</h3><p class="mt-2 text-sm text-fg-muted">{{ t(`landing.workflow.${step}.body`) }}</p></li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" class="mx-auto max-w-5xl px-4 py-20 text-center lg:px-8">
+        <p class="text-xs font-bold uppercase tracking-[.2em] text-fg-muted">{{ t('landing.pricingEyebrow') }}</p>
+        <h2 class="mt-3 text-3xl font-black tracking-[-.04em]">{{ t('landing.pricingTitle') }}</h2>
+        <div class="mx-auto mt-9 grid max-w-3xl gap-4 sm:grid-cols-2">
+          <div class="ls-card p-7 text-start"><p class="font-bold">{{ t('billing.monthly') }}</p><p class="mt-3 text-3xl font-black">{{ t('billing.monthlyPrice') }}</p><p class="mt-3 text-sm text-fg-muted">{{ t('landing.priceMonthlyBody') }}</p></div>
+          <div class="ls-card relative p-7 text-start"><span class="absolute end-4 top-4 rounded-full bg-fg px-3 py-1 text-xs font-bold text-background">{{ t('landing.bestValue') }}</span><p class="font-bold">{{ t('billing.yearly') }}</p><p class="mt-3 text-3xl font-black">{{ t('billing.yearlyPrice') }}</p><p class="mt-3 text-sm text-fg-muted">{{ t('landing.priceYearlyBody') }}</p></div>
+        </div>
+        <NuxtLink to="/signup" class="ls-btn ls-btn-primary mt-8">{{ t('landing.startTrial') }}</NuxtLink>
+      </section>
+    </main>
+
+    <footer class="border-t border-[var(--bs-border)] py-8"><div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 text-xs text-fg-muted lg:px-8"><span dir="ltr">© 2026 Building Suit</span><span>{{ t('landing.footer') }}</span></div></footer>
   </div>
 </template>

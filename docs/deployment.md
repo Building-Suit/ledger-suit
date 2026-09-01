@@ -71,6 +71,13 @@ Required at runtime: `SUPABASE_URL` and `SUPABASE_KEY`. See
 [environment.md](environment.md). The service role key must never be part of a
 client bundle.
 
+Public acquisition routes are `/` and `/signup`; the authenticated product
+starts at `/dashboard`. Before publishing signup, verify the hosted Supabase
+Auth email-confirmation setting described in the environment guide. The final
+signup action creates the tenant atomically and opens Stripe Checkout; users do
+not receive application write access until the signed Stripe webhook starts the
+trial.
+
 ### Phase 4 services
 
 The repository contains five Supabase Edge Functions under
