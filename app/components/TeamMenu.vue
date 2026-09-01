@@ -15,9 +15,12 @@ async function invite() {
   if (!currentId.value) return
   pending.value = true; errorMessage.value = ''; token.value = ''
   try {
-    const { data, error } = await supabase.rpc('create_organization_invitation' as never, { p_organization_id: currentId.value, p_email: email.value, p_role: role.value } as never)
+    const { data, error } = await supabase.functions.invoke('send-invitation', {
+      body: { organizationId: currentId.value, email: email.value, role: role.value },
+    })
     if (error) throw error
-    token.value = String((data as Array<{ invitation_token: string }> | null)?.[0]?.invitation_token ?? '')
+    token.value = String(data?.invitationToken ?? '')
+    if (data?.sent) email.value = ''
   }
   catch (error) { errorMessage.value = describeError(error) }
   finally { pending.value = false }

@@ -329,6 +329,10 @@
     "partially_paid": "Partially paid",
     "paid": "Paid",
     "cancelled": "Cancelled",
+    "trialing": "Trial",
+    "grace_period": "Payment due",
+    "checkout_required": "Checkout required",
+    "read_only": "Read only",
     "skipped": "Skipped"
   },
   "types": {
@@ -382,6 +386,42 @@
     "noAttachments": "No attachments yet."
   },
   "notifications": { "title": "Notifications", "markAll": "Mark all read", "empty": "No notifications yet." },
+  "billing": {
+    "title": "Subscription",
+    "subtitle": "Manage the Ledger Suit subscription for this organization.",
+    "singlePlan": "Ledger Suit subscription",
+    "unlock": "Activate {organization}",
+    "gateDescription": "Start with 14 days free. Your payment method is collected securely by Stripe before the workspace opens.",
+    "featureAccounting": "Double-entry accounting and complete reports",
+    "featureAutomation": "Commitments and recurring transaction automation",
+    "featureTeam": "Secure team access with organization roles",
+    "billingCycle": "Billing cycle",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "monthlyPrice": "EGP 600 / month",
+    "yearlyPrice": "EGP 4,800 / year",
+    "priceAtCheckout": "Stripe confirms the price and currency before you start the trial.",
+    "startTrial": "Continue to Stripe · 14 days free",
+    "openingCheckout": "Opening secure checkout…",
+    "paymentRequired": "A payment method is required. Stripe will charge it after the trial unless you cancel first.",
+    "checkoutFailed": "Secure checkout could not be opened.",
+    "portalFailed": "The Stripe billing portal could not be opened.",
+    "manageStripe": "Manage billing in Stripe",
+    "nextDate": "Trial end or next renewal",
+    "confirming": "Stripe is confirming your subscription. This normally takes a few seconds.",
+    "checkAgain": "Check again",
+    "readOnlyTitle": "This workspace is read-only",
+    "readOnlyBody": "Your records are safe, but new financial changes are blocked until billing is restored.",
+    "fixBilling": "Restore subscription",
+    "states": {
+      "loading": "Checking subscription…",
+      "checkout_required": "Checkout is required before using this workspace.",
+      "trialing": "Your 14-day trial is active.",
+      "active": "Your subscription is active.",
+      "grace_period": "Payment needs attention. Writes remain available briefly.",
+      "read_only": "Billing is inactive; records remain available read-only."
+    }
+  },
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "TENANT_ACCESS_DENIED": "That record belongs to a different organization.",

@@ -71,6 +71,45 @@ Required at runtime: `SUPABASE_URL` and `SUPABASE_KEY`. See
 [environment.md](environment.md). The service role key must never be part of a
 client bundle.
 
+### Phase 4 services
+
+The repository contains five Supabase Edge Functions under
+`supabase/functions/`: Stripe Checkout, Stripe Customer Portal, the Stripe
+webhook, scheduled Resend delivery, and team invitation email. Deploy them
+through the repository's connected Supabase workflow; do not paste function
+code or database DDL into the dashboard.
+
+External provider configuration is necessarily separate from database schema:
+
+1. Create one Stripe Product with monthly and yearly recurring Prices.
+2. Add the Edge secrets listed in [environment.md](environment.md).
+3. Point Stripe's webhook endpoint to
+   `https://<project-ref>.supabase.co/functions/v1/stripe-webhook` and subscribe
+   to `checkout.session.completed`, `customer.subscription.created`,
+   `customer.subscription.updated`, `customer.subscription.deleted`,
+   `customer.subscription.trial_will_end`, `invoice.paid`, and
+   `invoice.payment_failed`.
+4. Verify the Resend sender domain used by `RESEND_FROM_EMAIL`.
+5. Store the two scheduler values in Supabase Vault using the exact names in
+   the environment guide. The versioned Cron job detects them automatically.
+
+The current sandbox provider configuration is:
+
+- Stripe product: `prod_VBCRr1dyVPbpBx`
+- monthly EGP 600 price: `price_1UAq2LJmxtT9ICNehCkS6Fzx`
+- yearly EGP 4,800 price: `price_1UAq2RJmxtT9ICNeLZcFGmKt`
+- Stripe webhook: `we_1UAq2fJmxtT9ICNeuGEzlqrY`
+- application origin: `https://ledger-suit.vercel.app`
+- Resend sender: `notification@building-suit.com`
+
+These identifiers are sandbox-only. Create a separate live catalog and webhook
+when production billing is approved; never reuse test-mode identifiers in live
+configuration.
+
+No remote migration command is needed. The linked Git workflow applies the
+schema migration; Stripe and Resend credentials remain external secrets by
+design.
+
 The committed CI workflow runs lint, strict type checking, the production
 build, a clean local migration replay, all pgTAP tests, schema linting and the
 Chromium end-to-end journeys on pull requests and pushes to `main` or `dev`.

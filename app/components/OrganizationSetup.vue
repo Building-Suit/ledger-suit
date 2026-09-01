@@ -4,11 +4,16 @@ const supabase = useSupabaseClient<Database>()
 const { loadOrganizations } = useTenant()
 const { t } = useI18n()
 const describeError = useErrorMessage()
+const route = useRoute()
 const name = ref('')
 const currency = ref('EGP')
 const invitationToken = ref('')
 const pending = ref(false)
 const errorMessage = ref<string | null>(null)
+
+onMounted(() => {
+  if (typeof route.query.invitation === 'string') invitationToken.value = route.query.invitation
+})
 
 async function createOrganization() {
   pending.value = true; errorMessage.value = null
