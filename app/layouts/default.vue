@@ -13,15 +13,27 @@ const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const route = useRoute()
 const { t } = useI18n()
-const { current, loadOrganizations, loading } = useTenant()
+const { current, currentId, loadOrganizations, loading } = useTenant()
 const { can } = useTenant()
+const {
+  checkoutRequired,
+  readOnly,
+  writesAllowed,
+  loading: billingLoading,
+  load: loadBilling,
+} = useBilling()
 const { show: showOperations } = useOperationsCenter()
 const { restore } = useTheme()
 
 const mobileNavOpen = ref(false)
 
 await loadOrganizations()
+await loadBilling()
 onMounted(restore)
+
+watch(currentId, async (value, previous) => {
+  if (value !== previous) await loadBilling()
+})
 
 // Collapse the mobile drawer on navigation, otherwise it covers the page the
 // user just asked for.
@@ -79,6 +91,9 @@ async function signOut() {
         </nav>
 
         <div class="mt-auto space-y-2 border-t border-[var(--bs-border)] pt-3">
+          <NuxtLink v-if="can('billing.read')" to="/billing" class="ls-btn ls-btn-sm w-full">
+            {{ t('billing.title') }}
+          </NuxtLink>
           <TeamMenu />
           <SettingsMenu />
           <p class="truncate px-1 text-xs text-fg-muted">{{ user?.email }}</p>
@@ -112,19 +127,28 @@ async function signOut() {
         </div>
 
         <button
-          v-if="can('commitments.read') || can('recurring.read')"
+          v-if="writesAllowed && (can('commitments.read') || can('recurring.read'))"
           type="button" class="ls-btn ls-btn-sm" @click="showOperations('commitments')"
         >{{ t('operations.title') }}</button>
         <NotificationMenu />
-        <AddMenu />
+        <AddMenu v-if="writesAllowed" />
       </header>
 
       <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 lg:px-8">
-        <div v-if="loading" class="text-sm text-fg-muted">{{ t('app.loading') }}</div>
+        <div v-if="loading || billingLoading" class="text-sm text-fg-muted">{{ t('app.loading') }}</div>
 
         <OrganizationSetup v-else-if="!current" />
 
-        <slot v-else />
+        <SubscriptionGate v-else-if="checkoutRequired" />
+
+        <template v-else>
+          <div v-if="readOnly" class="mb-5 rounded-control border border-warning bg-[var(--bs-status-warning-bg)] p-4 text-sm" role="status">
+            <p class="font-semibold">{{ t('billing.readOnlyTitle') }}</p>
+            <p>{{ t('billing.readOnlyBody') }}</p>
+            <NuxtLink v-if="can('billing.manage')" to="/billing" class="mt-2 inline-block text-link">{{ t('billing.fixBilling') }}</NuxtLink>
+          </div>
+          <slot />
+        </template>
       </main>
     </div>
 

@@ -242,11 +242,19 @@ profile is gone.
 
 ---
 
-## 8. Subscriptions and entitlements
+## 8. Subscription access
 
-Billing is modelled at the organization level and carries no vendor specifics: a
-provider is a string plus an opaque id. The accounting domain imports no billing
-SDK.
+There is one public product: Ledger Suit, billed monthly or yearly through
+Stripe. Creating an organization inserts a `suspended` subscription and does
+**not** start access. Only a signature-verified Stripe event can attach the
+provider subscription and begin the 14-day trial.
+
+The central capability predicate applies subscription state after role and
+member overrides. Read capabilities and `billing.manage` remain available;
+every other mutation requires `trialing`, `active`, or a time-bounded payment
+grace period. A lapsed organization therefore keeps its financial history but
+cannot post, edit, invite, import, export, or run scheduled accounting writes.
+This is a database rule, not a frontend redirect.
 
 Entitlements are evaluated in exactly two places:
 
@@ -257,6 +265,14 @@ public.get_limit(organization_id, limit_key)   -- NULL = unlimited, 0 = denied
 
 `billing_events` is unique on `(provider, provider_event_id)`, which is what
 makes webhook processing idempotent no matter how often a provider retries.
+The webhook verifies Stripe's HMAC over the untouched request body before it
+calls the service-only database transition function.
+
+Supabase Cron runs recurring transactions, commitment reminders, and automatic
+commitment conversions every 15 minutes. It skips organizations without write
+access. A second five-minute Cron invokes the Resend queue worker with URL and
+credentials read from Supabase Vault; queue rows are claimed with
+`FOR UPDATE SKIP LOCKED` and use notification IDs as Resend idempotency keys.
 
 ---
 

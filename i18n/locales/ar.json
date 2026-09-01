@@ -329,6 +329,10 @@
     "partially_paid": "مدفوع جزئيًا",
     "paid": "مدفوع",
     "cancelled": "ملغي",
+    "trialing": "فترة تجريبية",
+    "grace_period": "الدفع مستحق",
+    "checkout_required": "الدفع مطلوب",
+    "read_only": "للقراءة فقط",
     "skipped": "تم تخطيه"
   },
   "types": {
@@ -382,6 +386,40 @@
     "noAttachments": "لا توجد مرفقات بعد."
   },
   "notifications": { "title": "الإشعارات", "markAll": "تحديد الكل كمقروء", "empty": "لا توجد إشعارات بعد." },
+  "billing": {
+    "title": "الاشتراك",
+    "subtitle": "إدارة اشتراك Ledger Suit لهذه المؤسسة.",
+    "singlePlan": "اشتراك Ledger Suit",
+    "unlock": "تفعيل {organization}",
+    "gateDescription": "ابدأ بتجربة مجانية لمدة 14 يومًا. يجمع Stripe وسيلة الدفع بأمان قبل فتح مساحة العمل.",
+    "featureAccounting": "محاسبة بالقيد المزدوج وتقارير كاملة",
+    "featureAutomation": "أتمتة الالتزامات والمعاملات المتكررة",
+    "featureTeam": "وصول آمن للفريق بصلاحيات المؤسسة",
+    "billingCycle": "دورة الفوترة",
+    "monthly": "شهري",
+    "yearly": "سنوي",
+    "priceAtCheckout": "يعرض Stripe السعر والعملة بدقة قبل التأكيد.",
+    "startTrial": "المتابعة إلى Stripe · 14 يومًا مجانًا",
+    "openingCheckout": "جارٍ فتح الدفع الآمن…",
+    "paymentRequired": "وسيلة الدفع مطلوبة. سيخصم Stripe المبلغ بعد انتهاء التجربة ما لم تُلغِ قبل ذلك.",
+    "checkoutFailed": "تعذر فتح صفحة الدفع الآمنة.",
+    "portalFailed": "تعذر فتح بوابة فوترة Stripe.",
+    "manageStripe": "إدارة الفوترة في Stripe",
+    "nextDate": "نهاية التجربة أو التجديد التالي",
+    "confirming": "يؤكد Stripe اشتراكك. يستغرق ذلك عادةً بضع ثوانٍ.",
+    "checkAgain": "التحقق مرة أخرى",
+    "readOnlyTitle": "مساحة العمل للقراءة فقط",
+    "readOnlyBody": "سجلاتك محفوظة، لكن التغييرات المالية الجديدة متوقفة حتى استعادة الفوترة.",
+    "fixBilling": "استعادة الاشتراك",
+    "states": {
+      "loading": "جارٍ التحقق من الاشتراك…",
+      "checkout_required": "الدفع مطلوب قبل استخدام مساحة العمل.",
+      "trialing": "تجربتك المجانية لمدة 14 يومًا نشطة.",
+      "active": "اشتراكك نشط.",
+      "grace_period": "الدفع يحتاج إلى مراجعة. يظل التعديل متاحًا مؤقتًا.",
+      "read_only": "الفوترة غير نشطة؛ تبقى السجلات متاحة للقراءة فقط."
+    }
+  },
   "errors": {
     "generic": "حدث خطأ ما. حاول مرة أخرى.",
     "TENANT_ACCESS_DENIED": "هذا السجل يخص مؤسسة أخرى.",

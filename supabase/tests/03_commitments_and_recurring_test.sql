@@ -37,6 +37,14 @@ set local role authenticated;
 
 insert into ids (key, id) values ('org', public.create_organization('Phase Three Co', 'EGP'));
 
+reset role;
+update public.subscriptions
+set status = 'active', provider = 'stripe', provider_subscription_id = 'sub_test_phase3',
+    provider_status = 'active', billing_interval = 'monthly', checkout_completed_at = now(),
+    current_period_start = now(), current_period_end = now() + interval '30 days'
+where organization_id = (select id from ids where key = 'org');
+set local role authenticated;
+
 insert into ids (key, id)
 select 'bank', a.id from public.accounts a
 where a.organization_id = (select id from ids where key = 'org') and a.system_key = 'bank';

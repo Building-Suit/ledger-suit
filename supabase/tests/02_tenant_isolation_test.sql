@@ -38,6 +38,14 @@ set local role authenticated;
 
 insert into ids (key, id) values ('org_a', public.create_organization('Alpha Trading', 'EGP'));
 
+reset role;
+update public.subscriptions
+set status = 'active', provider = 'stripe', provider_subscription_id = 'sub_test_tenant_a',
+    provider_status = 'active', billing_interval = 'monthly', checkout_completed_at = now(),
+    current_period_start = now(), current_period_end = now() + interval '30 days'
+where organization_id = (select id from ids where key = 'org_a');
+set local role authenticated;
+
 insert into ids (key, id)
 select 'bank_a', a.id from public.accounts a
 where a.organization_id = (select id from ids where key = 'org_a') and a.system_key = 'bank';
@@ -62,6 +70,14 @@ select set_config('request.jwt.claims',
 set local role authenticated;
 
 insert into ids (key, id) values ('org_b', public.create_organization('Beta Supplies', 'EGP'));
+
+reset role;
+update public.subscriptions
+set status = 'active', provider = 'stripe', provider_subscription_id = 'sub_test_tenant_b',
+    provider_status = 'active', billing_interval = 'monthly', checkout_completed_at = now(),
+    current_period_start = now(), current_period_end = now() + interval '30 days'
+where organization_id = (select id from ids where key = 'org_b');
+set local role authenticated;
 
 insert into ids (key, id)
 select 'bank_b', a.id from public.accounts a
