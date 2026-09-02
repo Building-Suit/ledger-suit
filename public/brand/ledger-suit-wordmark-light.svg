@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="300" viewBox="80 60 1040 300">
+  <rect width="1600" height="420" rx="36" fill="#0B0B0D"/>
+  <g transform="translate(60 40) scale(3.1)">
+    <path fill="#FAFAFA" d="M30 22h8q4 0 4 4v46h34q4 0 4 4v6q0 4-4 4H30q-4 0-4-4V26q0-4 4-4Z"/>
+    <rect x="52" y="48" width="12" height="12" rx="3" fill="#D4D4D8"/>
+    <rect x="68" y="48" width="12" height="12" rx="3" fill="#71717A"/>
+  </g>
+  <text x="430" y="205" fill="#FAFAFA" font-family="Manrope, Inter, Arial, sans-serif" font-size="116" font-weight="750" letter-spacing="-4">Ledger Suit</text>
+  <text x="438" y="282" fill="#A1A1AA" font-family="Manrope, Inter, Arial, sans-serif" font-size="38" font-weight="600" letter-spacing="1.5">BY BUILDING SUIT</text>
+</svg>

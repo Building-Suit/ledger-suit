@@ -129,7 +129,8 @@ Verified by `pnpm db:test` (105 assertions) and `pnpm test:e2e`:
 - direct client mutation cannot bypass financial or notification workflows
 - the Dashboard, Transactions, Accounts and Reports journeys run end-to-end
 - account creation collects the owner and business profile, provisions a full
-  starter ledger atomically, and continues directly into Stripe Checkout
+  starter ledger atomically, verifies the email with an in-app six-digit OTP,
+  and continues directly into Stripe Checkout
 - the public landing and three-step signup journey run end-to-end in English
   and share the Building Suit monochrome design system with the application
 - a permission-aware global add drawer reaches every supported transaction,
