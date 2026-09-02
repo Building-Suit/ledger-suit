@@ -281,7 +281,14 @@ credentials read from Supabase Vault; queue rows are claimed with
 `/` is public product information, `/signup` is the guided account journey, and
 `/dashboard` is the authenticated application entry. Signup gathers the owner
 profile, legal business details, country, currency, timezone, fiscal-year start,
-and billing interval before creating anything.
+and billing interval before creating anything. Supabase Auth then sends a
+six-digit email OTP. Workspace provisioning cannot run until `verifyOtp`
+returns an authenticated session for that address.
+
+The verification screen supports full-code paste, per-digit entry, a live
+expiry timer, a rate-limited resend countdown, and safe invalid/expired-code
+errors. Pending form fields can survive a same-tab refresh in session storage;
+the password and OTP never do.
 
 `complete_account_onboarding(...)` then provisions the profile, organization,
 owner membership, default categories, starter chart of accounts, audit entry,

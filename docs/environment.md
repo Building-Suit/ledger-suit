@@ -14,16 +14,35 @@ Copy `.env.example` to `.env` and fill it in. `.env` is gitignored; only
 
 `@nuxtjs/supabase` reads `SUPABASE_URL` and `SUPABASE_KEY` by convention.
 
-### Signup authentication setting
+### Signup OTP and Auth email delivery
 
-The guided signup proceeds directly from account creation to authenticated
-workspace provisioning and Stripe Checkout. Supabase Auth email confirmation
-must therefore be disabled for this flow; the committed local configuration
-uses `enable_confirmations = false`. In the hosted project, keep **Confirm
-email** disabled under Auth provider settings before enabling public signup.
-This is external Auth configuration, not database DDL. If email confirmation is
-required later, add a resumable verified-email onboarding flow before changing
-that setting.
+The guided signup requires email confirmation. Supabase sends a six-digit code,
+the in-app verification screen exchanges it for an authenticated session, and
+only then can the workspace RPC and Stripe Checkout run. The committed local
+configuration uses:
+
+- `enable_confirmations = true`
+- six-digit OTPs with a 60-minute expiry
+- a 60-second resend interval
+- `supabase/templates/confirmation.html` as the branded code template
+
+Hosted Auth settings and email templates are external provider configuration;
+database migrations do not alter them. In the hosted project:
+
+1. Keep **Confirm email** enabled under Authentication → Sign In / Providers →
+   Email.
+2. Set the Confirm signup subject to
+   `{{ .Token }} is your Ledger Suit verification code`.
+3. Copy the committed confirmation template into the hosted Confirm signup
+   template so the message exposes `{{ .Token }}` rather than only a link.
+4. Configure Supabase Auth custom SMTP with Resend (`smtp.resend.com`, port
+   `465`, username `resend`, and the Resend API key as the password). Use
+   `noreply@building-suit.com` as the Auth sender; operational notifications
+   continue to use `notification@building-suit.com`.
+
+The app never stores the signup password in session storage. It preserves only
+the pending business form and countdown timestamps so an accidental refresh can
+return to OTP verification.
 
 ### About the service role key
 

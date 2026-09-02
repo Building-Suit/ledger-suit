@@ -72,11 +72,11 @@ Required at runtime: `SUPABASE_URL` and `SUPABASE_KEY`. See
 client bundle.
 
 Public acquisition routes are `/` and `/signup`; the authenticated product
-starts at `/dashboard`. Before publishing signup, verify the hosted Supabase
-Auth email-confirmation setting described in the environment guide. The final
-signup action creates the tenant atomically and opens Stripe Checkout; users do
-not receive application write access until the signed Stripe webhook starts the
-trial.
+starts at `/dashboard`. Before publishing signup, configure the hosted Supabase
+Auth confirmation template and Resend SMTP described in the environment guide.
+Signup verifies the six-digit OTP, creates the tenant atomically, and opens
+Stripe Checkout; users do not receive application write access until the signed
+Stripe webhook starts the trial.
 
 ### Phase 4 services
 

@@ -60,10 +60,8 @@ async function signOut() {
     >
       <div class="flex h-full flex-col gap-6 p-4">
         <div class="flex items-center justify-between">
-          <!-- The product name stays Latin even in Arabic copy. -->
-          <NuxtLink to="/dashboard" class="text-base font-extrabold tracking-tight" dir="ltr">
-            {{ t('app.name') }}
-            <span class="text-xs font-semibold" dir="ltr"> by Building Suit </span>
+          <NuxtLink to="/dashboard" class="inline-flex" :aria-label="t('app.name')">
+            <AppLogo class="h-9 w-auto max-w-40" />
           </NuxtLink>
           <button
             type="button"
