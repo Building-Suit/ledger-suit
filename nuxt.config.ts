@@ -4,6 +4,14 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-08-30',
   devtools: { enabled: true },
 
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/brand/ledger-suit-app-icon.svg' },
+      ],
+    },
+  },
+
   modules: ['@nuxtjs/supabase', '@nuxtjs/i18n', '@nuxt/eslint'],
 
   css: ['~/assets/css/main.css'],

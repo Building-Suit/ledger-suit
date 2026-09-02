@@ -38,6 +38,7 @@ test('signup verifies email by OTP before provisioning and checkout', async ({ p
   }))
 
   await page.goto('/signup')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
   await page.getByLabel('Full name').fill('OTP Test Owner')
   await page.getByLabel('Phone number').fill('+201000000000')
   await page.getByLabel('Job title').fill('Founder')

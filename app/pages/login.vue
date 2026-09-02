@@ -40,18 +40,16 @@ async function signIn() {
 <template>
   <main class="grid min-h-dvh bg-background lg:grid-cols-2">
     <section class="hidden bg-[var(--bs-ink)] p-12 text-[var(--bs-paper)] lg:flex lg:flex-col">
-      <NuxtLink to="/" class="text-lg font-black tracking-[-.04em]" dir="ltr">
-        Ledger Suit
-        <span class="text-xs font-semibold" dir="ltr"> by Building Suit </span>
+      <NuxtLink to="/" class="inline-flex" aria-label="Ledger Suit home">
+        <AppLogo tone="light" class="h-14 w-auto max-w-56" />
       </NuxtLink>
       <div class="my-auto max-w-xl"><p class="text-xs font-bold uppercase tracking-[.2em] text-[var(--bs-gray-400)]">{{ t('auth.welcomeEyebrow') }}</p><h1 class="mt-4 text-5xl font-black leading-tight tracking-[-.05em]">{{ t('auth.welcomeTitle') }}</h1><p class="mt-5 text-base leading-7 text-[var(--bs-gray-400)]">{{ t('auth.welcomeBody') }}</p></div>
       <p class="text-xs text-[var(--bs-gray-500)]" dir="ltr">© 2026 Building Suit</p>
     </section>
     <section class="grid place-items-center px-4 py-10">
       <div class="w-full max-w-md">
-        <NuxtLink to="/" class="mb-8 inline-block text-lg font-black tracking-[-.04em] lg:hidden" dir="ltr">
-          Ledger Suit
-          <span class="text-xs font-semibold" dir="ltr"> by Building Suit </span>
+        <NuxtLink to="/" class="mb-8 inline-flex lg:hidden" aria-label="Ledger Suit home">
+          <AppLogo class="h-12 w-auto max-w-48" />
         </NuxtLink>
       <form class="ls-card space-y-5 p-7 sm:p-9" :data-hydrated="hydrated" @submit.prevent="signIn">
         <div>

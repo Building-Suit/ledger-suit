@@ -18,6 +18,7 @@ const otp = ref('')
 const otpExpiresAt = ref(0)
 const resendAvailableAt = ref(0)
 const now = ref(Date.now())
+const hydrated = ref(false)
 const provisionedOrganizationId = ref<string | null>(null)
 const ONBOARDING_STORAGE_KEY = 'ledger-suit.pending-onboarding'
 const OTP_EXPIRY_SECONDS = 60 * 60
@@ -182,6 +183,7 @@ async function resendOtp() {
 let timer: ReturnType<typeof setInterval> | undefined
 onMounted(() => {
   restore()
+  hydrated.value = true
   timer = setInterval(() => (now.value = Date.now()), 1000)
   const stored = sessionStorage.getItem(ONBOARDING_STORAGE_KEY)
   if (!stored) return
@@ -205,9 +207,8 @@ watchEffect(() => {
 <template>
   <main class="min-h-dvh bg-background px-4 py-6 lg:px-8">
     <div class="mx-auto max-w-6xl">
-      <header class="flex items-center justify-between gap-4"><NuxtLink to="/" class="text-lg font-black tracking-[-.04em]" dir="ltr">
-        Ledger Suit
-        <span class="text-xs font-semibold" dir="ltr"> by Building Suit </span>
+      <header class="flex items-center justify-between gap-4"><NuxtLink to="/" class="inline-flex" aria-label="Ledger Suit home">
+        <AppLogo class="h-10 w-auto max-w-40" />
       </NuxtLink>
       <div class="flex items-center gap-2"><SettingsMenu /><NuxtLink to="/login" class="ls-btn ls-btn-sm">{{ t('auth.signIn') }}</NuxtLink></div></header>
 
@@ -221,7 +222,7 @@ watchEffect(() => {
           </ol>
         </aside>
 
-        <form v-if="!awaitingOtp" class="ls-card p-6 sm:p-9" @submit.prevent="step < 3 ? next() : createAccount()">
+        <form v-if="!awaitingOtp" class="ls-card p-6 sm:p-9" :data-hydrated="hydrated" @submit.prevent="step < 3 ? next() : createAccount()">
           <div class="mb-7 flex items-center justify-between"><div><p class="text-xs font-bold text-fg-muted">{{ t('onboarding.stepCount', { step }) }}</p><h2 class="mt-1 text-2xl font-black">{{ t(`onboarding.steps.${step}.title`) }}</h2></div><button v-if="step > 1" type="button" class="ls-btn ls-btn-sm" @click="step--">{{ t('common.back') }}</button></div>
 
           <div v-if="step === 1" class="grid gap-4 sm:grid-cols-2">
@@ -256,7 +257,7 @@ watchEffect(() => {
           <p v-if="step === 3" class="mt-3 text-center text-xs text-fg-muted">{{ t('billing.paymentRequired') }}</p>
         </form>
 
-        <form v-else class="ls-card p-6 sm:p-9" @submit.prevent="verifyOtpAndContinue">
+        <form v-else class="ls-card p-6 sm:p-9" :data-hydrated="hydrated" @submit.prevent="verifyOtpAndContinue">
           <div class="mx-auto max-w-lg text-center">
             <div class="mx-auto grid size-14 place-items-center rounded-full bg-surface-muted text-2xl" aria-hidden="true">✉</div>
             <p class="mt-6 text-xs font-bold uppercase tracking-[.18em] text-fg-muted">{{ t('onboarding.otpEyebrow') }}</p>
