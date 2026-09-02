@@ -38,7 +38,7 @@ const THEMES: Array<{ value: ThemePreference, labelKey: string }> = [
 
     <div
       v-if="open"
-      class="ls-card absolute bottom-full start-0 z-30 mb-1 w-56 p-2 shadow-overlay"
+      class="ls-card absolute top-full start-0 z-30 my-1 w-56 p-2 shadow-overlay"
       role="menu"
     >
       <p class="px-2 pb-1 text-xs font-semibold text-fg-muted">{{ t('common.language') }}</p>

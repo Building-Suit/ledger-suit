@@ -205,7 +205,11 @@ watchEffect(() => {
 <template>
   <main class="min-h-dvh bg-background px-4 py-6 lg:px-8">
     <div class="mx-auto max-w-6xl">
-      <header class="flex items-center justify-between gap-4"><NuxtLink to="/" class="text-lg font-black tracking-[-.04em]" dir="ltr">Ledger Suit</NuxtLink><div class="flex items-center gap-2"><SettingsMenu /><NuxtLink to="/login" class="ls-btn ls-btn-sm">{{ t('auth.signIn') }}</NuxtLink></div></header>
+      <header class="flex items-center justify-between gap-4"><NuxtLink to="/" class="text-lg font-black tracking-[-.04em]" dir="ltr">
+        Ledger Suit
+        <span class="text-xs font-semibold" dir="ltr"> by Building Suit </span>
+      </NuxtLink>
+      <div class="flex items-center gap-2"><SettingsMenu /><NuxtLink to="/login" class="ls-btn ls-btn-sm">{{ t('auth.signIn') }}</NuxtLink></div></header>
 
       <div class="mx-auto mt-10 grid max-w-5xl gap-8 lg:grid-cols-[.72fr_1.28fr]">
         <aside class="rounded-modal bg-[var(--bs-ink)] p-7 text-[var(--bs-paper)] lg:sticky lg:top-6 lg:self-start">
