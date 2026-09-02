@@ -208,7 +208,7 @@ watchEffect(() => {
   <main class="min-h-dvh bg-background px-4 py-6 lg:px-8">
     <div class="mx-auto max-w-6xl">
       <header class="flex items-center justify-between gap-4"><NuxtLink to="/" class="inline-flex" aria-label="Ledger Suit home">
-        <AppLogo class="h-10 w-auto max-w-40" />
+        <AppLogo class="h-14 w-auto max-w-52" />
       </NuxtLink>
       <div class="flex items-center gap-2"><SettingsMenu /><NuxtLink to="/login" class="ls-btn ls-btn-sm">{{ t('auth.signIn') }}</NuxtLink></div></header>
 

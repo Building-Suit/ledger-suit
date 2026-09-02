@@ -23,7 +23,7 @@ const features = [
     <header class="sticky top-0 z-30 border-b border-[var(--bs-border)] bg-background/90 backdrop-blur-xl">
       <div class="mx-auto flex min-h-16 max-w-7xl items-center gap-4 px-4 lg:px-8">
         <NuxtLink to="/" class="inline-flex" aria-label="Ledger Suit home">
-          <AppLogo class="h-10 w-auto max-w-40" />
+          <AppLogo class="h-14 w-auto max-w-52" />
         </NuxtLink>
         <nav class="ms-auto hidden items-center gap-6 text-sm text-fg-muted md:flex" :aria-label="t('landing.navigation')">
           <a href="#features" class="hover:text-fg">{{ t('landing.navFeatures') }}</a>
