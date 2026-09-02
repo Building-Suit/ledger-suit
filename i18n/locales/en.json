@@ -23,7 +23,9 @@
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "themeSystem": "System"
+    "themeSystem": "System",
+    "back": "Back",
+    "continue": "Continue"
   },
   "nav": {
     "primary": "Primary",
@@ -46,7 +48,10 @@
     "signupSubtitle": "Create your secure Ledger Suit account.",
     "needAccount": "Need an account? Create one",
     "haveAccount": "Already have an account? Sign in",
-    "checkEmail": "Check your email to confirm your account, then sign in."
+    "checkEmail": "Check your email to confirm your account, then sign in.",
+    "welcomeEyebrow": "Your financial operating system",
+    "welcomeTitle": "Know where the business stands.",
+    "welcomeBody": "One secure workspace for cash flow, accounting, commitments, automation, and reports."
   },
   "org": {
     "switcher": "Organization",
@@ -232,6 +237,10 @@
   },
   "add": {
     "title": "Add",
+    "eyebrow": "Create in Ledger Suit",
+    "groups": { "transactions": "Transactions", "accounts": "Accounts", "operations": "Operations", "workspace": "Workspace" },
+    "items": { "account": "Account", "commitment": "Commitment", "recurring": "Recurring rule", "counterparty": "Counterparty", "tag": "Tag", "invitation": "Team invitation" },
+    "itemHints": { "account": "Add to the chart of accounts", "commitment": "Track money due or owed", "recurring": "Schedule a repeated transaction", "counterparty": "Add a customer, vendor, or other party", "tag": "Create a reporting label", "invitation": "Invite someone into this workspace" },
     "whatAreYouRecording": "What are you recording?",
     "amount": "Amount ({currency})",
     "date": "Date",
@@ -420,6 +429,81 @@
       "active": "Your subscription is active.",
       "grace_period": "Payment needs attention. Writes remain available briefly.",
       "read_only": "Billing is inactive; records remain available read-only."
+    }
+  },
+  "landing": {
+    "title": "Business finance, clearly managed",
+    "navigation": "Landing page navigation",
+    "navFeatures": "Features",
+    "navWorkflow": "How it works",
+    "navPricing": "Pricing",
+    "openApp": "Open workspace",
+    "startTrial": "Start 14-day trial",
+    "eyebrow": "Financial clarity for growing businesses",
+    "heroTitle": "Run your finances from one calm, accurate workspace.",
+    "heroBody": "Ledger Suit turns daily money activity into a reliable double-entry ledger, live cash visibility, commitments, automation, and decision-ready reports.",
+    "createWorkspace": "Create your workspace",
+    "explore": "Explore the system",
+    "trialNote": "14 days free · Payment method required · Cancel before renewal",
+    "previewLabel": "Live business overview",
+    "metrics": { "cash": "Available cash", "revenue": "Revenue", "expenses": "Expenses", "profit": "Net profit" },
+    "cashflowPreview": "Cash flow",
+    "months": "months",
+    "featuresEyebrow": "Everything connected",
+    "featuresTitle": "From a receipt to the full financial picture",
+    "featuresBody": "Every workflow shares the same secure organization ledger, so figures remain traceable and consistent.",
+    "features": {
+      "cashflow": { "title": "Cash visibility", "body": "See balances, inflows, outflows, and upcoming obligations in one view." },
+      "ledger": { "title": "Controlled accounting", "body": "Atomic double-entry posting keeps every journal balanced and auditable." },
+      "commitments": { "title": "Commitments", "body": "Track receivables, payables, due dates, partial settlements, and overdue items." },
+      "automation": { "title": "Recurring automation", "body": "Schedule repeat activity while keeping review and posting controls." },
+      "reports": { "title": "Decision-ready reports", "body": "Use profit and loss, balance sheet, trial balance, and cash-flow views." },
+      "team": { "title": "Secure collaboration", "body": "Invite a team with precise roles and strict organization isolation." }
+    },
+    "workflowEyebrow": "Ready from day one",
+    "workflowTitle": "Set up once, then start recording",
+    "workflow": {
+      "1": { "title": "Create the owner account", "body": "Provide the identity and contact information needed for a secure workspace." },
+      "2": { "title": "Configure the business", "body": "Choose the legal details, currency, timezone, and fiscal year." },
+      "3": { "title": "Start the subscription", "body": "Add payment securely in Stripe and enter a ready-to-use ledger." }
+    },
+    "pricingEyebrow": "One complete subscription",
+    "pricingTitle": "Simple pricing, all core features included",
+    "priceMonthlyBody": "Flexible monthly billing after the 14-day free trial.",
+    "priceYearlyBody": "Save two months compared with paying monthly.",
+    "bestValue": "Best value",
+    "footer": "Ledger Suit by Building Suit"
+  },
+  "onboarding": {
+    "eyebrow": "Workspace setup",
+    "title": "Create a ready-to-use account",
+    "subtitle": "Complete your owner profile, business setup, and subscription in one guided flow.",
+    "stepCount": "Step {step} of 3",
+    "completeRequired": "Complete all required fields before continuing.",
+    "confirmEmailFirst": "Confirm your email first, then return to continue setup.",
+    "fullName": "Full name",
+    "phone": "Phone number",
+    "jobTitle": "Job title",
+    "passwordHint": "Use at least 8 characters.",
+    "legalName": "Legal business name",
+    "businessType": "Business type",
+    "country": "Country",
+    "timezone": "Timezone",
+    "fiscalYear": "Fiscal year starts",
+    "taxIdentifier": "Tax identifier",
+    "optional": "Optional — you can add this later.",
+    "businessTypes": { "sole_proprietorship": "Sole proprietorship", "partnership": "Partnership", "limited_liability": "Limited liability company", "corporation": "Corporation", "nonprofit": "Nonprofit", "other": "Other" },
+    "countries": { "EG": "Egypt", "SA": "Saudi Arabia", "AE": "United Arab Emirates", "GB": "United Kingdom", "US": "United States" },
+    "months": { "1": "January", "2": "February", "3": "March", "4": "April", "5": "May", "6": "June", "7": "July", "8": "August", "9": "September", "10": "October", "11": "November", "12": "December" },
+    "readyTitle": "Your workspace will be ready immediately",
+    "readyAccounts": "A complete starter chart of accounts",
+    "paymentExplanation": "You will create the account and workspace, then continue to Stripe to add a payment method and activate the 14-day trial.",
+    "creating": "Creating your workspace…",
+    "continueToPayment": "Create account and continue to Stripe",
+    "steps": {
+      "1": { "title": "Owner profile", "body": "Your identity and secure login" },
+      "2": { "title": "Business setup", "body": "The details behind your books" },
+      "3": { "title": "Subscription", "body": "Choose billing and start the trial" }
     }
   },
   "errors": {

@@ -3,7 +3,7 @@
 // (categories, members, currencies, audit log, subscription) belongs in
 // Settings or a contextual panel — see spec section 4.
 const NAV = [
-  { to: '/', key: 'dashboard', icon: '◧' },
+  { to: '/dashboard', key: 'dashboard', icon: '◧' },
   { to: '/transactions', key: 'transactions', icon: '≡' },
   { to: '/accounts', key: 'accounts', icon: '▤' },
   { to: '/reports', key: 'reports', icon: '◔' },
@@ -40,7 +40,7 @@ watch(currentId, async (value, previous) => {
 watch(() => route.fullPath, () => (mobileNavOpen.value = false))
 
 function isActive(to: string) {
-  return to === '/' ? route.path === '/' : route.path.startsWith(to)
+  return route.path === to || route.path.startsWith(`${to}/`)
 }
 
 async function signOut() {
@@ -50,18 +50,18 @@ async function signOut() {
 </script>
 
 <template>
-  <div class="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
+  <div class="min-h-dvh bg-background lg:grid lg:grid-cols-[17rem_1fr] lg:gap-4 lg:p-4">
     <!-- Shown/hidden rather than slid off-screen with a transform: a translate
          utility that silently fails to apply leaves the drawer sitting on top
          of the page on every phone, which is exactly what happened here. -->
     <aside
-      class="fixed inset-y-0 start-0 z-40 w-64 border-e border-[var(--bs-border)] bg-surface lg:static lg:block"
+      class="fixed inset-y-0 start-0 z-40 w-64 border-e border-[var(--bs-border)] bg-surface lg:sticky lg:top-4 lg:block lg:h-[calc(100dvh-2rem)] lg:w-auto lg:rounded-modal lg:border lg:shadow-card"
       :class="mobileNavOpen ? 'block' : 'hidden'"
     >
       <div class="flex h-full flex-col gap-6 p-4">
         <div class="flex items-center justify-between">
           <!-- The product name stays Latin even in Arabic copy. -->
-          <NuxtLink to="/" class="text-base font-extrabold tracking-tight" dir="ltr">
+          <NuxtLink to="/dashboard" class="text-base font-extrabold tracking-tight" dir="ltr">
             {{ t('app.name') }}
           </NuxtLink>
           <button
@@ -112,7 +112,7 @@ async function signOut() {
     />
 
     <div class="flex min-w-0 flex-col">
-      <header class="sticky top-0 z-20 flex items-center gap-3 border-b border-[var(--bs-border)] bg-background/90 px-4 py-3 backdrop-blur lg:px-8">
+      <header class="sticky top-0 z-20 flex items-center gap-3 border-b border-[var(--bs-border)] bg-surface/90 px-4 py-3 backdrop-blur lg:top-4 lg:rounded-card lg:border lg:px-6 lg:shadow-card">
         <button
           type="button"
           class="ls-btn ls-btn-sm lg:hidden"
@@ -131,7 +131,6 @@ async function signOut() {
           type="button" class="ls-btn ls-btn-sm" @click="showOperations('commitments')"
         >{{ t('operations.title') }}</button>
         <NotificationMenu />
-        <AddMenu v-if="writesAllowed" />
       </header>
 
       <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 lg:px-8">
@@ -154,6 +153,7 @@ async function signOut() {
 
     <AddTransactionDialog />
     <OperationsCenter />
+    <AddMenu v-if="writesAllowed && current && !checkoutRequired" />
     <ToastHost />
   </div>
 </template>

@@ -4,8 +4,9 @@ Multi-tenant financial management SaaS. Simpler than a spreadsheet to operate,
 backed by a real double-entry ledger.
 
 This repository contains **Phases 1–4**: the multi-tenant accounting
-foundation, the four core-finance product pages, operational workflows, and a
-database-enforced Stripe subscription with a 14-day trial and Resend delivery.
+foundation, a public product site, guided owner onboarding, the four
+core-finance product pages, operational workflows, and a database-enforced
+Stripe subscription with a 14-day trial and Resend delivery.
 
 ---
 
@@ -109,7 +110,7 @@ types/database.types.ts Generated from the schema; do not hand-edit
 
 ## What Phases 1–4 guarantee
 
-Verified by `pnpm db:test` (95 assertions) and `pnpm test:e2e`:
+Verified by `pnpm db:test` (105 assertions) and `pnpm test:e2e`:
 
 - every posting produces balanced ledger entries — `SUM(debits) = SUM(credits)`
 - reversals return the affected accounts to exactly their prior balance
@@ -127,6 +128,12 @@ Verified by `pnpm db:test` (95 assertions) and `pnpm test:e2e`:
 - organization invitations are created and accepted through controlled RPCs
 - direct client mutation cannot bypass financial or notification workflows
 - the Dashboard, Transactions, Accounts and Reports journeys run end-to-end
+- account creation collects the owner and business profile, provisions a full
+  starter ledger atomically, and continues directly into Stripe Checkout
+- the public landing and three-step signup journey run end-to-end in English
+  and share the Building Suit monochrome design system with the application
+- a permission-aware global add drawer reaches every supported transaction,
+  account, operational, tagging, counterparty, and team invitation workflow
 - a new organization cannot write until Stripe Checkout collects a payment
   method and starts its 14-day trial
 - expired billing is enforced as read-only inside PostgreSQL, while tenant data

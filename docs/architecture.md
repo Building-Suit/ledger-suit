@@ -276,7 +276,32 @@ credentials read from Supabase Vault; queue rows are claimed with
 
 ---
 
-## 9. Operational workflows
+## 9. Acquisition and onboarding
+
+`/` is public product information, `/signup` is the guided account journey, and
+`/dashboard` is the authenticated application entry. Signup gathers the owner
+profile, legal business details, country, currency, timezone, fiscal-year start,
+and billing interval before creating anything.
+
+`complete_account_onboarding(...)` then provisions the profile, organization,
+owner membership, default categories, starter chart of accounts, audit entry,
+and checkout-required subscription in one PostgreSQL transaction. If any seed
+or validation fails, none of the workspace survives. The function resolves the
+caller through `auth.uid()`, refuses replay for an existing active member, fixes
+its `search_path`, and grants execution only to authenticated users.
+
+Stripe Checkout is the final signup step. Until its signed webhook activates
+the trial, the database removes write capabilities. A partially paid or
+client-forged workspace therefore cannot enter normal use.
+
+The authenticated shell exposes one global floating add control. Its drawer is
+derived from the caller's capabilities and delegates to the existing controlled
+transaction, account, commitment, recurring, counterparty, tag, and invitation
+workflows; it is navigation, never a second write path.
+
+---
+
+## 10. Operational workflows
 
 Commitments remain outside the ledger until settlement. Full and partial
 settlements call the same income/expense posting functions as manual entries;
@@ -303,7 +328,7 @@ financial history.
 
 ---
 
-## 9. Error codes
+## 11. Error codes
 
 Domain errors are raised with a stable prefix so the API layer can map them to
 safe user-facing messages:
@@ -325,7 +350,7 @@ ids.
 
 ---
 
-## 10. Deliberately built for what comes next
+## 12. Deliberately built for what comes next
 
 - `transaction_entries.dimensions jsonb` — branch, project, cost centre
 - `transaction_status.pending_approval` — approval policies without reshaping

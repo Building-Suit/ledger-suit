@@ -14,6 +14,17 @@ Copy `.env.example` to `.env` and fill it in. `.env` is gitignored; only
 
 `@nuxtjs/supabase` reads `SUPABASE_URL` and `SUPABASE_KEY` by convention.
 
+### Signup authentication setting
+
+The guided signup proceeds directly from account creation to authenticated
+workspace provisioning and Stripe Checkout. Supabase Auth email confirmation
+must therefore be disabled for this flow; the committed local configuration
+uses `enable_confirmations = false`. In the hosted project, keep **Confirm
+email** disabled under Auth provider settings before enabling public signup.
+This is external Auth configuration, not database DDL. If email confirmation is
+required later, add a resumable verified-email onboarding flow before changing
+that setting.
+
 ### About the service role key
 
 It bypasses row level security completely. Rules:
