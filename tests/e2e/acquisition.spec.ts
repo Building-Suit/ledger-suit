@@ -45,8 +45,9 @@ test('signup verifies email by OTP before provisioning and checkout', async ({ p
   await page.getByLabel('Password').fill('otp-test-password')
   await page.getByRole('button', { name: 'Continue' }).click()
 
-  await page.getByLabel('Organization name').fill('OTP Test Books')
-  await page.getByLabel('Legal business name').fill('OTP Test Books LLC')
+  await expect(page.getByRole('heading', { name: 'Business setup' })).toBeVisible()
+  await page.locator('#org-display-name').fill('OTP Test Books')
+  await page.locator('#org-legal-name').fill('OTP Test Books LLC')
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByRole('button', { name: 'Create account and continue to Stripe' }).click()
 
