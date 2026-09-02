@@ -63,7 +63,7 @@ async function signOut() {
           <!-- The product name stays Latin even in Arabic copy. -->
           <NuxtLink to="/dashboard" class="text-base font-extrabold tracking-tight" dir="ltr">
             {{ t('app.name') }}
-            <span class="text-xs" dir="ltr"> by Building Suit </span>
+            <span class="text-xs font-semibold" dir="ltr"> by Building Suit </span>
           </NuxtLink>
           <button
             type="button"

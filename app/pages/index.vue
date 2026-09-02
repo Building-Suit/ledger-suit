@@ -22,7 +22,10 @@ const features = [
   <div class="min-h-dvh bg-background text-fg">
     <header class="sticky top-0 z-30 border-b border-[var(--bs-border)] bg-background/90 backdrop-blur-xl">
       <div class="mx-auto flex min-h-16 max-w-7xl items-center gap-4 px-4 lg:px-8">
-        <NuxtLink to="/" class="text-lg font-black tracking-[-0.04em]" dir="ltr">Ledger Suit</NuxtLink>
+        <NuxtLink to="/" class="text-lg font-black tracking-[-0.04em]" dir="ltr">
+          Ledger Suit
+          <span class="text-xs font-semibold" dir="ltr"> by Building Suit </span>
+        </NuxtLink>
         <nav class="ms-auto hidden items-center gap-6 text-sm text-fg-muted md:flex" :aria-label="t('landing.navigation')">
           <a href="#features" class="hover:text-fg">{{ t('landing.navFeatures') }}</a>
           <a href="#workflow" class="hover:text-fg">{{ t('landing.navWorkflow') }}</a>
