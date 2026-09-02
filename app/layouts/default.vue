@@ -61,7 +61,7 @@ async function signOut() {
       <div class="flex h-full flex-col gap-6 p-4">
         <div class="flex items-center justify-between">
           <NuxtLink to="/dashboard" class="inline-flex" :aria-label="t('app.name')">
-            <AppLogo class="h-9 w-auto max-w-40" />
+            <AppLogo class="h-14 w-auto max-w-52" />
           </NuxtLink>
           <button
             type="button"

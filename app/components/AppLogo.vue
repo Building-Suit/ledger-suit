@@ -20,15 +20,15 @@ withDefaults(defineProps<{
       class="ls-logo-image ls-logo-image-dark"
       :src="`/brand/ledger-suit-${kind}-dark.svg`"
       alt=""
-      width="1600"
-      height="420"
+      width="1040"
+      height="300"
     >
     <img
       class="ls-logo-image ls-logo-image-light"
       :src="`/brand/ledger-suit-${kind}-light.svg`"
       alt=""
-      width="1600"
-      height="420"
+      width="1040"
+      height="300"
     >
   </span>
 </template>
@@ -39,7 +39,7 @@ withDefaults(defineProps<{
 }
 
 .ls-logo-wordmark {
-  aspect-ratio: 1600 / 420;
+  aspect-ratio: 1040 / 300;
 }
 
 .ls-logo-mark {
