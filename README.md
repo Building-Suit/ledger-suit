@@ -3,10 +3,10 @@
 Multi-tenant financial management SaaS. Simpler than a spreadsheet to operate,
 backed by a real double-entry ledger.
 
-This repository contains **Phases 1–3**: the multi-tenant accounting
-foundation, the four core-finance product pages, and the operational workflows
-for commitments, recurring transactions, counterparties, tags, attachments,
-notifications, organizations and team invitations.
+This repository contains **Phases 1–4**: the multi-tenant accounting
+foundation, a public product site, guided owner onboarding, the four
+core-finance product pages, operational workflows, and a database-enforced
+Stripe subscription with a 14-day trial and Resend delivery.
 
 ---
 
@@ -18,7 +18,8 @@ notifications, organizations and team invitations.
 | Auth | Supabase Auth |
 | Storage | Supabase Storage, private bucket |
 | Frontend | Nuxt 4 + TypeScript + Tailwind CSS 4 |
-| Billing | Provider-agnostic tables; no vendor SDK in the domain |
+| Billing | Stripe Checkout + Portal; database-authoritative access state |
+| Email | Resend through Supabase Edge Functions |
 
 ---
 
@@ -99,6 +100,7 @@ app/                    Nuxt application (pages, composables, utils)
 docs/                   Architecture, environment and deployment notes
 supabase/
   migrations/           Versioned schema — the authoritative definition
+  functions/            Stripe and Resend Edge Functions
   tests/                pgTAP: accounting integrity and tenant isolation
   seed.sql              Development data. Fake figures only.
 types/database.types.ts Generated from the schema; do not hand-edit
@@ -106,9 +108,9 @@ types/database.types.ts Generated from the schema; do not hand-edit
 
 ---
 
-## What Phases 1–3 guarantee
+## What Phases 1–4 guarantee
 
-Verified by `pnpm db:test` (81 assertions) and `pnpm test:e2e`:
+Verified by `pnpm db:test` (105 assertions) and `pnpm test:e2e`:
 
 - every posting produces balanced ledger entries — `SUM(debits) = SUM(credits)`
 - reversals return the affected accounts to exactly their prior balance
@@ -126,6 +128,18 @@ Verified by `pnpm db:test` (81 assertions) and `pnpm test:e2e`:
 - organization invitations are created and accepted through controlled RPCs
 - direct client mutation cannot bypass financial or notification workflows
 - the Dashboard, Transactions, Accounts and Reports journeys run end-to-end
+- account creation collects the owner and business profile, provisions a full
+  starter ledger atomically, and continues directly into Stripe Checkout
+- the public landing and three-step signup journey run end-to-end in English
+  and share the Building Suit monochrome design system with the application
+- a permission-aware global add drawer reaches every supported transaction,
+  account, operational, tagging, counterparty, and team invitation workflow
+- a new organization cannot write until Stripe Checkout collects a payment
+  method and starts its 14-day trial
+- expired billing is enforced as read-only inside PostgreSQL, while tenant data
+  remains available to authorized members
+- Stripe webhook retries are idempotent and scheduled financial jobs skip
+  organizations without write access
 
 See [docs/architecture.md](docs/architecture.md) for how.
 

@@ -9,6 +9,7 @@ definePageMeta({ layout: 'default' })
  */
 
 const supabase = useSupabaseClient<Database>()
+const route = useRoute()
 const { currentId, can, baseCurrency } = useTenant()
 const { t } = useI18n()
 const toasts = useToasts()
@@ -89,6 +90,13 @@ function openCreate() {
   editorError.value = null
   editorOpen.value = true
 }
+
+watch(() => route.query.create, (value) => {
+  if (value === 'account' && can('accounts.create')) {
+    openCreate()
+    void navigateTo('/accounts', { replace: true })
+  }
+}, { immediate: true })
 
 function openEdit(row: BalanceRow) {
   editing.value = row

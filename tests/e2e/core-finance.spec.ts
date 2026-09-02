@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByLabel('Email').fill('owner@alpha.test')
   await page.getByLabel('Password').fill('ledgersuit')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL('/dashboard')
 })
 
 test('owner can navigate the four-page finance shell and open operations', async ({ page }) => {
@@ -48,6 +48,18 @@ test('owner can reach reports and transaction entry', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Profit & Loss' })).toBeVisible()
   await page.getByRole('button', { name: 'Add' }).click()
-  await page.getByRole('menuitem').filter({ hasText: 'Expense' }).click()
+  const addDrawer = page.getByRole('dialog', { name: 'Add' })
+  await addDrawer.getByRole('button').filter({ hasText: 'Expense' }).click()
   await expect(page.getByRole('dialog')).toContainText('Expense')
+})
+
+test('global add drawer exposes creation workflows by section', async ({ page }) => {
+  await page.getByRole('button', { name: 'Add' }).click()
+  const drawer = page.getByRole('dialog', { name: 'Add' })
+  await expect(drawer.getByRole('heading', { name: 'Transactions' })).toBeVisible()
+  await expect(drawer.getByRole('heading', { name: 'Accounts' })).toBeVisible()
+  await expect(drawer.getByRole('heading', { name: 'Operations' })).toBeVisible()
+  await expect(drawer.getByRole('heading', { name: 'Workspace' })).toBeVisible()
+  await expect(drawer.getByRole('button', { name: /^Account / })).toBeVisible()
+  await expect(drawer.getByRole('button', { name: /^Team invitation / })).toBeVisible()
 })

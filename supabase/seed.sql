@@ -77,6 +77,19 @@ begin
     'Alpha Trading LLC', 1::smallint
   );
 
+  -- Local fixtures have a simulated paid Stripe subscription so the seed can
+  -- exercise write workflows. No external API is contacted by db reset.
+  update public.subscriptions
+  set status = 'active',
+      provider = 'stripe',
+      provider_subscription_id = 'sub_local_alpha',
+      provider_status = 'active',
+      billing_interval = 'monthly',
+      checkout_completed_at = now(),
+      current_period_start = now(),
+      current_period_end = now() + interval '30 days'
+  where organization_id = v_org;
+
   select id into v_bank   from public.accounts where organization_id = v_org and system_key = 'bank';
   select id into v_cash   from public.accounts where organization_id = v_org and system_key = 'cash';
   select id into v_wallet from public.accounts where organization_id = v_org and code = '1130';
@@ -287,6 +300,17 @@ declare
   v_bank uuid;
 begin
   v_org := public.create_organization('Beta Supplies', 'EGP', 'EG', 'Africa/Cairo');
+
+  update public.subscriptions
+  set status = 'active',
+      provider = 'stripe',
+      provider_subscription_id = 'sub_local_beta',
+      provider_status = 'active',
+      billing_interval = 'monthly',
+      checkout_completed_at = now(),
+      current_period_start = now(),
+      current_period_end = now() + interval '30 days'
+  where organization_id = v_org;
 
   select id into v_bank from public.accounts where organization_id = v_org and system_key = 'bank';
 

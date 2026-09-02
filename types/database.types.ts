@@ -740,6 +740,12 @@ export type Database = {
           action_url: string | null
           body: string | null
           created_at: string
+          email_attempt_count: number
+          email_error: string | null
+          email_last_attempt_at: string | null
+          email_provider_id: string | null
+          email_sent_at: string | null
+          email_status: string
           entity_id: string | null
           entity_type: string | null
           id: string
@@ -755,6 +761,12 @@ export type Database = {
           action_url?: string | null
           body?: string | null
           created_at?: string
+          email_attempt_count?: number
+          email_error?: string | null
+          email_last_attempt_at?: string | null
+          email_provider_id?: string | null
+          email_sent_at?: string | null
+          email_status?: string
           entity_id?: string | null
           entity_type?: string | null
           id?: string
@@ -770,6 +782,12 @@ export type Database = {
           action_url?: string | null
           body?: string | null
           created_at?: string
+          email_attempt_count?: number
+          email_error?: string | null
+          email_last_attempt_at?: string | null
+          email_provider_id?: string | null
+          email_sent_at?: string | null
+          email_status?: string
           entity_id?: string | null
           entity_type?: string | null
           id?: string
@@ -984,6 +1002,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           base_currency: string
+          business_type: Database["public"]["Enums"]["organization_business_type"]
           country_code: string
           created_at: string
           created_by: string
@@ -1001,6 +1020,7 @@ export type Database = {
         Insert: {
           archived_at?: string | null
           base_currency: string
+          business_type?: Database["public"]["Enums"]["organization_business_type"]
           country_code?: string
           created_at?: string
           created_by: string
@@ -1018,6 +1038,7 @@ export type Database = {
         Update: {
           archived_at?: string | null
           base_currency?: string
+          business_type?: Database["public"]["Enums"]["organization_business_type"]
           country_code?: string
           created_at?: string
           created_by?: string
@@ -1057,7 +1078,10 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          job_title: string | null
           locale: string
+          onboarding_completed_at: string | null
+          phone: string | null
           timezone: string
           updated_at: string
         }
@@ -1068,7 +1092,10 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          job_title?: string | null
           locale?: string
+          onboarding_completed_at?: string | null
+          phone?: string | null
           timezone?: string
           updated_at?: string
         }
@@ -1079,7 +1106,10 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          job_title?: string | null
           locale?: string
+          onboarding_completed_at?: string | null
+          phone?: string | null
           timezone?: string
           updated_at?: string
         }
@@ -1481,17 +1511,24 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_interval:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
           cancel_at_period_end: boolean
           cancelled_at: string | null
+          checkout_completed_at: string | null
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
           grace_period_ends_at: string | null
           id: string
+          last_payment_at: string | null
           organization_id: string
+          payment_failed_at: string | null
           plan_id: string
           price_id: string | null
           provider: string | null
+          provider_status: string | null
           provider_subscription_id: string | null
           status: Database["public"]["Enums"]["billing_status"]
           trial_ends_at: string | null
@@ -1499,17 +1536,24 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_interval?:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
           cancel_at_period_end?: boolean
           cancelled_at?: string | null
+          checkout_completed_at?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           grace_period_ends_at?: string | null
           id?: string
+          last_payment_at?: string | null
           organization_id: string
+          payment_failed_at?: string | null
           plan_id: string
           price_id?: string | null
           provider?: string | null
+          provider_status?: string | null
           provider_subscription_id?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
           trial_ends_at?: string | null
@@ -1517,17 +1561,24 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_interval?:
+            | Database["public"]["Enums"]["billing_interval"]
+            | null
           cancel_at_period_end?: boolean
           cancelled_at?: string | null
+          checkout_completed_at?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
           grace_period_ends_at?: string | null
           id?: string
+          last_payment_at?: string | null
           organization_id?: string
+          payment_failed_at?: string | null
           plan_id?: string
           price_id?: string | null
           provider?: string | null
+          provider_status?: string | null
           provider_subscription_id?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
           trial_ends_at?: string | null
@@ -2321,7 +2372,41 @@ export type Database = {
         Args: { p_token: string }
         Returns: string
       }
+      apply_stripe_subscription_event: {
+        Args: {
+          p_cancel_at_period_end?: boolean
+          p_customer_id: string
+          p_event_id: string
+          p_event_type: string
+          p_interval: Database["public"]["Enums"]["billing_interval"]
+          p_last_payment_at?: string
+          p_organization_id: string
+          p_payload: Json
+          p_payment_failed_at?: string
+          p_period_end?: string
+          p_period_start?: string
+          p_provider_status: string
+          p_subscription_id: string
+          p_trial_end?: string
+          p_trial_start?: string
+        }
+        Returns: boolean
+      }
       archive_account: { Args: { p_account_id: string }; Returns: string }
+      billing_checkout_context: {
+        Args: {
+          p_interval: Database["public"]["Enums"]["billing_interval"]
+          p_organization_id: string
+        }
+        Returns: {
+          access_state: string
+          billing_email: string
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
+          organization_id: string
+          organization_name: string
+          provider_customer_id: string
+        }[]
+      }
       can_use_feature: {
         Args: { p_feature_key: string; p_organization_id: string }
         Returns: boolean
@@ -2333,6 +2418,43 @@ export type Database = {
       check_balance_sheet_integrity: {
         Args: { p_as_of_date?: string; p_organization_id: string }
         Returns: Json
+      }
+      claim_notification_emails: {
+        Args: { p_limit?: number }
+        Returns: {
+          action_url: string
+          body: string
+          notification_id: string
+          notification_type: string
+          organization_name: string
+          recipient_email: string
+          recipient_name: string
+          subject: string
+        }[]
+      }
+      complete_account_onboarding: {
+        Args: {
+          p_base_currency: string
+          p_business_type: Database["public"]["Enums"]["organization_business_type"]
+          p_country_code: string
+          p_fiscal_year_start_month: number
+          p_full_name: string
+          p_job_title: string
+          p_legal_name: string
+          p_organization_name: string
+          p_phone: string
+          p_tax_identifier?: string
+          p_timezone: string
+        }
+        Returns: string
+      }
+      complete_notification_email: {
+        Args: {
+          p_error?: string
+          p_notification_id: string
+          p_provider_id?: string
+        }
+        Returns: undefined
       }
       confirm_recurring_occurrence: {
         Args: { p_occurrence_id: string }
@@ -2790,6 +2912,10 @@ export type Database = {
         Args: { p_occurrence_id: string; p_reason?: string }
         Returns: string
       }
+      subscription_access_state: {
+        Args: { p_organization_id: string }
+        Returns: string
+      }
       update_account: {
         Args: { p_account_id: string; p_code?: string; p_name: string }
         Returns: string
@@ -2889,6 +3015,13 @@ export type Database = {
       membership_status: "active" | "suspended"
       normal_balance: "debit" | "credit"
       occurrence_status: "pending" | "posted" | "skipped" | "failed"
+      organization_business_type:
+        | "sole_proprietorship"
+        | "partnership"
+        | "limited_liability"
+        | "corporation"
+        | "nonprofit"
+        | "other"
       organization_role:
         | "owner"
         | "admin"
@@ -3148,6 +3281,14 @@ export const Constants = {
       membership_status: ["active", "suspended"],
       normal_balance: ["debit", "credit"],
       occurrence_status: ["pending", "posted", "skipped", "failed"],
+      organization_business_type: [
+        "sole_proprietorship",
+        "partnership",
+        "limited_liability",
+        "corporation",
+        "nonprofit",
+        "other",
+      ],
       organization_role: [
         "owner",
         "admin",

@@ -13,8 +13,6 @@ const email = ref('')
 const password = ref('')
 const pending = ref(false)
 const error = ref<string | null>(null)
-const mode = ref<'signin' | 'signup'>('signin')
-const message = ref<string | null>(null)
 const hydrated = ref(false)
 
 onMounted(() => {
@@ -23,32 +21,36 @@ onMounted(() => {
 })
 
 watchEffect(() => {
-  if (user.value) navigateTo('/')
+  if (user.value) navigateTo('/dashboard')
 })
 
 async function signIn() {
   pending.value = true
   error.value = null
 
-  const { data, error: signInError } = mode.value === 'signin'
-    ? await supabase.auth.signInWithPassword({ email: email.value, password: password.value })
-    : await supabase.auth.signUp({ email: email.value, password: password.value })
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value })
 
   pending.value = false
   // Deliberately generic: the form must not reveal whether an address exists.
   if (signInError) error.value = t('auth.failed')
-  else if (mode.value === 'signup' && !data.session) message.value = t('auth.checkEmail')
-  else await navigateTo('/')
+  else await navigateTo('/dashboard')
 }
 </script>
 
 <template>
-  <main class="grid min-h-dvh place-items-center px-4">
-    <div class="w-full max-w-sm">
-      <form class="ls-card space-y-5 p-8" :data-hydrated="hydrated" @submit.prevent="signIn">
+  <main class="grid min-h-dvh bg-background lg:grid-cols-2">
+    <section class="hidden bg-[var(--bs-ink)] p-12 text-[var(--bs-paper)] lg:flex lg:flex-col">
+      <NuxtLink to="/" class="text-lg font-black tracking-[-.04em]" dir="ltr">Ledger Suit</NuxtLink>
+      <div class="my-auto max-w-xl"><p class="text-xs font-bold uppercase tracking-[.2em] text-[var(--bs-gray-400)]">{{ t('auth.welcomeEyebrow') }}</p><h1 class="mt-4 text-5xl font-black leading-tight tracking-[-.05em]">{{ t('auth.welcomeTitle') }}</h1><p class="mt-5 text-base leading-7 text-[var(--bs-gray-400)]">{{ t('auth.welcomeBody') }}</p></div>
+      <p class="text-xs text-[var(--bs-gray-500)]" dir="ltr">© 2026 Building Suit</p>
+    </section>
+    <section class="grid place-items-center px-4 py-10">
+      <div class="w-full max-w-md">
+        <NuxtLink to="/" class="mb-8 inline-block text-lg font-black tracking-[-.04em] lg:hidden" dir="ltr">Ledger Suit</NuxtLink>
+      <form class="ls-card space-y-5 p-7 sm:p-9" :data-hydrated="hydrated" @submit.prevent="signIn">
         <div>
           <h1 class="text-xl font-extrabold" dir="ltr">{{ t('auth.title') }}</h1>
-          <p class="mt-1 text-sm text-fg-muted">{{ t(mode === 'signin' ? 'auth.subtitle' : 'auth.signupSubtitle') }}</p>
+          <p class="mt-1 text-sm text-fg-muted">{{ t('auth.subtitle') }}</p>
         </div>
 
         <div>
@@ -70,7 +72,7 @@ async function signIn() {
             id="password"
             v-model="password"
             type="password"
-            :autocomplete="mode === 'signin' ? 'current-password' : 'new-password'"
+            autocomplete="current-password"
             required
             dir="ltr"
             class="ls-input"
@@ -78,17 +80,16 @@ async function signIn() {
         </div>
 
         <p v-if="error" role="alert" class="ls-error">{{ error }}</p>
-        <p v-if="message" role="status" class="text-sm text-[var(--bs-status-success)]">{{ message }}</p>
-
         <button type="submit" :disabled="pending" class="ls-btn ls-btn-primary w-full">
-          {{ pending ? t('auth.signingIn') : t(mode === 'signin' ? 'auth.signIn' : 'auth.signUp') }}
+          {{ pending ? t('auth.signingIn') : t('auth.signIn') }}
         </button>
-        <button type="button" class="w-full text-sm text-link" @click="mode = mode === 'signin' ? 'signup' : 'signin'; error = null; message = null">{{ t(mode === 'signin' ? 'auth.needAccount' : 'auth.haveAccount') }}</button>
+        <p class="text-center text-sm text-fg-muted">{{ t('auth.needAccount') }} <NuxtLink to="/signup" class="font-bold text-fg underline underline-offset-4">{{ t('landing.startTrial') }}</NuxtLink></p>
       </form>
 
       <div class="mt-4 flex justify-center">
         <SettingsMenu />
       </div>
-    </div>
+      </div>
+    </section>
   </main>
 </template>

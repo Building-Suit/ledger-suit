@@ -242,11 +242,19 @@ profile is gone.
 
 ---
 
-## 8. Subscriptions and entitlements
+## 8. Subscription access
 
-Billing is modelled at the organization level and carries no vendor specifics: a
-provider is a string plus an opaque id. The accounting domain imports no billing
-SDK.
+There is one public product: Ledger Suit, billed monthly or yearly through
+Stripe. Creating an organization inserts a `suspended` subscription and does
+**not** start access. Only a signature-verified Stripe event can attach the
+provider subscription and begin the 14-day trial.
+
+The central capability predicate applies subscription state after role and
+member overrides. Read capabilities and `billing.manage` remain available;
+every other mutation requires `trialing`, `active`, or a time-bounded payment
+grace period. A lapsed organization therefore keeps its financial history but
+cannot post, edit, invite, import, export, or run scheduled accounting writes.
+This is a database rule, not a frontend redirect.
 
 Entitlements are evaluated in exactly two places:
 
@@ -257,10 +265,43 @@ public.get_limit(organization_id, limit_key)   -- NULL = unlimited, 0 = denied
 
 `billing_events` is unique on `(provider, provider_event_id)`, which is what
 makes webhook processing idempotent no matter how often a provider retries.
+The webhook verifies Stripe's HMAC over the untouched request body before it
+calls the service-only database transition function.
+
+Supabase Cron runs recurring transactions, commitment reminders, and automatic
+commitment conversions every 15 minutes. It skips organizations without write
+access. A second five-minute Cron invokes the Resend queue worker with URL and
+credentials read from Supabase Vault; queue rows are claimed with
+`FOR UPDATE SKIP LOCKED` and use notification IDs as Resend idempotency keys.
 
 ---
 
-## 9. Operational workflows
+## 9. Acquisition and onboarding
+
+`/` is public product information, `/signup` is the guided account journey, and
+`/dashboard` is the authenticated application entry. Signup gathers the owner
+profile, legal business details, country, currency, timezone, fiscal-year start,
+and billing interval before creating anything.
+
+`complete_account_onboarding(...)` then provisions the profile, organization,
+owner membership, default categories, starter chart of accounts, audit entry,
+and checkout-required subscription in one PostgreSQL transaction. If any seed
+or validation fails, none of the workspace survives. The function resolves the
+caller through `auth.uid()`, refuses replay for an existing active member, fixes
+its `search_path`, and grants execution only to authenticated users.
+
+Stripe Checkout is the final signup step. Until its signed webhook activates
+the trial, the database removes write capabilities. A partially paid or
+client-forged workspace therefore cannot enter normal use.
+
+The authenticated shell exposes one global floating add control. Its drawer is
+derived from the caller's capabilities and delegates to the existing controlled
+transaction, account, commitment, recurring, counterparty, tag, and invitation
+workflows; it is navigation, never a second write path.
+
+---
+
+## 10. Operational workflows
 
 Commitments remain outside the ledger until settlement. Full and partial
 settlements call the same income/expense posting functions as manual entries;
@@ -287,7 +328,7 @@ financial history.
 
 ---
 
-## 9. Error codes
+## 11. Error codes
 
 Domain errors are raised with a stable prefix so the API layer can map them to
 safe user-facing messages:
@@ -309,7 +350,7 @@ ids.
 
 ---
 
-## 10. Deliberately built for what comes next
+## 12. Deliberately built for what comes next
 
 - `transaction_entries.dimensions jsonb` — branch, project, cost centre
 - `transaction_status.pending_approval` — approval policies without reshaping
