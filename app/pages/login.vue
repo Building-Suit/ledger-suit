@@ -15,6 +15,13 @@ const pending = ref(false)
 const error = ref<string | null>(null)
 const hydrated = ref(false)
 
+function isUnconfirmedEmail(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const authError = error as Record<string, unknown>
+  return [authError.message, authError.code, authError.error_code]
+    .some(value => String(value ?? '').toLowerCase().includes('email_not_confirmed') || String(value ?? '').toLowerCase().includes('email not confirmed'))
+}
+
 onMounted(() => {
   restore()
   hydrated.value = true
@@ -32,7 +39,13 @@ async function signIn() {
 
   pending.value = false
   // Deliberately generic: the form must not reveal whether an address exists.
-  if (signInError) error.value = t('auth.failed')
+  if (isUnconfirmedEmail(signInError)) {
+    // This route is only reached after a successful password check. Sending a
+    // fresh code gives the account holder an immediate way to finish signup.
+    await supabase.auth.resend({ type: 'signup', email: email.value.trim().toLowerCase() })
+    await navigateTo({ path: '/verify-email', query: { email: email.value.trim().toLowerCase() } })
+  }
+  else if (signInError) error.value = t('auth.failed')
   else await navigateTo('/dashboard')
 }
 </script>

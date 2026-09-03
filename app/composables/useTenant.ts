@@ -60,8 +60,12 @@ export function useTenant() {
     capabilities.value = (data as string[] | null) ?? []
   }
 
-  async function loadOrganizations() {
-    if (!user.value) return
+  async function loadOrganizations(authenticatedUserId?: string) {
+    // Route middleware can run immediately after sign-in, before Nuxt's
+    // reactive auth user has caught up. The verified user from getUser is
+    // sufficient to continue; the database request still carries the user's
+    // JWT and remains fully protected by RLS.
+    if (!user.value && !authenticatedUserId) return
 
     loading.value = true
     try {

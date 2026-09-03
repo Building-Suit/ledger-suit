@@ -23,10 +23,17 @@ export default defineNuxtConfig({
   // Only the publishable (anon) key ever reaches the browser. The service role
   // key is deliberately absent from this config — it must never be bundled.
   supabase: {
+    // Authentication and billing access are handled by the application-wide
+    // entitlement middleware. The module's generic redirect cannot distinguish
+    // an unpaid member from an unauthenticated visitor.
+    redirect: false,
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
-      exclude: ['/', '/login', '/signup'],
+      // Verification is intentionally reachable before a confirmed session,
+      // while /subscribe is protected by our entitlement middleware so it can
+      // distinguish unpaid workspaces from unauthenticated visitors.
+      exclude: ['/', '/login', '/signup', '/verify-email', '/subscribe', '/dashboard', '/transactions', '/accounts', '/reports', '/billing'],
     },
   },
 
