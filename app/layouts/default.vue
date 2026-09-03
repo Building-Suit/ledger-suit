@@ -16,6 +16,7 @@ const { t } = useI18n()
 const { current, currentId, loadOrganizations, loading } = useTenant()
 const { can } = useTenant()
 const {
+  accessState,
   checkoutRequired,
   readOnly,
   writesAllowed,
@@ -50,7 +51,8 @@ async function signOut() {
 </script>
 
 <template>
-  <div class="min-h-dvh bg-background lg:grid lg:grid-cols-[17rem_1fr] lg:gap-4 lg:p-4">
+  <div v-if="billingLoading || accessState === 'loading' || checkoutRequired" class="min-h-dvh bg-background" aria-busy="true" />
+  <div v-else class="min-h-dvh bg-background lg:grid lg:grid-cols-[17rem_1fr] lg:gap-4 lg:p-4">
     <!-- Shown/hidden rather than slid off-screen with a transform: a translate
          utility that silently fails to apply leaves the drawer sitting on top
          of the page on every phone, which is exactly what happened here. -->
@@ -136,8 +138,6 @@ async function signOut() {
         <div v-if="loading || billingLoading" class="text-sm text-fg-muted">{{ t('app.loading') }}</div>
 
         <OrganizationSetup v-else-if="!current" />
-
-        <SubscriptionGate v-else-if="checkoutRequired" />
 
         <template v-else>
           <div v-if="readOnly" class="mb-5 rounded-control border border-warning bg-[var(--bs-status-warning-bg)] p-4 text-sm" role="status">
