@@ -18,7 +18,7 @@ async function invite() {
     const { data, error } = await supabase.functions.invoke('send-invitation', {
       body: { organizationId: currentId.value, email: email.value, role: role.value },
     })
-    if (error) throw error
+    if (error) throw new Error(await edgeFunctionErrorMessage(error, t('errors.generic')))
     token.value = String(data?.invitationToken ?? '')
     if (data?.sent) email.value = ''
   }
