@@ -95,7 +95,10 @@ async function openCheckout(organizationId: string) {
   const { data: checkout, error: checkoutError } = await supabase.functions.invoke('stripe-checkout', {
     body: { organizationId, interval: form.interval },
   })
-  if (checkoutError || !checkout?.url) throw checkoutError ?? new Error(t('billing.checkoutFailed'))
+  if (checkoutError) {
+    throw new Error(await edgeFunctionErrorMessage(checkoutError, t('billing.checkoutFailed')))
+  }
+  if (!checkout?.url) throw new Error(t('billing.checkoutFailed'))
   clearPendingOnboarding()
   window.location.assign(checkout.url)
 }

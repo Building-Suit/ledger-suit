@@ -28,7 +28,6 @@ Deno.serve(async (request) => {
     const appUrl = requiredEnv('APP_BASE_URL').replace(/\/$/, '')
     const body = new URLSearchParams({
       mode: 'subscription',
-      integration_identifier: 'ledger_suit_xqjrmnvt',
       'line_items[0][price]': priceId,
       'line_items[0][quantity]': '1',
       payment_method_collection: 'always',
