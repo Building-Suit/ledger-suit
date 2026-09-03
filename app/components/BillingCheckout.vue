@@ -15,7 +15,7 @@ async function checkout() {
     const { data, error } = await supabase.functions.invoke('stripe-checkout', {
       body: { organizationId: currentId.value, interval: interval.value },
     })
-    if (error) throw error
+    if (error) throw new Error(await edgeFunctionErrorMessage(error, t('billing.checkoutFailed')))
     if (!data?.url) throw new Error(data?.error ?? t('billing.checkoutFailed'))
     window.location.assign(data.url)
   }

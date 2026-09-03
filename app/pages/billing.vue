@@ -22,7 +22,7 @@ async function openPortal() {
     const { data, error } = await supabase.functions.invoke('stripe-portal', {
       body: { organizationId: currentId.value },
     })
-    if (error) throw error
+    if (error) throw new Error(await edgeFunctionErrorMessage(error, t('billing.portalFailed')))
     if (!data?.url) throw new Error(data?.error ?? t('billing.portalFailed'))
     window.location.assign(data.url)
   }
