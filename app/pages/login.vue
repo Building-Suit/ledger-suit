@@ -48,7 +48,10 @@ async function signIn() {
   else if (signInError) error.value = t('auth.failed')
   else {
     useState<string | null>('auth:transition-user', () => null).value = data.user?.id ?? data.session?.user.id ?? null
-    await navigateTo('/dashboard')
+    // Let the entitlement page make the first post-login decision. This avoids
+    // briefly opening the product shell before we know whether checkout is
+    // required, and it gives Supabase a moment to persist the new session.
+    await navigateTo('/subscribe')
   }
 }
 </script>

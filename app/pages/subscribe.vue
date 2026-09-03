@@ -7,6 +7,7 @@ const { t } = useI18n()
 const { current, loadOrganizations } = useTenant()
 const { checkoutRequired, loading, load } = useBilling()
 const { restore } = useTheme()
+const transitionUserId = useState<string | null>('auth:transition-user', () => null)
 
 useHead({ title: () => `${t('billing.title')} · ${t('app.name')}` })
 
@@ -19,7 +20,7 @@ onMounted(async () => {
 })
 
 watchEffect(() => {
-  if (!user.value) navigateTo('/login')
+  if (!user.value && !transitionUserId.value) navigateTo('/login')
   else if (current.value && !loading.value && !checkoutRequired.value) navigateTo('/dashboard')
 })
 
