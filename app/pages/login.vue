@@ -35,7 +35,7 @@ async function signIn() {
   pending.value = true
   error.value = null
 
-  const { data, error: signInError } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value })
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value })
 
   pending.value = false
   // Deliberately generic: the form must not reveal whether an address exists.
@@ -46,13 +46,7 @@ async function signIn() {
     await navigateTo({ path: '/verify-email', query: { email: email.value.trim().toLowerCase() } })
   }
   else if (signInError) error.value = t('auth.failed')
-  else {
-    useState<string | null>('auth:transition-user', () => null).value = data.user?.id ?? data.session?.user.id ?? null
-    // Let the entitlement page make the first post-login decision. This avoids
-    // briefly opening the product shell before we know whether checkout is
-    // required, and it gives Supabase a moment to persist the new session.
-    await navigateTo('/subscribe')
-  }
+  else await navigateTo('/dashboard')
 }
 </script>
 

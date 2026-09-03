@@ -75,6 +75,7 @@ test('the dedicated OTP route presents verification without the product shell', 
 
 test('an unpaid workspace is sent to payment before the product shell', async ({ page }) => {
   await page.goto('/login')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
   await page.route('**/rest/v1/rpc/subscription_access_state', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -86,6 +87,6 @@ test('an unpaid workspace is sent to payment before the product shell', async ({
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 
   await expect(page).toHaveURL('/subscribe')
-  await expect(page.getByRole('heading', { name: /Unlock/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Activate Alpha Trading' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
 })

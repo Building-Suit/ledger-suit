@@ -22,8 +22,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     await new Promise(resolve => setTimeout(resolve, 100))
     session = (await supabase.auth.getSession()).data.session
   }
-  const transitionUserId = useState<string | null>('auth:transition-user', () => null)
-  const user = useSupabaseUser().value ?? session?.user ?? (transitionUserId.value ? { id: transitionUserId.value } : null)
+  const user = useSupabaseUser().value ?? session?.user
   if (!user) return navigateTo('/login')
 
   const tenant = useTenant()
