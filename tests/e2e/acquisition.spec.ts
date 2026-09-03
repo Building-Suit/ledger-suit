@@ -29,6 +29,20 @@ test('landing page explains the product and leads to paid onboarding', async ({ 
   await expect(page.getByLabel('Job title')).toBeVisible()
 })
 
+test('the brand wordmark follows the selected theme', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('ledger-suit.theme', 'dark'))
+  await page.goto('/')
+
+  const logo = page.getByRole('img', { name: 'Ledger Suit by Building Suit' }).first()
+  await expect(logo.locator('.ls-logo-image-light')).toBeVisible()
+  await expect(logo.locator('.ls-logo-image-dark')).toBeHidden()
+
+  await page.evaluate(() => localStorage.setItem('ledger-suit.theme', 'light'))
+  await page.reload()
+  await expect(logo.locator('.ls-logo-image-dark')).toBeVisible()
+  await expect(logo.locator('.ls-logo-image-light')).toBeHidden()
+})
+
 test('signup verifies email by OTP before provisioning and checkout', async ({ page }) => {
   const email = `otp-${Date.now()}@ledgersuit.test`
   await page.route('**/functions/v1/stripe-checkout', route => route.fulfill({

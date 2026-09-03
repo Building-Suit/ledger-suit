@@ -20,26 +20,26 @@ withDefaults(defineProps<{
       class="ls-logo-image ls-logo-image-dark"
       :src="`/brand/ledger-suit-${kind}-dark.svg`"
       alt=""
-      width="1040"
-      height="300"
+      :width="kind === 'mark' ? 1024 : 1600"
+      :height="kind === 'mark' ? 1024 : 420"
     >
     <img
       class="ls-logo-image ls-logo-image-light"
       :src="`/brand/ledger-suit-${kind}-light.svg`"
       alt=""
-      width="1040"
-      height="300"
+      :width="kind === 'mark' ? 1024 : 1600"
+      :height="kind === 'mark' ? 1024 : 420"
     >
   </span>
 </template>
 
-<style scoped>
+<style>
 .ls-logo {
   line-height: 0;
 }
 
 .ls-logo-wordmark {
-  aspect-ratio: 1040 / 300;
+  aspect-ratio: 1600 / 420;
 }
 
 .ls-logo-mark {
@@ -62,20 +62,20 @@ withDefaults(defineProps<{
   display: block;
 }
 
-:global(:root[data-theme='dark']) .ls-logo-auto .ls-logo-image-dark {
+:root[data-theme='dark'] .ls-logo-auto .ls-logo-image-dark {
   display: none;
 }
 
-:global(:root[data-theme='dark']) .ls-logo-auto .ls-logo-image-light {
+:root[data-theme='dark'] .ls-logo-auto .ls-logo-image-light {
   display: block;
 }
 
 @media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme='light']):not([data-theme='dark'])) .ls-logo-auto .ls-logo-image-dark {
+  :root:not([data-theme='light']):not([data-theme='dark']) .ls-logo-auto .ls-logo-image-dark {
     display: none;
   }
 
-  :global(:root:not([data-theme='light']):not([data-theme='dark'])) .ls-logo-auto .ls-logo-image-light {
+  :root:not([data-theme='light']):not([data-theme='dark']) .ls-logo-auto .ls-logo-image-light {
     display: block;
   }
 }
