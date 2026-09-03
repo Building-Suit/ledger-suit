@@ -65,3 +65,28 @@ test('signup verifies email by OTP before provisioning and checkout', async ({ p
 
   await expect(page).toHaveURL(/\/billing\/ready\?session_id=otp-test/)
 })
+
+test('the dedicated OTP route presents verification without the product shell', async ({ page }) => {
+  await page.goto('/verify-email?email=unconfirmed%40ledgersuit.test')
+  await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
+  await expect(page.getByText('unconfirmed@ledgersuit.test')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
+})
+
+test('an unpaid workspace is sent to payment before the product shell', async ({ page }) => {
+  await page.goto('/login')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await page.route('**/rest/v1/rpc/subscription_access_state', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify('checkout_required'),
+  }))
+
+  await page.getByLabel('Email').fill('owner@alpha.test')
+  await page.getByLabel('Password').fill('ledgersuit')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+
+  await expect(page).toHaveURL('/subscribe')
+  await expect(page.getByRole('heading', { name: 'Activate Alpha Trading' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
+})
