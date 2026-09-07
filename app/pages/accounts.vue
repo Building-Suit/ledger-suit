@@ -157,9 +157,9 @@ async function archiveAccount(row: BalanceRow) {
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="space-y-6">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-extrabold">{{ t('accounts.title') }}</h1>
+      <h1 class="text-h1 font-bold">{{ t('accounts.title') }}</h1>
       <div class="flex items-center gap-3">
         <label class="flex items-center gap-2 text-sm text-fg-muted">
           <input v-model="showArchived" type="checkbox" class="rounded-sm border-[var(--bs-border)]">
@@ -179,7 +179,7 @@ async function archiveAccount(row: BalanceRow) {
       :description="t('accounts.emptyHint')"
     />
 
-    <div v-else class="space-y-5">
+    <div v-else class="space-y-6">
       <section
         v-for="group in groups"
         :key="group.type"
@@ -239,10 +239,10 @@ async function archiveAccount(row: BalanceRow) {
 
     <Teleport to="body">
       <div v-if="editorOpen" class="fixed inset-0 z-50 grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" @click.self="editorOpen = false">
-        <form class="ls-card w-full max-w-lg space-y-4 p-6" @submit.prevent="saveAccount">
+        <form class="ls-modal-panel ls-card w-full max-w-lg space-y-4 p-6 shadow-overlay" @submit.prevent="saveAccount">
           <div class="flex items-center justify-between">
             <h2 class="text-lg font-bold">{{ editing ? t('accounts.edit') : t('accounts.add') }}</h2>
-            <button type="button" class="ls-btn ls-btn-sm" @click="editorOpen = false">✕</button>
+            <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="editorOpen = false"><AppIcon name="close" /></button>
           </div>
           <div><label class="ls-label" for="account-name">{{ t('accounts.name') }}</label><input id="account-name" v-model="form.name" class="ls-input" required></div>
           <div><label class="ls-label" for="account-code">{{ t('accounts.code') }}</label><input id="account-code" v-model="form.code" class="ls-input" dir="ltr"></div>

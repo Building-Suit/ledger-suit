@@ -29,7 +29,7 @@ async function checkout() {
 </script>
 
 <template>
-  <div :class="compact ? 'space-y-3' : 'space-y-5'">
+  <div :class="compact ? 'space-y-3' : 'space-y-6'">
     <fieldset>
       <legend class="ls-label">{{ t('billing.billingCycle') }}</legend>
       <div class="grid grid-cols-2 gap-2" dir="ltr">

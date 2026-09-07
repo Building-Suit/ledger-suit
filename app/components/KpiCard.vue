@@ -40,7 +40,7 @@ const changeLabel = computed(() => {
 </script>
 
 <template>
-  <article class="ls-card p-5">
+  <article class="ls-card p-6">
     <p class="text-sm text-fg-muted">{{ title }}</p>
     <p class="mt-2 text-2xl font-extrabold">
       <MoneyText :amount-minor="current" />

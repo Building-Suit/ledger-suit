@@ -3,7 +3,7 @@ import type { Database } from '~~/types/database.types'
 const supabase = useSupabaseClient<Database>()
 const { currentId, can } = useTenant()
 const { t } = useI18n()
-const { open, show, close } = useTeamInvitation()
+const { open, show, close, markChanged } = useTeamInvitation()
 const email = ref('')
 const role = ref<Database['public']['Enums']['organization_role']>('viewer')
 const token = ref('')
@@ -20,7 +20,10 @@ async function invite() {
     })
     if (error) throw new Error(await edgeFunctionErrorMessage(error, t('errors.generic')))
     token.value = String(data?.invitationToken ?? '')
-    if (data?.sent) email.value = ''
+    if (token.value) markChanged()
+    if (data?.sent) {
+      email.value = ''
+    }
   }
   catch (error) { errorMessage.value = describeError(error) }
   finally { pending.value = false }
@@ -31,10 +34,10 @@ async function invite() {
     <button type="button" class="ls-btn ls-btn-sm w-full" @click="show">{{ t('org.invite') }}</button>
     <Teleport to="body">
       <div v-if="open" class="fixed inset-0 z-[70] grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" @click.self="close">
-        <form class="ls-card w-full max-w-lg space-y-4 p-6" @submit.prevent="invite">
+        <form class="ls-modal-panel ls-card w-full max-w-lg space-y-4 p-6 shadow-overlay" @submit.prevent="invite">
           <div class="flex justify-between">
             <h2 class="text-lg font-bold">{{ t('org.invite') }}</h2>
-            <button type="button" class="ls-btn ls-btn-sm" @click="close">✕</button>
+            <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="close"><AppIcon name="close" /></button>
           </div>
           <input v-model="email" type="email" class="ls-input" :placeholder="t('auth.email')" required>
           <select v-model="role" class="ls-input">

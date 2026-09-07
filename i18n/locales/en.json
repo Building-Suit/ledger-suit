@@ -31,8 +31,18 @@
     "primary": "Primary",
     "dashboard": "Dashboard",
     "transactions": "Transactions",
+    "allTransactions": "All transactions",
     "accounts": "Accounts",
     "reports": "Reports",
+    "teamInvitations": "Team invitations",
+    "groups": {
+      "transactions": "Transactions",
+      "ledger": "Ledger",
+      "operations": "Operations",
+      "directory": "Directory",
+      "workspace": "Workspace",
+      "insights": "Insights"
+    },
     "open": "Open navigation",
     "close": "Close navigation"
   },
@@ -317,6 +327,22 @@
       "mustBalance": "Debits must equal credits before this can be posted.",
       "descriptionAndReason": "A description and a reason are both required."
     }
+  },
+  "recordPages": {
+    "allTransactions": "All transactions",
+    "count": "{count} records",
+    "add": "Add {item}",
+    "empty": "No {item} records yet",
+    "emptyHint": "New records will appear here after they are created.",
+    "kind": "Type",
+    "schedule": "Schedule",
+    "nextRun": "Next run",
+    "color": "Color",
+    "created": "Created",
+    "expires": "Expires",
+    "role": "Role",
+    "addCounterparty": "Add counterparty",
+    "addTag": "Add tag"
   },
   "status": {
     "draft": "Draft",

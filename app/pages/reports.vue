@@ -199,8 +199,8 @@ function exportBalanceSheet() {
 </script>
 
 <template>
-  <div class="space-y-5">
-    <h1 class="text-2xl font-extrabold">{{ t('reports.title') }}</h1>
+  <div class="space-y-6">
+    <h1 class="text-h1 font-bold">{{ t('reports.title') }}</h1>
 
     <div class="flex gap-1 overflow-x-auto border-b border-[var(--bs-border)]" role="tablist">
       <button
@@ -268,7 +268,7 @@ function exportBalanceSheet() {
 
       <SectionSkeleton v-if="trialBalancePending" variant="table" :rows="7" />
       <section v-else class="ls-card overflow-hidden" aria-labelledby="tb-heading">
-        <div class="flex items-center justify-between px-5 py-4">
+        <div class="flex items-center justify-between px-6 py-4">
           <h2 id="tb-heading" class="text-base font-bold">{{ t('reports.trialBalance') }}</h2>
           <p class="text-sm font-semibold" :class="trialTotals.debit === trialTotals.credit ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'">
             {{ trialTotals.debit === trialTotals.credit ? t('reports.inBalance') : t('reports.outOfBalance') }}

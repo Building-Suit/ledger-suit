@@ -158,7 +158,7 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
 <template>
   <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-2xl font-extrabold">{{ t('transactions.title') }}</h1>
+      <h1 class="text-h1 font-bold">{{ t('transactions.title') }}</h1>
       <p class="text-sm text-fg-muted">{{ t('transactions.count', total) }}</p>
     </div>
 
@@ -294,7 +294,7 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
               <td class="whitespace-nowrap">{{ t(`types.${row.type}`) }}</td>
               <td>{{ row.category_name || t('common.dash') }}</td>
               <td class="whitespace-nowrap text-fg-muted">
-                {{ row.from_account_name || t('common.dash') }} → {{ row.to_account_name || t('common.dash') }}
+                {{ row.from_account_name || t('common.dash') }} <AppIcon name="arrowRight" :size="14" directional class="inline-block" /> {{ row.to_account_name || t('common.dash') }}
               </td>
               <td>{{ row.counterparty_name || t('common.dash') }}</td>
               <td><StatusBadge :status="row.status" /></td>

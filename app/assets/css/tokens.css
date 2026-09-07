@@ -1,9 +1,15 @@
-/* Building Suit monochrome design system: fixed palette, semantic roles, and shared scales. */
+/*
+ * Building Suit design tokens.
+ * Canonical source: building-suit/.docs/building-suit-brand-guidelines/
+ * 07-design-tokens/design-tokens.json (v1.0.0).
+ */
 :root {
   --bs-font-latin: 'Manrope Variable', 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --bs-font-arabic: 'IBM Plex Sans Arabic', 'Cairo', 'Tajawal', 'Segoe UI', sans-serif;
   --bs-font-mono: 'Fira Mono', ui-monospace, 'SF Mono', monospace;
 
+  /* Ledger Suit's neutral extension: the product shell stays black/graphite;
+     navy is reserved for brand moments rather than every surface. */
   --bs-ink: #0b0b0d;
   --bs-charcoal: #141416;
   --bs-graphite: #1c1c1f;
@@ -20,22 +26,49 @@
   --bs-gray-50: #fafafa;
   --bs-paper: #ffffff;
 
-  --bs-success: #16835f;
-  --bs-success-bg: #e7f6ef;
-  --bs-warning: #b9690d;
-  --bs-warning-bg: #fff4df;
-  --bs-error: #c43e3e;
-  --bs-error-bg: #fdeaea;
-  --bs-info: #356fa8;
-  --bs-info-bg: #e8f1fa;
-  --bs-success-dark: #4dc496;
-  --bs-success-bg-dark: #143329;
-  --bs-warning-dark: #f2a64e;
-  --bs-warning-bg-dark: #3b2914;
-  --bs-error-dark: #ef7777;
-  --bs-error-bg-dark: #3c1d1d;
-  --bs-info-dark: #76a9dc;
-  --bs-info-bg-dark: #172b3d;
+  --bs-building-navy: #16293b;
+  --bs-deep-structure-navy: #0d1b28;
+  --bs-midnight-bg: #0a111a;
+  --bs-navy-surface: #14233a;
+  --bs-navy-surface-raised: #1b2e47;
+  --bs-steel-border: #2e3f52;
+  --bs-premium-gold: #d89b42;
+  --bs-highlight-gold: #ebb45a;
+  --bs-gold-700: #a86c1c;
+  --bs-gold-600: #c8902f;
+  --bs-gold-500: #d89b42;
+  --bs-gold-400: #ebb45a;
+  --bs-gold-300: #f4ce86;
+  --bs-pearl-white: #f7f8fa;
+  --bs-soft-silver: #e2e5ea;
+  --bs-cloud-gray: #cbd2db;
+  --bs-white: #ffffff;
+  --bs-slate-blue: #36506e;
+  --bs-sky-steel: #7e97b3;
+  --bs-pale-sky: #dce6f1;
+  --bs-graphite-text: #232b33;
+  --bs-slate-gray: #5a6573;
+  --bs-steel-gray: #9aa6b4;
+
+  --bs-success: #2e9e6b;
+  --bs-success-bg: #e4f4ec;
+  --bs-warning: #e1841f;
+  --bs-warning-bg: #fbeedd;
+  --bs-error: #d14b4b;
+  --bs-error-bg: #f8e3e3;
+  --bs-info: #2f77c9;
+  --bs-info-bg: #dce6f1;
+  --bs-success-dark: #46b383;
+  --bs-success-bg-dark: #18352a;
+  --bs-warning-dark: #f09a3c;
+  --bs-warning-bg-dark: #3a2a14;
+  --bs-error-dark: #e26a6a;
+  --bs-error-bg-dark: #3a1e1e;
+  --bs-info-dark: #4f92dd;
+  --bs-info-bg-dark: #15263a;
+
+  --bs-gradient-gold: linear-gradient(135deg, #ebb45a 0%, #d89b42 50%, #a86c1c 100%);
+  --bs-gradient-navy: linear-gradient(160deg, #16293b 0%, #0d1b28 100%);
 
   --bs-bg: var(--bs-gray-50);
   --bs-surface: var(--bs-paper);
@@ -45,16 +78,16 @@
   --bs-text-muted: var(--bs-gray-600);
   --bs-text-disabled: var(--bs-gray-400);
   --bs-text-on-primary: var(--bs-paper);
-  --bs-text-on-accent: var(--bs-paper);
+  --bs-text-on-accent: var(--bs-deep-structure-navy);
   --bs-border: var(--bs-gray-200);
   --bs-border-strong: var(--bs-gray-500);
-  --bs-primary: var(--bs-ink);
-  --bs-primary-hover: var(--bs-gray-800);
-  --bs-primary-pressed: #000000;
-  --bs-accent: var(--bs-gray-700);
-  --bs-accent-hover: var(--bs-gray-600);
+  --bs-primary: var(--bs-building-navy);
+  --bs-primary-hover: #1e3a50;
+  --bs-primary-pressed: var(--bs-deep-structure-navy);
+  --bs-accent: var(--bs-premium-gold);
+  --bs-accent-hover: var(--bs-highlight-gold);
   --bs-link: var(--bs-gray-700);
-  --bs-focus-ring: var(--bs-gray-800);
+  --bs-focus-ring: var(--bs-premium-gold);
   --bs-scrim: rgb(11 11 13 / 0.56);
   --bs-status-success: var(--bs-success);
   --bs-status-success-bg: var(--bs-success-bg);
@@ -110,12 +143,12 @@
   --bs-input-height: 48px;
   --bs-tap-target-min: 44px;
   --bs-target-gap-min: 8px;
-  --bs-shadow-1: 0 1px 3px rgb(11 11 13 / 0.07), 0 8px 24px rgb(11 11 13 / 0.04);
-  --bs-shadow-2: 0 12px 32px rgb(11 11 13 / 0.12);
-  --bs-shadow-3: 0 24px 64px rgb(11 11 13 / 0.22);
-  --bs-shadow-1-dark: 0 1px 3px rgb(0 0 0 / 0.35), 0 8px 24px rgb(0 0 0 / 0.24);
-  --bs-shadow-2-dark: 0 12px 32px rgb(0 0 0 / 0.42);
-  --bs-shadow-3-dark: 0 24px 64px rgb(0 0 0 / 0.58);
+  --bs-shadow-1: 0 2px 8px rgb(13 27 40 / 0.08);
+  --bs-shadow-2: 0 4px 16px rgb(13 27 40 / 0.12);
+  --bs-shadow-3: 0 8px 24px rgb(13 27 40 / 0.16);
+  --bs-shadow-1-dark: 0 2px 8px rgb(0 0 0 / 0.32);
+  --bs-shadow-2-dark: 0 4px 16px rgb(0 0 0 / 0.4);
+  --bs-shadow-3-dark: 0 8px 24px rgb(0 0 0 / 0.48);
   --bs-elevation-1: var(--bs-shadow-1);
   --bs-elevation-2: var(--bs-shadow-2);
   --bs-elevation-3: var(--bs-shadow-3);
@@ -125,6 +158,7 @@
   --bs-focus-ring-width: 2px;
   --bs-focus-ring-offset: 2px;
   --bs-focus-ring-style: var(--bs-focus-ring-width) solid var(--bs-focus-ring);
+
 }
 
 :root[data-theme='dark'] {
@@ -139,13 +173,13 @@
   --bs-text-on-accent: var(--bs-ink);
   --bs-border: var(--bs-gray-800);
   --bs-border-strong: var(--bs-gray-500);
-  --bs-primary: var(--bs-gray-50);
-  --bs-primary-hover: var(--bs-gray-200);
-  --bs-primary-pressed: var(--bs-gray-300);
-  --bs-accent: var(--bs-gray-300);
-  --bs-accent-hover: var(--bs-gray-100);
+  --bs-primary: var(--bs-premium-gold);
+  --bs-primary-hover: var(--bs-highlight-gold);
+  --bs-primary-pressed: var(--bs-gold-600);
+  --bs-accent: var(--bs-highlight-gold);
+  --bs-accent-hover: var(--bs-gold-300);
   --bs-link: var(--bs-gray-300);
-  --bs-focus-ring: var(--bs-gray-200);
+  --bs-focus-ring: var(--bs-highlight-gold);
   --bs-scrim: rgb(0 0 0 / 0.72);
   --bs-status-success: var(--bs-success-dark);
   --bs-status-success-bg: var(--bs-success-bg-dark);
@@ -173,13 +207,13 @@
     --bs-text-on-accent: var(--bs-ink);
     --bs-border: var(--bs-gray-800);
     --bs-border-strong: var(--bs-gray-500);
-    --bs-primary: var(--bs-gray-50);
-    --bs-primary-hover: var(--bs-gray-200);
-    --bs-primary-pressed: var(--bs-gray-300);
-    --bs-accent: var(--bs-gray-300);
-    --bs-accent-hover: var(--bs-gray-100);
+    --bs-primary: var(--bs-premium-gold);
+    --bs-primary-hover: var(--bs-highlight-gold);
+    --bs-primary-pressed: var(--bs-gold-600);
+    --bs-accent: var(--bs-highlight-gold);
+    --bs-accent-hover: var(--bs-gold-300);
     --bs-link: var(--bs-gray-300);
-    --bs-focus-ring: var(--bs-gray-200);
+    --bs-focus-ring: var(--bs-highlight-gold);
     --bs-scrim: rgb(0 0 0 / 0.72);
     --bs-status-success: var(--bs-success-dark);
     --bs-status-success-bg: var(--bs-success-bg-dark);
