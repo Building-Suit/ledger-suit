@@ -38,18 +38,6 @@ export function useTenant() {
   const loading = useState<boolean>('tenant:loading', () => false)
   const loadedUserId = useState<string | null>('tenant:loadedUserId', () => null)
 
-  // These Nuxt data helpers resolve the active app internally. Tenant methods
-  // can be called from event handlers or after Supabase promises settle, where
-  // that implicit async context no longer exists. Re-enter the app captured
-  // when this composable was created before touching the Nuxt data cache.
-  function clearOrganizationData() {
-    return nuxtApp.runWithContext(() => clearNuxtData(key => key.startsWith('org:')))
-  }
-
-  function refreshOrganizationData() {
-    return nuxtApp.runWithContext(() => refreshNuxtData())
-  }
-
   const current = computed(
     () => organizations.value.find(o => o.id === currentId.value) ?? null,
   )
@@ -87,7 +75,7 @@ export function useTenant() {
     if (loadedUserId.value && loadedUserId.value !== userId) {
       // A second sign-in can happen without a document reload. Remove every
       // payload belonging to the previous identity before loading the next.
-      clearOrganizationData()
+      clearNuxtData(key => key.startsWith('org:'))
       organizations.value = []
       currentId.value = null
       capabilities.value = []
@@ -126,7 +114,7 @@ export function useTenant() {
 
         const nextOrganizationId = valid ? remembered : (organizations.value[0]?.id ?? null)
         if (currentId.value !== nextOrganizationId) {
-          clearOrganizationData()
+          clearNuxtData(key => key.startsWith('org:'))
           currentId.value = nextOrganizationId
         }
         await loadCapabilities()
