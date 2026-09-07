@@ -11,6 +11,7 @@ import type { Database } from '~~/types/database.types'
 export type AccountType = Database['public']['Enums']['account_type']
 
 export interface AccountRow {
+  organization_id: string
   id: string
   code: string | null
   name: string
@@ -41,12 +42,12 @@ export function useOrgAccounts() {
   const supabase = useSupabaseClient<Database>()
   const { currentId } = useTenant()
 
-  return useAsyncData<AccountRow[]>('org:accounts', async () => {
+  return useLazyAsyncData<AccountRow[]>('org:accounts', async () => {
     if (!currentId.value) return []
 
     const { data, error } = await supabase
       .from('accounts')
-      .select('id, code, name, type, subtype, currency, is_liquid, is_archived, is_system, system_key, parent_account_id')
+      .select('organization_id, id, code, name, type, subtype, currency, is_liquid, is_archived, is_system, system_key, parent_account_id')
       .eq('organization_id', currentId.value)
       .order('code', { ascending: true, nullsFirst: false })
 
@@ -59,7 +60,7 @@ export function useOrgCategories() {
   const supabase = useSupabaseClient<Database>()
   const { currentId } = useTenant()
 
-  return useAsyncData<CategoryRow[]>('org:categories', async () => {
+  return useLazyAsyncData<CategoryRow[]>('org:categories', async () => {
     if (!currentId.value) return []
 
     const { data, error } = await supabase
@@ -78,7 +79,7 @@ export function useOrgCounterparties() {
   const supabase = useSupabaseClient<Database>()
   const { currentId } = useTenant()
 
-  return useAsyncData<CounterpartyRow[]>('org:counterparties', async () => {
+  return useLazyAsyncData<CounterpartyRow[]>('org:counterparties', async () => {
     if (!currentId.value) return []
 
     const { data, error } = await supabase

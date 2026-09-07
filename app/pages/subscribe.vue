@@ -2,26 +2,49 @@
 definePageMeta({ layout: false })
 
 const supabase = useSupabaseClient()
-const user = useSupabaseUser()
 const { t } = useI18n()
 const { current, loadOrganizations } = useTenant()
 const { checkoutRequired, loading, load } = useBilling()
 const { restore } = useTheme()
+const route = useRoute()
+const redirecting = ref(false)
+const checkoutConfirmationActive = ref(false)
+const processing = computed(() => route.query.checkout === 'success')
 
 useHead({ title: () => `${t('billing.title')} · ${t('app.name')}` })
 
 await loadOrganizations()
 await load()
-onMounted(async () => {
+onMounted(() => {
   restore()
-  if (!current.value) await loadOrganizations()
-  await load()
+  if (processing.value) {
+    checkoutConfirmationActive.value = true
+    void confirmCheckout()
+  }
 })
+onBeforeUnmount(() => (checkoutConfirmationActive.value = false))
 
-watchEffect(() => {
-  if (!user.value) navigateTo('/login')
-  else if (current.value && !loading.value && !checkoutRequired.value) navigateTo('/dashboard')
-})
+async function confirmCheckout() {
+  // Stripe redirects before its webhook is guaranteed to have updated our
+  // subscription row. Poll briefly, then leave an explicit retry button rather
+  // than issuing unbounded background requests.
+  for (let attempt = 0; attempt < 10 && checkoutRequired.value && checkoutConfirmationActive.value; attempt++) {
+    try {
+      await load({ force: true })
+    }
+    catch {
+      return
+    }
+    if (!checkoutRequired.value) return
+    if (attempt < 9) await new Promise(resolve => setTimeout(resolve, 1_500))
+  }
+}
+
+watch([current, loading, checkoutRequired], async () => {
+  if (!current.value || loading.value || checkoutRequired.value || redirecting.value) return
+  redirecting.value = true
+  await navigateTo('/dashboard', { replace: true })
+}, { immediate: true })
 
 async function signOut() {
   await supabase.auth.signOut()

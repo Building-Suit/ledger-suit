@@ -8,7 +8,7 @@ const open = ref(false)
 const root = ref<HTMLElement | null>(null)
 useClickOutside(root, () => (open.value = false))
 
-const { data: notifications, refresh } = await useAsyncData('org:notifications', async () => {
+const { data: notifications, refresh } = useLazyAsyncData('org:notifications', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.from('notifications').select('*').eq('organization_id', currentId.value).order('created_at', { ascending: false }).limit(20)
   if (error) throw error

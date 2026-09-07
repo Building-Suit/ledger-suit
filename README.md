@@ -110,7 +110,7 @@ types/database.types.ts Generated from the schema; do not hand-edit
 
 ## What Phases 1–4 guarantee
 
-Verified by `pnpm db:test` (105 assertions) and `pnpm test:e2e`:
+Verified by `pnpm db:test` (107 assertions) and `pnpm test:e2e`:
 
 - every posting produces balanced ledger entries — `SUM(debits) = SUM(credits)`
 - reversals return the affected accounts to exactly their prior balance

@@ -2,7 +2,7 @@
 const supabase = useSupabaseClient()
 const { t, locale } = useI18n()
 const { currentId } = useTenant()
-const { accessState, subscription, load } = useBilling()
+const { accessState, subscription } = useBilling()
 const pending = ref(false)
 const errorMessage = ref('')
 
@@ -32,7 +32,8 @@ async function openPortal() {
   finally { pending.value = false }
 }
 
-onMounted(load)
+// The global entitlement middleware owns the initial load. Loading again from
+// onMounted made the layout remove and remount this page on every request.
 </script>
 
 <template>
