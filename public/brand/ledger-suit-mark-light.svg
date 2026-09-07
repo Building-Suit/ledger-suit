@@ -1,5 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 108 108">
-  <path fill="#FAFAFA" d="M30 22h8q4 0 4 4v46h34q4 0 4 4v6q0 4-4 4H30q-4 0-4-4V26q0-4 4-4Z"/>
-  <rect x="52" y="48" width="12" height="12" rx="3" fill="#D4D4D8"/>
-  <rect x="68" y="48" width="12" height="12" rx="3" fill="#71717A"/>
+<svg viewBox="145.8 126.12612612612614 347.40000000000003 351.35135135135135" xmlns="http://www.w3.org/2000/svg" style="max-height: 500px" width="347.40000000000003" height="351.35135135135135">
+
+<defs>
+  <linearGradient y2="100%" x2="100%" y1="0%" x1="0%" id="gold">
+    <stop stop-color="#EBB45A" offset="0%"/>
+    <stop stop-color="#D89B42" offset="58%"/>
+    <stop stop-color="#A86C1C" offset="100%"/>
+  </linearGradient>
+
+  <linearGradient y2="0%" x2="100%" y1="0%" x1="0%" id="ledgerRow">
+    <stop stop-color="#71717A" offset="0%"/>
+    <stop stop-color="#52525B" offset="42%"/>
+    <stop stop-color="#16293B" offset="70%"/>
+    <stop stop-color="#0D1B28" offset="100%"/>
+  </linearGradient>
+
+  <linearGradient y2="100%" x2="100%" y1="0%" x1="0%" id="navy">
+    <stop stop-color="#16293B" offset="0%"/>
+    <stop stop-color="#0D1B28" offset="100%"/>
+  </linearGradient>
+</defs>
+
+<g transform="translate(80,60) scale(0.47)">
+  <rect stroke-width="8" stroke="#D89B42" fill="#141416" rx="150" height="696" width="696" y="164" x="164"/>
+  <rect opacity="0.9" stroke-width="6" stroke="#16293B" fill="none" rx="132" height="660" width="660" y="182" x="182"/>
+  
+
+<rect fill="url(#gold)" rx="46" height="472" width="92" y="276" x="286"/>
+<rect fill="url(#gold)" rx="46" height="92" width="430" y="656" x="286"/>
+
+
+<rect fill="url(#ledgerRow)" rx="27" height="54" width="286" y="314" x="430"/>
+<rect fill="url(#ledgerRow)" rx="27" height="54" width="286" y="434" x="430"/>
+<rect fill="url(#ledgerRow)" rx="27" height="54" width="286" y="554" x="430"/>
+
+
+<rect fill="url(#gold)" rx="27" height="54" width="106" y="314" x="610"/>
+<rect fill="url(#gold)" rx="27" height="54" width="186" y="434" x="530"/>
+<rect fill="url(#gold)" rx="27" height="54" width="66" y="554" x="650"/>
+
+</g>
+
+<text letter-spacing="-4" font-weight="800" font-size="126" font-family="Manrope Variable, Manrope, Inter, Arial, sans-serif" fill="#0B0B0D" y="300" x="620">Ledger</text>
+<text letter-spacing="-4" font-weight="800" font-size="126" font-family="Manrope Variable, Manrope, Inter, Arial, sans-serif" fill="#D89B42" y="300" x="1039">Suit</text>
+
+<rect fill="#16293B" rx="4" height="8" width="112" y="343" x="626"/>
+<rect fill="#D89B42" rx="4" height="8" width="64" y="343" x="746"/>
+
+<text letter-spacing="8" font-weight="600" font-size="36" font-family="Manrope Variable, Manrope, Inter, Arial, sans-serif" fill="#52525B" y="404" x="626">BY BUILDING SUIT</text>
 </svg>
