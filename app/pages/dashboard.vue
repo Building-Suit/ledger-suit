@@ -41,7 +41,7 @@ interface Summary {
 
 // Every figure below is computed by the database. Nothing on this page
 // recalculates a total from rows it fetched.
-const { data: summary } = await useAsyncData<Summary | null>('org:dashboard', async () => {
+const { data: summary, pending: summaryPending } = useLazyAsyncData<Summary | null>('org:dashboard', async () => {
   if (!currentId.value) return null
   const { data, error } = await supabase.rpc('dashboard_summary', {
     p_organization_id: currentId.value,
@@ -50,7 +50,7 @@ const { data: summary } = await useAsyncData<Summary | null>('org:dashboard', as
   return data as unknown as Summary
 }, { watch: [currentId] })
 
-const { data: series } = await useAsyncData<SeriesPoint[]>('org:dashboard-series', async () => {
+const { data: series, pending: seriesPending } = useLazyAsyncData<SeriesPoint[]>('org:dashboard-series', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.rpc('report_monthly_series', {
     p_organization_id: currentId.value,
@@ -61,7 +61,7 @@ const { data: series } = await useAsyncData<SeriesPoint[]>('org:dashboard-series
   return (data ?? []) as unknown as SeriesPoint[]
 }, { watch: [currentId, months, customRange, customFrom, customTo], default: () => [] })
 
-const { data: liquid } = await useAsyncData('org:cash-position', async () => {
+const { data: liquid, pending: liquidPending } = useLazyAsyncData('org:cash-position', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase
     .from('account_balances')
@@ -73,7 +73,7 @@ const { data: liquid } = await useAsyncData('org:cash-position', async () => {
   return data ?? []
 }, { watch: [currentId], default: () => [] })
 
-const { data: recent } = await useAsyncData('org:recent-transactions', async () => {
+const { data: recent, pending: recentPending } = useLazyAsyncData('org:recent-transactions', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.rpc('search_transactions', {
     p_organization_id: currentId.value,
@@ -85,7 +85,7 @@ const { data: recent } = await useAsyncData('org:recent-transactions', async () 
 
 const hasActivity = computed(() => (recent.value?.length ?? 0) > 0)
 
-const { data: commitments } = await useAsyncData('org:dashboard-commitments', async () => {
+const { data: commitments, pending: commitmentsPending } = useLazyAsyncData('org:dashboard-commitments', async () => {
   if (!currentId.value || !can('commitments.read')) return []
   const { data, error } = await supabase.from('commitment_states').select('id,title,due_date,display_status,outstanding_minor,currency_code').eq('organization_id', currentId.value).in('display_status', ['due', 'due_soon', 'overdue', 'partially_paid']).order('due_date').limit(8)
   if (error) throw error
@@ -106,8 +106,16 @@ const payableHint = computed(() =>
   <div class="space-y-8">
     <h1 class="text-2xl font-extrabold">{{ t('dashboard.title') }}</h1>
 
+    <div v-if="recentPending" class="space-y-6">
+      <SectionSkeleton variant="cards" />
+      <div class="grid gap-6 xl:grid-cols-3">
+        <SectionSkeleton class="xl:col-span-2" variant="chart" />
+        <SectionSkeleton variant="table" :rows="4" />
+      </div>
+    </div>
+
     <EmptyState
-      v-if="!hasActivity"
+      v-else-if="!hasActivity"
       :title="t('dashboard.emptyTitle')"
       :description="t('dashboard.emptyHint')"
       :action-label="can('transactions.create') ? t('dashboard.emptyAction') : undefined"
@@ -115,7 +123,8 @@ const payableHint = computed(() =>
     />
 
     <template v-else>
-      <section aria-labelledby="kpis" class="space-y-3">
+      <SectionSkeleton v-if="summaryPending || commitmentsPending" variant="cards" />
+      <section v-else aria-labelledby="kpis" class="space-y-3">
         <h2 id="kpis" class="sr-only">{{ t('dashboard.kpis') }}</h2>
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard :title="t('dashboard.totalAssets')" :amount-minor="summary?.total_assets_minor" good-direction="neutral" />
@@ -152,7 +161,8 @@ const payableHint = computed(() =>
       </section>
 
       <div class="grid gap-6 xl:grid-cols-3">
-        <section class="ls-card min-w-0 p-6 xl:col-span-2" aria-labelledby="chart-heading">
+        <SectionSkeleton v-if="seriesPending" class="xl:col-span-2" variant="chart" />
+        <section v-else class="ls-card min-w-0 p-6 xl:col-span-2" aria-labelledby="chart-heading">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 id="chart-heading" class="text-base font-bold">{{ t('dashboard.revenueVsExpenses') }}</h2>
             <div class="flex gap-1" role="group" :aria-label="t('dashboard.chartRange')">
@@ -174,7 +184,8 @@ const payableHint = computed(() =>
           <RevenueExpenseChart :series="series ?? []" />
         </section>
 
-        <section class="ls-card min-w-0 p-6" aria-labelledby="cash-heading">
+        <SectionSkeleton v-if="liquidPending" variant="table" :rows="4" />
+        <section v-else class="ls-card min-w-0 p-6" aria-labelledby="cash-heading">
           <h2 id="cash-heading" class="mb-4 text-base font-bold">{{ t('dashboard.cashPosition') }}</h2>
           <table v-if="liquid?.length" class="ls-table">
             <caption class="sr-only">{{ t('dashboard.cashPositionCaption') }}</caption>
@@ -191,13 +202,15 @@ const payableHint = computed(() =>
         </section>
       </div>
 
-      <section v-if="can('commitments.read')" class="ls-card overflow-hidden" aria-labelledby="commitments-heading">
+      <SectionSkeleton v-if="can('commitments.read') && commitmentsPending" variant="table" :rows="4" />
+      <section v-else-if="can('commitments.read')" class="ls-card overflow-hidden" aria-labelledby="commitments-heading">
         <div class="flex items-center justify-between px-6 py-4"><h2 id="commitments-heading" class="text-base font-bold">{{ t('dashboard.commitments') }}</h2><button class="ls-btn ls-btn-sm" @click="showOperations('commitments')">{{ t('dashboard.manage') }}</button></div>
         <div v-if="commitments.length" class="overflow-x-auto"><table class="ls-table"><tbody><tr v-for="(item, index) in commitments" :key="item.id ?? index"><td>{{ item.title }}</td><td>{{ formatDate(item.due_date, locale) }}</td><td><StatusBadge :status="item.display_status ?? 'unknown'" /></td><td class="ls-num"><MoneyText :amount-minor="item.outstanding_minor ?? 0" :currency="item.currency_code ?? undefined" /></td></tr></tbody></table></div>
         <p v-else class="px-6 pb-5 text-sm text-fg-muted">{{ t('dashboard.noCommitments') }}</p>
       </section>
 
-      <section class="ls-card overflow-hidden" aria-labelledby="recent-heading">
+      <SectionSkeleton v-if="recentPending" variant="table" :rows="8" />
+      <section v-else class="ls-card overflow-hidden" aria-labelledby="recent-heading">
         <div class="flex items-center justify-between px-6 py-4">
           <h2 id="recent-heading" class="text-base font-bold">{{ t('dashboard.recent') }}</h2>
           <NuxtLink to="/transactions" class="text-sm font-semibold text-link hover:underline">

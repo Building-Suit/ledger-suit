@@ -26,21 +26,21 @@ const errorMessage = ref<string | null>(null)
 const selectedTagId = ref('')
 const uploading = ref(false)
 
-const { data: tags } = await useAsyncData('org:detail-tags', async () => {
+const { data: tags } = useLazyAsyncData('org:detail-tags', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.from('tags').select('id,name,color').eq('organization_id', currentId.value).order('name')
   if (error) throw error
   return data ?? []
 }, { watch: [currentId], default: () => [] })
 
-const { data: assignedTags, refresh: refreshTags } = await useAsyncData('transaction-detail-tags', async () => {
+const { data: assignedTags, refresh: refreshTags } = useLazyAsyncData('transaction-detail-tags', async () => {
   if (!props.transactionId) return []
   const { data, error } = await supabase.from('transaction_tags').select('tag_id,tags(id,name,color)').eq('transaction_id', props.transactionId)
   if (error) throw error
   return data ?? []
 }, { watch: [() => props.transactionId], default: () => [] })
 
-const { data: attachments, refresh: refreshAttachments } = await useAsyncData('transaction-detail-attachments', async () => {
+const { data: attachments, refresh: refreshAttachments } = useLazyAsyncData('transaction-detail-attachments', async () => {
   if (!props.transactionId) return []
   const { data, error } = await supabase.from('attachments').select('*').eq('entity_type', 'transaction').eq('entity_id', props.transactionId).order('created_at')
   if (error) throw error
@@ -94,7 +94,7 @@ async function deleteAttachment(item: NonNullable<typeof attachments.value>[numb
   await refreshAttachments(); emit('changed')
 }
 
-const { data: detail, refresh } = await useAsyncData(
+const { data: detail, refresh } = useLazyAsyncData(
   'transaction-detail',
   async () => {
     if (!props.transactionId) return null

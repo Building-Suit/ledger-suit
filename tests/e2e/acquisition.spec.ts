@@ -104,3 +104,53 @@ test('an unpaid workspace is sent to payment before the product shell', async ({
   await expect(page.getByRole('heading', { name: 'Activate Alpha Trading' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
 })
+
+test('billing stays mounted and product navigation remains client-side', async ({ page }) => {
+  let entitlementRequests = 0
+  let documentRequests = 0
+
+  page.on('request', (request) => {
+    if (request.url().includes('/rest/v1/rpc/subscription_access_state')) entitlementRequests++
+    if (request.resourceType() === 'document') documentRequests++
+  })
+
+  await page.goto('/login')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await page.getByLabel('Email').fill('owner@alpha.test')
+  await page.getByLabel('Password').fill('ledgersuit')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page).toHaveURL('/dashboard')
+  await expect(page.getByTestId('section-skeleton')).toHaveCount(0)
+
+  const documentsAfterLogin = documentRequests
+  await page.getByRole('link', { name: 'Subscription' }).click()
+  await expect(page).toHaveURL('/billing')
+  await expect(page.getByRole('heading', { name: 'Subscription' })).toBeVisible()
+
+  // A remount loop used to issue this RPC continuously and leave a blank page.
+  await page.waitForTimeout(1_000)
+  expect(entitlementRequests).toBeLessThanOrEqual(2)
+
+  let releaseTransactions!: () => void
+  const transactionsReleased = new Promise<void>((resolve) => {
+    releaseTransactions = resolve
+  })
+  await page.route('**/rest/v1/rpc/search_transactions', async (route) => {
+    await transactionsReleased
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  })
+
+  const click = page.getByRole('link', { name: 'Transactions' }).click()
+  await expect(page).toHaveURL('/transactions')
+  await expect(page.getByRole('heading', { name: 'Transactions' })).toBeVisible()
+  await expect(page.getByTestId('section-skeleton')).toBeVisible()
+  expect(documentRequests).toBe(documentsAfterLogin)
+
+  releaseTransactions()
+  await click
+  await expect(page.getByTestId('section-skeleton')).toHaveCount(0)
+})

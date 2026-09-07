@@ -20,6 +20,7 @@ useHead({ title: () => `${t('accounts.title')} · ${t('app.name')}` })
 const showArchived = ref(false)
 
 interface BalanceRow {
+  organization_id: string
   account_id: string
   code: string | null
   name: string
@@ -33,12 +34,12 @@ interface BalanceRow {
   parent_account_id: string | null
 }
 
-const { data: balances } = await useAsyncData<BalanceRow[]>('org:account-balances', async () => {
+const { data: balances, pending: balancesPending } = useLazyAsyncData<BalanceRow[]>('org:account-balances', async () => {
   if (!currentId.value) return []
 
   const { data, error } = await supabase
     .from('account_balances')
-    .select('account_id, code, name, type, subtype, currency, balance_minor, entry_count, is_archived, is_liquid, parent_account_id')
+    .select('organization_id, account_id, code, name, type, subtype, currency, balance_minor, entry_count, is_archived, is_liquid, parent_account_id')
     .eq('organization_id', currentId.value)
     .order('code', { ascending: true, nullsFirst: false })
 
@@ -50,8 +51,15 @@ const GROUP_TYPES: Array<BalanceRow['type']> = [
   'asset', 'liability', 'equity', 'revenue', 'expense',
 ]
 
+// Keep the selected organization as a rendering boundary too. RLS remains the
+// authority, but a cached response from a previous selection must never flash
+// under the next organization's heading while its refresh is in flight.
+const scopedBalances = computed(() =>
+  (balances.value ?? []).filter(a => a.organization_id === currentId.value),
+)
+
 const visible = computed(() =>
-  (balances.value ?? []).filter(a => showArchived.value || !a.is_archived),
+  scopedBalances.value.filter(a => showArchived.value || !a.is_archived),
 )
 
 const groups = computed(() =>
@@ -68,7 +76,7 @@ const groups = computed(() =>
   }),
 )
 
-const hasAccounts = computed(() => (balances.value?.length ?? 0) > 0)
+const hasAccounts = computed(() => scopedBalances.value.length > 0)
 
 const editorOpen = ref(false)
 const editing = ref<BalanceRow | null>(null)
@@ -163,8 +171,10 @@ async function archiveAccount(row: BalanceRow) {
       </div>
     </div>
 
+    <SectionSkeleton v-if="balancesPending" variant="table" :rows="8" />
+
     <EmptyState
-      v-if="!hasAccounts"
+      v-else-if="!hasAccounts"
       :title="t('accounts.emptyTitle')"
       :description="t('accounts.emptyHint')"
     />

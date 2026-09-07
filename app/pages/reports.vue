@@ -41,7 +41,7 @@ const from = ref(`${now.getFullYear()}-01-01`)
 const to = ref(now.toISOString().slice(0, 10))
 const asOf = ref(now.toISOString().slice(0, 10))
 
-const { data: accounts } = await useOrgAccounts()
+const { data: accounts } = useOrgAccounts()
 const ledgerAccountId = ref<string>('')
 
 watchEffect(() => {
@@ -59,7 +59,7 @@ interface ReportRow {
   amount_minor: number
 }
 
-const { data: profitLoss } = await useAsyncData<ReportRow[]>('org:report-pl', async () => {
+const { data: profitLoss, pending: profitLossPending } = useLazyAsyncData<ReportRow[]>('org:report-pl', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.rpc('report_profit_and_loss', {
     p_organization_id: currentId.value,
@@ -70,7 +70,7 @@ const { data: profitLoss } = await useAsyncData<ReportRow[]>('org:report-pl', as
   return (data ?? []) as ReportRow[]
 }, { watch: [currentId, from, to], default: () => [] })
 
-const { data: balanceSheet } = await useAsyncData<ReportRow[]>('org:report-bs', async () => {
+const { data: balanceSheet, pending: balanceSheetPending } = useLazyAsyncData<ReportRow[]>('org:report-bs', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.rpc('report_balance_sheet', {
     p_organization_id: currentId.value,
@@ -80,7 +80,7 @@ const { data: balanceSheet } = await useAsyncData<ReportRow[]>('org:report-bs', 
   return (data ?? []) as ReportRow[]
 }, { watch: [currentId, asOf], default: () => [] })
 
-const { data: integrity } = await useAsyncData('org:report-integrity', async () => {
+const { data: integrity } = useLazyAsyncData('org:report-integrity', async () => {
   if (!currentId.value) return null
   const { data, error } = await supabase.rpc('check_balance_sheet_integrity', {
     p_organization_id: currentId.value,
@@ -90,7 +90,7 @@ const { data: integrity } = await useAsyncData('org:report-integrity', async () 
   return data as unknown as Record<string, number | boolean | string>
 }, { watch: [currentId, asOf] })
 
-const { data: cashFlow } = await useAsyncData('org:report-cf', async () => {
+const { data: cashFlow, pending: cashFlowPending } = useLazyAsyncData('org:report-cf', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.rpc('report_cash_flow', {
     p_organization_id: currentId.value,
@@ -101,7 +101,7 @@ const { data: cashFlow } = await useAsyncData('org:report-cf', async () => {
   return data ?? []
 }, { watch: [currentId, from, to], default: () => [] })
 
-const { data: ledger } = await useAsyncData('org:report-ledger', async () => {
+const { data: ledger, pending: ledgerPending } = useLazyAsyncData('org:report-ledger', async () => {
   if (!currentId.value || !ledgerAccountId.value) return []
   const { data, error } = await supabase.rpc('report_general_ledger', {
     p_organization_id: currentId.value,
@@ -113,7 +113,7 @@ const { data: ledger } = await useAsyncData('org:report-ledger', async () => {
   return data ?? []
 }, { watch: [currentId, ledgerAccountId, from, to], default: () => [] })
 
-const { data: trialBalance } = await useAsyncData('org:report-tb', async () => {
+const { data: trialBalance, pending: trialBalancePending } = useLazyAsyncData('org:report-tb', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.rpc('report_trial_balance', {
     p_organization_id: currentId.value,
@@ -258,14 +258,16 @@ function exportBalanceSheet() {
         </p>
       </div>
 
-      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <SectionSkeleton v-if="balanceSheetPending || profitLossPending" variant="cards" />
+      <div v-else class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard :title="t('reports.assets')" :amount-minor="assets" good-direction="neutral" />
         <KpiCard :title="t('reports.liabilities')" :amount-minor="liabilities" good-direction="neutral" />
         <KpiCard :title="t('reports.equity')" :amount-minor="equity" good-direction="neutral" />
         <KpiCard :title="t('reports.netProfitPeriod')" :amount-minor="netProfit" good-direction="neutral" />
       </div>
 
-      <section class="ls-card overflow-hidden" aria-labelledby="tb-heading">
+      <SectionSkeleton v-if="trialBalancePending" variant="table" :rows="7" />
+      <section v-else class="ls-card overflow-hidden" aria-labelledby="tb-heading">
         <div class="flex items-center justify-between px-5 py-4">
           <h2 id="tb-heading" class="text-base font-bold">{{ t('reports.trialBalance') }}</h2>
           <p class="text-sm font-semibold" :class="trialTotals.debit === trialTotals.credit ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'">
@@ -308,8 +310,10 @@ function exportBalanceSheet() {
         <button type="button" class="ls-btn" @click="exportProfitLoss">{{ t('common.exportCsv') }}</button>
       </div>
 
+      <SectionSkeleton v-if="profitLossPending" variant="table" :rows="7" />
+
       <EmptyState
-        v-if="!profitLoss?.length"
+        v-else-if="!profitLoss?.length"
         :title="t('reports.emptyTitle')"
         :description="t('reports.emptyRange')"
       />
@@ -347,8 +351,10 @@ function exportBalanceSheet() {
         <button type="button" class="ls-btn" @click="exportBalanceSheet">{{ t('common.exportCsv') }}</button>
       </div>
 
+      <SectionSkeleton v-if="balanceSheetPending" variant="table" :rows="7" />
+
       <EmptyState
-        v-if="!balanceSheet?.length"
+        v-else-if="!balanceSheet?.length"
         :title="t('reports.emptyTitle')"
         :description="t('reports.emptyAsOf')"
       />
@@ -386,8 +392,10 @@ function exportBalanceSheet() {
 
     <!-- Cash flow -->
     <section v-else-if="tab === 'cash-flow'" role="tabpanel" :aria-label="t('reports.tabs.cashFlow')">
+      <SectionSkeleton v-if="cashFlowPending" variant="table" :rows="5" />
+
       <EmptyState
-        v-if="!cashFlow?.length"
+        v-else-if="!cashFlow?.length"
         :title="t('reports.emptyCashTitle')"
         :description="t('reports.emptyCashHint')"
       />
@@ -425,8 +433,10 @@ function exportBalanceSheet() {
 
     <!-- General ledger -->
     <section v-else role="tabpanel" :aria-label="t('reports.tabs.ledger')">
+      <SectionSkeleton v-if="ledgerPending" variant="table" :rows="8" />
+
       <EmptyState
-        v-if="!ledger?.length"
+        v-else-if="!ledger?.length"
         :title="t('reports.emptyLedgerTitle')"
         :description="t('reports.emptyLedgerHint')"
       />

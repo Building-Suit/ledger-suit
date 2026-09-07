@@ -8,7 +8,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(22);
 
 create temp table ids (key text primary key, id uuid);
 grant all on ids to authenticated;
@@ -109,6 +109,20 @@ select is(
    where organization_id = (select id from ids where key = 'org_a')),
   0::bigint,
   'a user cannot read another organization''s chart of accounts'
+);
+
+select is(
+  (select count(*) from public.accounts),
+  (select count(*) from public.accounts
+   where organization_id = (select id from ids where key = 'org_b')),
+  'an unfiltered account query still returns only the caller''s organization'
+);
+
+select is(
+  (select count(*) from public.accounts
+   where system_key = 'bank'),
+  1::bigint,
+  'identical system accounts remain separate and only the local one is visible'
 );
 
 select is(

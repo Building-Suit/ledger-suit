@@ -25,8 +25,10 @@ export interface TenantOrganization {
 }
 
 const STORAGE_KEY = 'ledger-suit.organization'
+const pendingLoads = new WeakMap<object, Map<string, Promise<void>>>()
 
 export function useTenant() {
+  const nuxtApp = useNuxtApp()
   const supabase = useSupabaseClient<Database>()
   const user = useSupabaseUser()
 
@@ -34,6 +36,7 @@ export function useTenant() {
   const currentId = useState<string | null>('tenant:currentId', () => null)
   const capabilities = useState<string[]>('tenant:capabilities', () => [])
   const loading = useState<boolean>('tenant:loading', () => false)
+  const loadedUserId = useState<string | null>('tenant:loadedUserId', () => null)
 
   const current = computed(
     () => organizations.value.find(o => o.id === currentId.value) ?? null,
@@ -60,52 +63,81 @@ export function useTenant() {
     capabilities.value = (data as string[] | null) ?? []
   }
 
-  async function loadOrganizations(authenticatedUserId?: string) {
+  async function loadOrganizations(authenticatedUserId?: string, options: { force?: boolean } = {}) {
     // Route middleware can run immediately after sign-in, before Nuxt's
     // reactive auth user has caught up. The verified user from getUser is
     // sufficient to continue; the database request still carries the user's
     // JWT and remains fully protected by RLS.
-    if (!user.value && !authenticatedUserId) return
+    const userId = authenticatedUserId ?? user.value?.id
+    if (!userId) return
+    if (!options.force && loadedUserId.value === userId) return
 
-    loading.value = true
-    try {
-      const { data, error } = await supabase
-        .from('organization_members')
-        .select('role, organizations(id, name, slug, base_currency, timezone, status)')
-        .eq('status', 'active')
-
-      if (error) throw error
-
-      organizations.value = (data ?? [])
-        .flatMap((row) => {
-          const org = row.organizations as TenantOrganization | null
-          return org ? [{ ...org, role: row.role as MembershipRole }] : []
-        })
-        .sort((a, b) => a.name.localeCompare(b.name))
-
-      // Restore the last used organization, but only if the membership still
-      // exists — a removed member must not keep a stale tenant selected.
-      const remembered = import.meta.client ? localStorage.getItem(STORAGE_KEY) : null
-      const valid = organizations.value.some(o => o.id === remembered)
-
-      currentId.value = valid ? remembered : (organizations.value[0]?.id ?? null)
-
-      await loadCapabilities()
+    if (loadedUserId.value && loadedUserId.value !== userId) {
+      // A second sign-in can happen without a document reload. Remove every
+      // payload belonging to the previous identity before loading the next.
+      clearNuxtData(key => key.startsWith('org:'))
+      organizations.value = []
+      currentId.value = null
+      capabilities.value = []
+      loadedUserId.value = null
     }
-    finally {
-      loading.value = false
+
+    let appLoads = pendingLoads.get(nuxtApp)
+    if (!appLoads) {
+      appLoads = new Map()
+      pendingLoads.set(nuxtApp, appLoads)
     }
+    const pending = appLoads.get(userId)
+    if (pending) return pending
+
+    const request = (async () => {
+      loading.value = true
+      try {
+        const { data, error } = await supabase
+          .from('organization_members')
+          .select('role, organizations(id, name, slug, base_currency, timezone, status)')
+          .eq('status', 'active')
+
+        if (error) throw error
+
+        organizations.value = (data ?? [])
+          .flatMap((row) => {
+            const org = row.organizations as TenantOrganization | null
+            return org ? [{ ...org, role: row.role as MembershipRole }] : []
+          })
+          .sort((a, b) => a.name.localeCompare(b.name))
+
+        // Restore the last used organization, but only if the membership still
+        // exists — a removed member must not keep a stale tenant selected.
+        const remembered = import.meta.client ? localStorage.getItem(STORAGE_KEY) : null
+        const valid = organizations.value.some(o => o.id === remembered)
+
+        const nextOrganizationId = valid ? remembered : (organizations.value[0]?.id ?? null)
+        if (currentId.value !== nextOrganizationId) {
+          clearNuxtData(key => key.startsWith('org:'))
+          currentId.value = nextOrganizationId
+        }
+        await loadCapabilities()
+        loadedUserId.value = userId
+      }
+      finally {
+        appLoads.delete(userId)
+        loading.value = false
+      }
+    })()
+
+    appLoads.set(userId, request)
+    return request
   }
 
   async function setOrganization(id: string) {
     if (id === currentId.value) return
 
-    currentId.value = id
-    if (import.meta.client) localStorage.setItem(STORAGE_KEY, id)
-
     // Drop every tenant-scoped payload before the new organization renders.
     clearNuxtData(key => key.startsWith('org:'))
     capabilities.value = []
+    currentId.value = id
+    if (import.meta.client) localStorage.setItem(STORAGE_KEY, id)
 
     await loadCapabilities()
     await refreshNuxtData()

@@ -14,15 +14,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (import.meta.server) return
 
   const supabase = useSupabaseClient()
-  // Let the auth state listener consume the successful sign-in response before
-  // checking the persisted session on the next navigation.
-  await nextTick()
-  let { data: { session } } = await supabase.auth.getSession()
-  if (!session) {
-    await new Promise(resolve => setTimeout(resolve, 100))
-    session = (await supabase.auth.getSession()).data.session
-  }
-  const user = useSupabaseUser().value ?? session?.user
+  // Immediately after sign-in, Nuxt's reactive auth user can trail the SDK by
+  // one navigation. Ask Supabase for the verified user instead of racing local
+  // storage with a fixed timeout.
+  let user = useSupabaseUser().value
+  if (!user) user = (await supabase.auth.getUser()).data.user
   if (!user) return navigateTo('/login')
 
   const tenant = useTenant()
@@ -34,10 +30,16 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (!tenant.currentId.value) return
 
   const billing = useBilling()
-  await billing.load()
+  const isCheckoutReturn = to.query.checkout === 'success'
+  await billing.load({ force: isCheckoutReturn })
 
   if (billing.checkoutRequired.value && to.path !== '/subscribe') {
-    return navigateTo('/subscribe')
+    // Older Checkout Sessions return to /billing. Preserve their success
+    // marker so the subscribe page can wait for the webhook to arrive.
+    return navigateTo({
+      path: '/subscribe',
+      query: isCheckoutReturn ? to.query : undefined,
+    }, { replace: true })
   }
 
   if (!billing.checkoutRequired.value && to.path === '/subscribe') {

@@ -20,7 +20,6 @@ const {
   checkoutRequired,
   readOnly,
   writesAllowed,
-  loading: billingLoading,
   load: loadBilling,
 } = useBilling()
 const { show: showOperations } = useOperationsCenter()
@@ -51,7 +50,7 @@ async function signOut() {
 </script>
 
 <template>
-  <div v-if="billingLoading || accessState === 'loading' || checkoutRequired" class="min-h-dvh bg-background" aria-busy="true" />
+  <div v-if="accessState === 'loading' || checkoutRequired" class="min-h-dvh bg-background" aria-busy="true" />
   <div v-else class="min-h-dvh bg-background lg:grid lg:grid-cols-[17rem_1fr] lg:gap-4 lg:p-4">
     <!-- Shown/hidden rather than slid off-screen with a transform: a translate
          utility that silently fails to apply leaves the drawer sitting on top
@@ -135,7 +134,7 @@ async function signOut() {
       </header>
 
       <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 lg:px-8">
-        <div v-if="loading || billingLoading" class="text-sm text-fg-muted">{{ t('app.loading') }}</div>
+        <div v-if="loading" class="text-sm text-fg-muted">{{ t('app.loading') }}</div>
 
         <OrganizationSetup v-else-if="!current" />
 

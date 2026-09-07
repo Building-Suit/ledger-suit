@@ -414,3 +414,16 @@ body {
     linear-gradient(to bottom, color-mix(in oklab, var(--bs-gray-500) 13%, transparent) 1px, transparent 1px);
   background-size: 48px 48px;
 }
+
+@keyframes ls-skeleton-pulse {
+  50% { opacity: 0.42; }
+}
+
+.ls-skeleton {
+  background: color-mix(in oklab, var(--bs-text-muted) 20%, var(--bs-surface-muted));
+  animation: ls-skeleton-pulse 1.35s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ls-skeleton { animation: none; }
+}
