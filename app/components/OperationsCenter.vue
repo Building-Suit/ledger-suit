@@ -4,8 +4,8 @@ import type { Database } from '~~/types/database.types'
 const supabase = useSupabaseClient<Database>()
 const { currentId, baseCurrency, can } = useTenant()
 const { open, tab, close } = useOperationsCenter()
-const { data: accounts } = await useOrgAccounts()
-const { data: categories } = await useOrgCategories()
+const { data: accounts } = useOrgAccounts()
+const { data: categories } = useOrgCategories()
 const toasts = useToasts()
 const describeError = useErrorMessage()
 const { t, locale } = useI18n()
@@ -17,29 +17,29 @@ const expenseCategories = computed(() => categories.value.filter(c => c.kind ===
 const busy = ref(false)
 const errorMessage = ref<string | null>(null)
 
-const { data: commitments, refresh: refreshCommitments } = await useAsyncData('org:commitments', async () => {
+const { data: commitments, refresh: refreshCommitments } = useLazyAsyncData('org:commitments', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.from('commitment_states').select('*').eq('organization_id', currentId.value).order('due_date')
   if (error) throw error
   return data ?? []
 }, { watch: [currentId], default: () => [] })
 
-const { data: rules, refresh: refreshRules } = await useAsyncData('org:recurring-rules', async () => {
+const { data: rules, refresh: refreshRules } = useLazyAsyncData('org:recurring-rules', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.from('recurring_rules').select('*').eq('organization_id', currentId.value).order('created_at', { ascending: false })
   if (error) throw error
   return data ?? []
 }, { watch: [currentId], default: () => [] })
 
-const { data: occurrences, refresh: refreshOccurrences } = await useAsyncData('org:recurring-occurrences', async () => {
+const { data: occurrences, refresh: refreshOccurrences } = useLazyAsyncData('org:recurring-occurrences', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.from('recurring_occurrences').select('*').eq('organization_id', currentId.value).order('occurrence_date', { ascending: false }).limit(50)
   if (error) throw error
   return data ?? []
 }, { watch: [currentId], default: () => [] })
 
-const { data: counterparties, refresh: refreshCounterparties } = await useOrgCounterparties()
-const { data: tags, refresh: refreshTags } = await useAsyncData('org:tags', async () => {
+const { data: counterparties, refresh: refreshCounterparties } = useOrgCounterparties()
+const { data: tags, refresh: refreshTags } = useLazyAsyncData('org:tags', async () => {
   if (!currentId.value) return []
   const { data, error } = await supabase.from('tags').select('*').eq('organization_id', currentId.value).order('name')
   if (error) throw error

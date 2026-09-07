@@ -4,6 +4,10 @@ const { current } = useTenant()
 const { load, loading } = useBilling()
 const route = useRoute()
 const processing = computed(() => route.query.checkout === 'success')
+
+function checkAgain() {
+  return load({ force: true })
+}
 </script>
 
 <template>
@@ -21,7 +25,7 @@ const processing = computed(() => route.query.checkout === 'success')
       </ul>
       <div v-if="processing" class="rounded-control bg-surface-muted p-3 text-sm" role="status">
         <p class="font-semibold">{{ t('billing.confirming') }}</p>
-        <button type="button" class="mt-2 text-link" :disabled="loading" @click="load">
+        <button type="button" class="mt-2 text-link" :disabled="loading" @click="checkAgain">
           {{ t('billing.checkAgain') }}
         </button>
       </div>

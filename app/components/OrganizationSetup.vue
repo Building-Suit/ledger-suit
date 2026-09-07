@@ -20,7 +20,7 @@ async function createOrganization() {
   try {
     const { error } = await supabase.rpc('create_organization', { p_name: name.value, p_base_currency: currency.value })
     if (error) throw error
-    await loadOrganizations(); await refreshNuxtData()
+    await loadOrganizations(undefined, { force: true }); await refreshNuxtData()
   }
   catch (error) { errorMessage.value = describeError(error) }
   finally { pending.value = false }
@@ -31,7 +31,7 @@ async function acceptInvitation() {
   try {
     const { error } = await supabase.rpc('accept_organization_invitation' as never, { p_token: invitationToken.value.trim() } as never)
     if (error) throw error
-    await loadOrganizations(); await refreshNuxtData()
+    await loadOrganizations(undefined, { force: true }); await refreshNuxtData()
   }
   catch (error) { errorMessage.value = describeError(error) }
   finally { pending.value = false }

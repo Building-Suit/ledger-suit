@@ -37,8 +37,10 @@ Deno.serve(async (request) => {
       'metadata[billing_interval]': interval,
       client_reference_id: organizationId,
       customer_email: context.provider_customer_id ? '' : context.billing_email,
-      success_url: `${appUrl}/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/billing?checkout=cancelled`,
+      // Checkout can return before Stripe's webhook reaches the database. The
+      // subscription route has a bounded confirmation state for that window.
+      success_url: `${appUrl}/subscribe?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/subscribe?checkout=cancelled`,
     })
     if (context.provider_customer_id) {
       body.delete('customer_email')

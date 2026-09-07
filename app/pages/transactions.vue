@@ -17,8 +17,8 @@ const { t, locale } = useI18n()
 
 useHead({ title: () => `${t('transactions.title')} · ${t('app.name')}` })
 
-const { data: categories } = await useOrgCategories()
-const { data: accounts } = await useOrgAccounts()
+const { data: categories } = useOrgCategories()
+const { data: accounts } = useOrgAccounts()
 
 const PAGE_SIZE = 25
 
@@ -69,7 +69,7 @@ function amountToMinor(value: string): number | undefined {
 
 type TransactionRow = Database['public']['Functions']['search_transactions']['Returns'][number]
 
-const { data: result, pending, refresh } = await useAsyncData('org:transactions', async () => {
+const { data: result, pending, refresh } = useLazyAsyncData('org:transactions', async () => {
   if (!currentId.value) return { rows: [] as TransactionRow[], total: 0 }
 
   const { data, error } = await supabase.rpc('search_transactions', {
@@ -236,8 +236,10 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
       </div>
     </div>
 
+    <SectionSkeleton v-if="pending" variant="table" :rows="8" />
+
     <EmptyState
-      v-if="!pending && rows.length === 0 && !activeFilterCount && !debouncedSearch"
+      v-else-if="rows.length === 0 && !activeFilterCount && !debouncedSearch"
       :title="t('transactions.emptyTitle')"
       :description="t('transactions.emptyHint')"
       :action-label="can('transactions.create') ? t('transactions.emptyAction') : undefined"
@@ -245,7 +247,7 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
     />
 
     <EmptyState
-      v-else-if="!pending && rows.length === 0"
+      v-else-if="rows.length === 0"
       :title="t('transactions.noMatchTitle')"
       :description="t('transactions.noMatchHint')"
       :action-label="t('transactions.noMatchAction')"

@@ -17,9 +17,9 @@ const toasts = useToasts()
 const { t } = useI18n()
 const describeError = useErrorMessage()
 
-const { data: accounts } = await useOrgAccounts()
-const { data: categories } = await useOrgCategories()
-const { data: counterparties } = await useOrgCounterparties()
+const { data: accounts } = useOrgAccounts()
+const { data: categories } = useOrgCategories()
+const { data: counterparties } = useOrgCounterparties()
 
 const paymentAccounts = usePaymentAccounts(accounts)
 const assetAccounts = useAccountsOfType(accounts, ['asset'])
