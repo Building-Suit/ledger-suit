@@ -154,3 +154,25 @@ test('billing stays mounted and product navigation remains client-side', async (
   await click
   await expect(page.getByTestId('section-skeleton')).toHaveCount(0)
 })
+
+test('switching authenticated users clears tenant data without losing Nuxt context', async ({ page }) => {
+  await page.goto('/login')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await page.getByLabel('Email').fill('owner@alpha.test')
+  await page.getByLabel('Password').fill('ledgersuit')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page).toHaveURL('/dashboard')
+  await expect(page.getByRole('banner').getByText('Alpha Trading', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page).toHaveURL('/login')
+
+  await page.getByLabel('Email').fill('owner@beta.test')
+  await page.getByLabel('Password').fill('ledgersuit')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+
+  await expect(page).toHaveURL('/dashboard')
+  await expect(page.getByRole('banner').getByText('Beta Supplies', { exact: true })).toBeVisible()
+  await expect(page.getByRole('banner').getByText('Alpha Trading', { exact: true })).toHaveCount(0)
+  await expect(page.getByText(/composable that requires access to the Nuxt instance/i)).toHaveCount(0)
+})
