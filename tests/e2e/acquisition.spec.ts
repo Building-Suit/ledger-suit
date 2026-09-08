@@ -203,7 +203,7 @@ test('billing stays mounted and product navigation remains client-side', async (
 
   const click = page.getByRole('link', { name: 'Transactions' }).click()
   await expect(page).toHaveURL('/transactions')
-  await expect(page.getByRole('heading', { name: 'Transactions' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Transactions', level: 1 })).toBeVisible()
   await expect(page.getByTestId('section-skeleton')).toBeVisible()
   expect(documentRequests).toBe(documentsAfterLogin)
 
