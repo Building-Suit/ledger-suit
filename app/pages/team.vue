@@ -104,7 +104,10 @@ function formatDate(value: string) {
 }
 
 async function loadAccess() {
-  if (!currentId.value || !can('members.read')) return
+  if (!currentId.value || !can('members.read')) {
+    loading.value = false
+    return
+  }
   loading.value = true
   errorMessage.value = ''
   try {

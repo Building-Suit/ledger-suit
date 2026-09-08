@@ -50,7 +50,21 @@ test('permanent navigation exposes every creation workflow by section', async ({
   await expect(navigation.getByRole('heading', { name: 'Operations' })).toBeVisible()
   await expect(navigation.getByRole('heading', { name: 'Workspace' })).toBeVisible()
   await expect(navigation.getByRole('link', { name: 'Accounts', exact: true })).toBeVisible()
-  await expect(navigation.getByRole('link', { name: 'Team invitations' })).toBeVisible()
+  await expect(navigation.getByRole('link', { name: 'Access & permissions' })).toBeVisible()
+})
+
+test('owner can review members, role permissions and invitations', async ({ page }) => {
+  await page.getByRole('link', { name: 'Access & permissions' }).click()
+  await expect(page.getByRole('heading', { name: 'Roles, permissions & invitations' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Members/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('table').getByText('Amina Owner', { exact: true })).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Roles & permissions' }).click()
+  await expect(page.getByRole('heading', { name: 'Role access at a glance' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Permission matrix' })).toBeVisible()
+
+  await page.getByRole('tab', { name: /Invitations/ }).click()
+  await expect(page.getByRole('button', { name: 'Invite team member' }).first()).toBeVisible()
 })
 
 test('financial system map explains the path from setup to reports', async ({ page }) => {

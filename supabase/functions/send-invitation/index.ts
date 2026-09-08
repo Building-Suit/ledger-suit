@@ -59,12 +59,15 @@ Deno.serve(async (request) => {
         actionLabel: 'Accept invitation & create password',
         brandUrl: `${appUrl}/brand/ledger-suit-app-icon.png`,
         preheader: `Join ${organizationName} securely and create your Ledger Suit password.`,
-        idempotencyKey: `invitation/${invitation.invitation_id}/${invitationId ? 'renewed' : 'created'}`,
+        idempotencyKey: `invitation/${invitation.invitation_id}/${invitation.invitation_token.slice(0, 16)}`,
       })
       return json({ sent: true })
     }
     catch (emailError) {
-      return json({ sent: false, warning: publicError(emailError) }, 502)
+      // A token that never reached the recipient must not remain as a ghost
+      // pending invitation or block a clean retry with the same address.
+      await supabase.rpc('revoke_organization_invitation', { p_invitation_id: invitation.invitation_id })
+      return json({ sent: false, warning: publicError(emailError) })
     }
   }
   catch (error) {

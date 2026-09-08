@@ -1,12 +1,13 @@
 import { expect, test } from '@playwright/test'
 
 async function readOtp(email: string) {
+  const mailpitUrl = process.env.MAILPIT_URL ?? 'http://127.0.0.1:54324'
   for (let attempt = 0; attempt < 20; attempt++) {
-    const response = await fetch(`http://127.0.0.1:54324/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`)
+    const response = await fetch(`${mailpitUrl}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`)
     const inbox = await response.json() as { messages?: Array<{ ID?: string; id?: string }> }
     const messageId = inbox.messages?.[0]?.ID ?? inbox.messages?.[0]?.id
     if (messageId) {
-      const message = await fetch(`http://127.0.0.1:54324/api/v1/message/${messageId}`).then(result => result.text())
+      const message = await fetch(`${mailpitUrl}/api/v1/message/${messageId}`).then(result => result.text())
       const otp = message.match(/\b(\d{6})\b/)?.[1]
       if (otp) return otp
     }
@@ -14,6 +15,62 @@ async function readOtp(email: string) {
   }
   throw new Error(`No signup OTP received for ${email}`)
 }
+
+test('an invited user verifies email, creates a password, joins, and can sign in again', async ({ page, request }) => {
+  const supabaseUrl = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321'
+  const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+  const email = `invitee-${Date.now()}@ledgersuit.test`
+  const password = 'invited-user-password'
+
+  const ownerAuth = await request.post(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+    headers: { apikey: anonKey },
+    data: { email: 'owner@alpha.test', password: 'ledgersuit' },
+  })
+  expect(ownerAuth.ok()).toBeTruthy()
+  const ownerSession = await ownerAuth.json() as { access_token: string }
+
+  const organizationsResponse = await request.get(`${supabaseUrl}/rest/v1/organizations?select=id&name=eq.Alpha%20Trading`, {
+    headers: { apikey: anonKey, Authorization: `Bearer ${ownerSession.access_token}` },
+  })
+  const organizations = await organizationsResponse.json() as Array<{ id: string }>
+
+  const invitationResponse = await request.post(`${supabaseUrl}/rest/v1/rpc/create_organization_invitation`, {
+    headers: { apikey: anonKey, Authorization: `Bearer ${ownerSession.access_token}` },
+    data: {
+      p_organization_id: organizations[0]!.id,
+      p_email: email,
+      p_role: 'viewer',
+    },
+  })
+  expect(invitationResponse.ok()).toBeTruthy()
+  const invitations = await invitationResponse.json() as Array<{ invitation_token: string }>
+
+  await page.goto(`/accept-invitation?token=${invitations[0]!.invitation_token}`)
+  await expect(page.getByRole('heading', { name: 'You’re invited to Alpha Trading' })).toBeVisible()
+  await expect(page.getByLabel('Your Ledger Suit login email')).toHaveValue(email)
+  await expect(page.getByLabel('Your Ledger Suit login email')).toHaveAttribute('readonly', '')
+  await page.getByRole('button', { name: 'Send OTP to create password' }).click()
+
+  const otp = await readOtp(email)
+  for (let index = 0; index < 6; index++) {
+    await page.getByLabel(`Verification code digit ${index + 1}`).fill(otp[index]!)
+  }
+  await page.getByRole('button', { name: 'Verify code' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Create your password' })).toBeVisible()
+  await page.getByLabel('New password').fill(password)
+  await page.getByLabel('Confirm password').fill(password)
+  await page.getByRole('button', { name: 'Create password & join workspace' }).click()
+  await expect(page).toHaveURL('/dashboard')
+  await expect(page.getByRole('banner').getByText('Alpha Trading', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Sign out' }).click()
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page).toHaveURL('/dashboard')
+})
 
 test('landing page explains the product and leads to paid onboarding', async ({ page }) => {
   await page.goto('/')

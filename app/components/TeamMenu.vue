@@ -26,8 +26,8 @@ async function invite() {
       body: { organizationId: currentId.value, email: email.value, role: role.value },
     })
     if (error) throw new Error(await edgeFunctionErrorMessage(error, t('errors.generic')))
-    if (!data?.sent) throw new Error(data?.warning ?? t('errors.generic'))
     markChanged()
+    if (!data?.sent) throw new Error(data?.warning ?? t('errors.generic'))
     email.value = ''
     role.value = 'viewer'
     close()

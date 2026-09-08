@@ -206,7 +206,14 @@ begin
   if not found then
     raise exception 'INVITATION_NOT_FOUND' using errcode = 'P0002';
   end if;
-  perform app.require_capability(v_invitation.organization_id, 'members.update');
+  if not app.is_org_member(v_invitation.organization_id)
+     or not (
+       app.has_capability(v_invitation.organization_id, 'members.update')
+       or app.has_capability(v_invitation.organization_id, 'members.invite')
+     ) then
+    raise exception 'INSUFFICIENT_PERMISSION: members.update or members.invite is required'
+      using errcode = '42501';
+  end if;
 
   update public.organization_invitations
   set status = 'revoked'
