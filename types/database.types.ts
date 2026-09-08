@@ -2372,6 +2372,19 @@ export type Database = {
         Args: { p_token: string }
         Returns: string
       }
+      check_legal_name_availability: {
+        Args: {
+          p_legal_name: string
+        }
+        Returns: boolean
+      }
+      check_owner_availability: {
+        Args: {
+          p_email: string
+          p_phone: string
+        }
+        Returns: Json
+      }
       apply_stripe_subscription_event: {
         Args: {
           p_cancel_at_period_end?: boolean

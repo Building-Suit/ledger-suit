@@ -752,6 +752,7 @@
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
+    "LEGAL_NAME_ALREADY_EXISTS": "A business with this legal name already exists.",
     "TENANT_ACCESS_DENIED": "That record belongs to a different organization.",
     "INSUFFICIENT_PERMISSION": "Your role does not allow this action.",
     "UNBALANCED_JOURNAL": "The journal does not balance. Debits must equal credits.",

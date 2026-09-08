@@ -7,6 +7,7 @@ const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
 const { t } = useI18n()
 const { restore } = useTheme()
+const describeError = useErrorMessage()
 
 useHead({ title: () => `${t('onboarding.title')} · ${t('app.name')}` })
 
@@ -173,7 +174,8 @@ async function provisionAndCheckout() {
     p_fiscal_year_start_month: form.fiscalYearStartMonth,
     p_tax_identifier: form.taxIdentifier.trim() || undefined,
   })
-  if (onboardingError || !organizationId) throw onboardingError ?? new Error(t('errors.generic'))
+  if (onboardingError) throw new Error(describeError(onboardingError))
+  if (!organizationId) throw new Error(t('errors.generic'))
   provisionedOrganizationId.value = organizationId
   savePendingOnboarding()
   await openCheckout(organizationId)
