@@ -13,7 +13,7 @@ const email = ref('')
 const password = ref('')
 const pending = ref(false)
 const error = ref<string | null>(null)
-const hydrated = ref(true)
+const hydrated = ref(false)
 
 function isUnconfirmedEmail(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false
