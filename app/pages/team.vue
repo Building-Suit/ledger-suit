@@ -144,42 +144,24 @@ watch(invitationRevision, () => void loadAccess())
 const editingMember = ref<MemberRow | null>(null)
 const editRole = ref<Role>('viewer')
 const editStatus = ref<MemberStatus>('active')
-const selectedPermissions = ref<Set<string>>(new Set())
 const saving = ref(false)
-
-function effectivePermissions(member: MemberRow) {
-  const permissions = defaultsFor(member.role)
-  member.granted_capabilities.forEach(key => permissions.add(key))
-  member.revoked_capabilities.forEach(key => permissions.delete(key))
-  return permissions
-}
 
 function openEditor(member: MemberRow) {
   editingMember.value = member
   editRole.value = member.role
   editStatus.value = member.status
-  selectedPermissions.value = effectivePermissions(member)
   errorMessage.value = ''
-}
-
-function togglePermission(key: string, checked: boolean) {
-  const next = new Set(selectedPermissions.value)
-  if (checked) next.add(key)
-  else next.delete(key)
-  selectedPermissions.value = next
-}
-
-function resetToRoleDefaults() {
-  selectedPermissions.value = defaultsFor(editRole.value)
 }
 
 async function saveMember() {
   if (!editingMember.value) return
   saving.value = true
   errorMessage.value = ''
-  const defaults = defaultsFor(editRole.value)
-  const granted = capabilities.value.map(item => item.key).filter(key => selectedPermissions.value.has(key) && !defaults.has(key))
-  const revoked = capabilities.value.map(item => item.key).filter(key => !selectedPermissions.value.has(key) && defaults.has(key))
+  // Changing the role resets any per-member capability overrides to the new role's defaults;
+  // keeping the same role preserves existing overrides.
+  const roleChanged = editingMember.value.role !== editRole.value
+  const granted = roleChanged ? [] : editingMember.value.granted_capabilities
+  const revoked = roleChanged ? [] : editingMember.value.revoked_capabilities
   try {
     const { error } = await supabase.rpc('manage_organization_member', {
       p_member_id: editingMember.value.id,
@@ -203,7 +185,6 @@ async function quickStatus(member: MemberRow) {
   editingMember.value = member
   editRole.value = member.role
   editStatus.value = nextStatus
-  selectedPermissions.value = effectivePermissions(member)
   await saveMember()
 }
 
@@ -297,7 +278,7 @@ async function resendInvitation(invitation: InvitationRow) {
               <td><span class="ls-badge bg-surface-muted">{{ t(`org.roles.${member.role}`) }}</span><span v-if="member.granted_capabilities.length || member.revoked_capabilities.length" class="ms-1 text-xs text-fg-muted">{{ t('access.customized') }}</span></td>
               <td><StatusBadge :status="member.status" /></td>
               <td class="whitespace-nowrap">{{ formatDate(member.joined_at) }}</td>
-              <td class="whitespace-nowrap text-end"><button v-if="can('members.update')" type="button" class="ls-btn ls-btn-sm" @click="openEditor(member)">{{ t('access.editAccess') }}</button><button v-if="can('members.update') && member.role !== 'owner' && member.user_id !== user?.id" type="button" class="ls-btn ls-btn-sm ms-1" @click="quickStatus(member)">{{ t(member.status === 'active' ? 'access.suspend' : 'access.reactivate') }}</button><button v-if="can('members.remove') && member.role !== 'owner' && member.user_id !== user?.id" type="button" class="ls-btn ls-btn-sm ms-1 text-danger" @click="removeMember(member)">{{ t('access.remove') }}</button></td>
+              <td class="whitespace-nowrap text-end"><button v-if="can('members.update') && member.role !== 'owner'" type="button" class="ls-btn ls-btn-sm" @click="openEditor(member)">{{ t('access.editAccess') }}</button><button v-if="can('members.update') && member.role !== 'owner' && member.user_id !== user?.id" type="button" class="ls-btn ls-btn-sm ms-1" @click="quickStatus(member)">{{ t(member.status === 'active' ? 'access.suspend' : 'access.reactivate') }}</button><button v-if="can('members.remove') && member.role !== 'owner' && member.user_id !== user?.id" type="button" class="ls-btn ls-btn-sm ms-1 text-danger" @click="removeMember(member)">{{ t('access.remove') }}</button></td>
             </tr>
           </tbody>
         </table>
@@ -347,11 +328,14 @@ async function resendInvitation(invitation: InvitationRow) {
     <Teleport to="body">
       <Transition name="ls-modal">
         <div v-if="editingMember" class="fixed inset-0 z-[70] grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" @click.self="editingMember = null">
-          <form class="ls-modal-panel ls-card max-h-[90dvh] w-full max-w-3xl overflow-y-auto p-6 shadow-overlay" @submit.prevent="saveMember">
+          <form class="ls-modal-panel ls-card max-h-[90dvh] w-full max-w-md overflow-y-auto p-6 shadow-overlay" @submit.prevent="saveMember">
             <div class="flex items-start justify-between gap-4"><div><h2 class="text-lg font-bold">{{ t('access.editAccessFor', { name: editingMember.profile?.full_name || editingMember.profile?.email }) }}</h2><p class="mt-1 text-sm text-fg-muted" dir="ltr">{{ editingMember.profile?.email }}</p></div><button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="editingMember = null"><AppIcon name="close" /></button></div>
-            <div class="mt-6 grid gap-4 sm:grid-cols-2"><FloatingField :label="t('access.role')"><select v-model="editRole" class="ls-input"><option v-for="role in assignableRoles" :key="role" :value="role">{{ t(`org.roles.${role}`) }}</option></select></FloatingField><FloatingField :label="t('access.status')"><select v-model="editStatus" class="ls-input" :disabled="editingMember.user_id === user?.id"><option value="active">{{ t('access.active') }}</option><option value="suspended">{{ t('access.suspended') }}</option></select></FloatingField></div>
-            <div class="mt-7 flex flex-wrap items-start justify-between gap-3"><div><h3 class="font-bold">{{ t('access.permissionOverrides') }}</h3><p class="mt-1 max-w-xl text-sm text-fg-muted">{{ t('access.permissionOverridesHint') }}</p></div><button type="button" class="ls-btn ls-btn-sm" @click="resetToRoleDefaults">{{ t('access.roleSummary') }}</button></div>
-            <div class="mt-4 grid gap-4 sm:grid-cols-2"><fieldset v-for="[domain, items] in groupedCapabilities" :key="domain" class="rounded-card border border-[var(--bs-border)] p-4"><legend class="px-1 text-sm font-bold capitalize">{{ domain.replaceAll('_', ' ') }}</legend><label v-for="capability in items" :key="capability.key" class="mt-3 flex cursor-pointer items-start gap-3 text-sm"><input type="checkbox" class="mt-1 size-4 accent-[var(--bs-accent)]" :checked="selectedPermissions.has(capability.key)" @change="togglePermission(capability.key, ($event.target as HTMLInputElement).checked)"><span><span class="block font-semibold">{{ capability.description }}</span><code class="text-xs text-fg-muted" dir="ltr">{{ capability.key }}</code></span></label></fieldset></div>
+            <fieldset class="mt-6">
+              <legend class="text-sm font-bold">{{ t('access.role') }}</legend>
+              <div class="mt-3 grid gap-2">
+                <label v-for="role in assignableRoles" :key="role" class="flex cursor-pointer items-center justify-between gap-3 rounded-card border p-3 text-sm transition-colors" :class="editRole === role ? 'border-fg bg-surface-muted' : 'border-[var(--bs-border)] hover:bg-surface-muted'"><span class="flex items-center gap-3"><input v-model="editRole" type="radio" name="edit-member-role" :value="role" class="size-4 accent-[var(--bs-accent)]"><span class="font-bold">{{ t(`org.roles.${role}`) }}</span></span><span class="text-xs text-fg-muted">{{ rolePermissionCount(role) }} / {{ capabilities.length }} {{ t('access.permissionsMatrix').toLocaleLowerCase() }}</span></label>
+              </div>
+            </fieldset>
             <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
             <div class="mt-6 flex justify-end gap-2"><button type="button" class="ls-btn" @click="editingMember = null">{{ t('common.cancel') }}</button><button class="ls-btn ls-btn-primary" :disabled="saving">{{ saving ? t('common.saving') : t('access.saveAccess') }}</button></div>
           </form>

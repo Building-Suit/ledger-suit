@@ -1,3 +1,4 @@
+import { STORAGE_KEY } from '~/composables/useTheme'
 /**
  * Apply only the root theme attribute before the page mounts. Component state is
  * restored in onMounted so SSR and the first client render remain identical.
