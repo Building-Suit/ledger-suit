@@ -1,12 +1,13 @@
 import { expect, test } from '@playwright/test'
 
 async function readOtp(email: string) {
+  const mailpitUrl = process.env.MAILPIT_URL ?? 'http://127.0.0.1:54324'
   for (let attempt = 0; attempt < 20; attempt++) {
-    const response = await fetch(`http://127.0.0.1:54324/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`)
+    const response = await fetch(`${mailpitUrl}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`)
     const inbox = await response.json() as { messages?: Array<{ ID?: string; id?: string }> }
     const messageId = inbox.messages?.[0]?.ID ?? inbox.messages?.[0]?.id
     if (messageId) {
-      const message = await fetch(`http://127.0.0.1:54324/api/v1/message/${messageId}`).then(result => result.text())
+      const message = await fetch(`${mailpitUrl}/api/v1/message/${messageId}`).then(result => result.text())
       const otp = message.match(/\b(\d{6})\b/)?.[1]
       if (otp) return otp
     }
@@ -146,7 +147,7 @@ test('billing stays mounted and product navigation remains client-side', async (
 
   const click = page.getByRole('link', { name: 'Transactions' }).click()
   await expect(page).toHaveURL('/transactions')
-  await expect(page.getByRole('heading', { name: 'Transactions' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Transactions', level: 1 })).toBeVisible()
   await expect(page.getByTestId('section-skeleton')).toBeVisible()
   expect(documentRequests).toBe(documentsAfterLogin)
 
