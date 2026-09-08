@@ -61,7 +61,10 @@ test('owner can review members, role permissions and invitations', async ({ page
 
   await page.getByRole('tab', { name: 'Roles & permissions' }).click()
   await expect(page.getByRole('heading', { name: 'Role access at a glance' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Permission matrix' })).toBeVisible()
+  await page.getByRole('button', { name: 'Permission matrix' }).click()
+  const matrix = page.getByRole('dialog')
+  await expect(matrix.getByRole('heading', { name: 'Permission matrix' })).toBeVisible()
+  await matrix.getByRole('button', { name: 'Close' }).click()
 
   await page.getByRole('tab', { name: /Invitations/ }).click()
   await expect(page.getByRole('button', { name: 'Invite team member' }).first()).toBeVisible()
