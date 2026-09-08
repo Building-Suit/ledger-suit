@@ -18,7 +18,7 @@ test('owner can navigate the grouped finance shell and open operation pages', as
   await expect(page.getByRole('heading', { name: 'Commitments' })).toBeVisible()
   await page.getByRole('link', { name: 'Recurring rule' }).click()
   await expect(page.getByRole('heading', { name: 'Recurring rule' })).toBeVisible()
-  await expect(page.getByRole('columnheader', { name: 'Actions' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add Recurring rule' }).first()).toBeVisible()
 })
 
 test('owner can add an account through the controlled workflow', async ({ page }) => {
@@ -27,7 +27,7 @@ test('owner can add an account through the controlled workflow', async ({ page }
   await expect(page.getByRole('tab', { name: 'Assets' })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('tab', { name: 'Liabilities' }).click()
   await expect(page).toHaveURL(/\/accounts\?tab=liability/)
-  await page.getByRole('button', { name: 'Add account' }).click()
+  await page.getByRole('button', { name: 'Add account' }).first().click()
   await page.getByLabel('Account name').fill(accountName)
   await page.getByLabel('Code').fill(`PW${Date.now()}`)
   await page.getByRole('button', { name: 'Save' }).click()
@@ -39,7 +39,7 @@ test('owner can reach reports and transaction entry', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Profit & Loss' })).toBeVisible()
   await page.getByRole('link', { name: 'Expense' }).click()
-  await page.getByRole('button', { name: 'Add Expense' }).click()
+  await page.getByRole('button', { name: 'Add Expense' }).first().click()
   await expect(page.getByRole('dialog', { name: 'Expense' })).toBeVisible()
 })
 

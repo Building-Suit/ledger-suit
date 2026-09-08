@@ -38,7 +38,8 @@ const isTransaction = computed(() => (ADD_FLOWS as readonly string[]).includes(k
 const title = computed(() => {
   if (isTransaction.value) return t(`add.flows.${kind.value}`)
   if (kind.value === 'invitations') return t('add.items.invitation')
-  const itemKey = kind.value === 'commitments' ? 'commitment' : kind.value === 'counterparties' ? 'counterparty' : kind.value === 'tags' ? 'tag' : 'recurring'
+  if (kind.value === 'commitments') return t('operations.tabs.commitments')
+  const itemKey = kind.value === 'counterparties' ? 'counterparty' : kind.value === 'tags' ? 'tag' : 'recurring'
   return t(`add.items.${itemKey}`)
 })
 

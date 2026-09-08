@@ -180,7 +180,8 @@ test('billing stays mounted and product navigation remains client-side', async (
   await expect(page.getByTestId('section-skeleton')).toHaveCount(0)
 
   const documentsAfterLogin = documentRequests
-  await page.getByRole('link', { name: 'Subscription' }).click()
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Subscription' }).click()
   await expect(page).toHaveURL('/billing')
   await expect(page.getByRole('heading', { name: 'Subscription' })).toBeVisible()
 
@@ -221,7 +222,8 @@ test('switching authenticated users clears tenant data without losing Nuxt conte
   await expect(page).toHaveURL('/dashboard')
   await expect(page.getByRole('banner').getByText('Alpha Trading', { exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Sign out' }).click()
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Sign out' }).click()
   await expect(page).toHaveURL('/login')
 
   await page.getByLabel('Email').fill('owner@beta.test')
