@@ -17,16 +17,17 @@ withDefaults(defineProps<{
     dir="ltr"
   >
     <img
-      class="ls-logo-image ls-logo-image-dark"
-      :src="`/brand/ledger-suit-${kind}-dark.svg`"
+      class="ls-logo-image ls-logo-image-light"
+      :src="`/brand/ledger-suit-${kind}-light.svg`"
       alt=""
       :width="kind === 'mark' ? 1024 : 1600"
       :height="kind === 'mark' ? 1024 : 420"
     >
     <img
-      class="ls-logo-image ls-logo-image-light"
-      :src="`/brand/ledger-suit-${kind}-light.svg`"
+      class="ls-logo-image ls-logo-image-dark"
+      :src="`/brand/ledger-suit-${kind}-dark.svg`"
       alt=""
+      loading="lazy"
       :width="kind === 'mark' ? 1024 : 1600"
       :height="kind === 'mark' ? 1024 : 420"
     >
@@ -34,6 +35,11 @@ withDefaults(defineProps<{
 </template>
 
 <style>
+/* Both variants are rendered and visibility is decided purely in CSS so the
+   correct tone shows before hydration. The light variant is first in the DOM
+   (grid stacking makes order irrelevant for layout) so a browser that
+   prefetches the hidden sibling — Chromium treats a display:none element as
+   viewport-adjacent, defeating loading="lazy" — still fetches light first. */
 .ls-logo {
   line-height: 0;
 }

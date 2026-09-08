@@ -6,6 +6,21 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      // Runs before first paint so a refresh shows the stored theme's very
+      // first frame instead of flashing another mode first. The same logic
+      // lives in app/composables/useTheme.ts — keep the two in sync.
+      script: [
+        {
+          innerHTML: [
+            'try{',
+            "var t=localStorage.getItem('ledger-suit.theme');",
+            `if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t)}`,
+            'else{document.documentElement.removeAttribute(\'data-theme\')}',
+            '}catch(e){}',
+          ].join(''),
+          tagPosition: 'head',
+        },
+      ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/brand/ledger-suit-app-icon.svg' },
       ],

@@ -521,7 +521,8 @@ returns table (
   role_name_ar text,
   inviter_name text,
   inviter_job_title text,
-  expires_at timestamptz
+  expires_at timestamptz,
+  user_exists boolean
 )
 language plpgsql
 stable
@@ -544,7 +545,8 @@ begin
     r.name_ar,
     coalesce(nullif(trim(p.full_name), ''), 'A Ledger Suit administrator'),
     nullif(trim(p.job_title), ''),
-    i.expires_at
+    i.expires_at,
+    exists(select 1 from public.profiles u where u.email = i.email::extensions.citext)
   from public.organization_invitations i
   join public.organizations o on o.id = i.organization_id
   left join public.organization_roles r on r.id = i.role_id
