@@ -31,8 +31,18 @@
     "primary": "التنقل الرئيسي",
     "dashboard": "لوحة التحكم",
     "transactions": "المعاملات",
+    "allTransactions": "كل المعاملات",
     "accounts": "الحسابات",
     "reports": "التقارير",
+    "teamInvitations": "دعوات الفريق",
+    "groups": {
+      "transactions": "المعاملات",
+      "ledger": "دفتر الأستاذ",
+      "operations": "العمليات",
+      "directory": "الدليل",
+      "workspace": "مساحة العمل",
+      "insights": "التحليلات"
+    },
     "open": "فتح القائمة",
     "close": "إغلاق القائمة"
   },
@@ -317,6 +327,22 @@
       "mustBalance": "يجب أن يتساوى المدين مع الدائن قبل الترحيل.",
       "descriptionAndReason": "الوصف والسبب كلاهما مطلوب."
     }
+  },
+  "recordPages": {
+    "allTransactions": "كل المعاملات",
+    "count": "{count} سجل",
+    "add": "إضافة {item}",
+    "empty": "لا توجد سجلات {item} بعد",
+    "emptyHint": "ستظهر السجلات الجديدة هنا بعد إنشائها.",
+    "kind": "النوع",
+    "schedule": "الجدول",
+    "nextRun": "التشغيل التالي",
+    "color": "اللون",
+    "created": "تاريخ الإنشاء",
+    "expires": "تاريخ الانتهاء",
+    "role": "الدور",
+    "addCounterparty": "إضافة طرف تعامل",
+    "addTag": "إضافة وسم"
   },
   "status": {
     "draft": "مسودة",

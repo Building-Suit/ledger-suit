@@ -25,7 +25,7 @@ useHead(() => ({
          Without it every page renders bare and the tenant context in the
          default layout never loads. -->
     <NuxtLayout>
-      <NuxtPage />
+      <NuxtPage :transition="{ name: 'ls-page', mode: 'out-in' }" />
     </NuxtLayout>
   </div>
 </template>

@@ -109,9 +109,9 @@ onBeforeUnmount(() => {
       aria-haspopup="menu"
       @click="openMenu"
     >
-      <span aria-hidden="true">⚙</span>
+      <AppIcon name="settings" />
 
-      <span>
+      <span class="hidden sm:inline">
         {{ t('common.language') }} · {{ t('common.theme') }}
       </span>
     </button>
@@ -136,16 +136,15 @@ onBeforeUnmount(() => {
         type="button"
         role="menuitemradio"
         :aria-checked="locale === option.code"
-        class="flex w-full items-center justify-between rounded-chip px-2 py-1.5 text-start text-sm hover:bg-surface-muted"
+        class="flex w-full items-center justify-between rounded-chip px-2 py-2 text-start text-sm hover:bg-surface-muted"
         @click="setLocale(option.code as typeof locale); open = false"
       >
         <span>{{ option.name }}</span>
-        <span
+        <AppIcon
           v-if="locale === option.code"
-          aria-hidden="true"
-        >
-          ✓
-        </span>
+          name="check"
+          class="text-[var(--bs-status-success)]"
+        />
       </button>
 
       <hr class="my-2 border-[var(--bs-border)]">
@@ -160,17 +159,16 @@ onBeforeUnmount(() => {
         type="button"
         role="menuitemradio"
         :aria-checked="preference === option.value"
-        class="flex w-full items-center justify-between rounded-chip px-2 py-1.5 text-start text-sm hover:bg-surface-muted"
+        class="flex w-full items-center justify-between rounded-chip px-2 py-2 text-start text-sm hover:bg-surface-muted"
         @click="setTheme(option.value)"
       >
         <span>{{ t(option.labelKey) }}</span>
 
-        <span
+        <AppIcon
           v-if="preference === option.value"
-          aria-hidden="true"
-        >
-          ✓
-        </span>
+          name="check"
+          class="text-[var(--bs-status-success)]"
+        />
       </button>
     </div>
   </div>

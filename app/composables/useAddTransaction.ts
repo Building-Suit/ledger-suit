@@ -30,6 +30,7 @@ export const FLOW_CAPABILITY: Record<AddFlow, string> = {
 export function useAddTransaction() {
   const open = useState<boolean>('add-transaction:open', () => false)
   const flow = useState<AddFlow>('add-transaction:flow', () => 'expense')
+  const revision = useState<number>('add-transaction:revision', () => 0)
 
   function start(next: AddFlow) {
     flow.value = next
@@ -40,5 +41,7 @@ export function useAddTransaction() {
     open.value = false
   }
 
-  return { open, flow, start, close }
+  function markChanged() { revision.value += 1 }
+
+  return { open, flow, revision, start, close, markChanged }
 }

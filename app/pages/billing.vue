@@ -43,7 +43,7 @@ async function openPortal() {
       <p class="mt-1 text-sm text-fg-muted">{{ t('billing.subtitle') }}</p>
     </header>
 
-    <div class="ls-card max-w-2xl space-y-5 p-6">
+    <div class="ls-card max-w-2xl space-y-6 p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p class="text-lg font-bold">{{ t('billing.singlePlan') }}</p>

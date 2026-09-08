@@ -23,7 +23,7 @@ async function markAll() { if (!currentId.value) return; await supabase.rpc('mar
 <template>
   <div ref="root" class="relative">
     <button type="button" class="ls-btn ls-btn-sm relative" :aria-label="t('notifications.title')" :aria-expanded="open" @click="open = !open">
-      <span aria-hidden="true">♢</span><span v-if="unread" class="ls-badge bg-[var(--bs-status-error)] text-white">{{ unread }}</span>
+      <AppIcon name="notification" /><span v-if="unread" class="ls-badge bg-[var(--bs-status-error)] text-white">{{ unread }}</span>
     </button>
     <div v-if="open" class="ls-card absolute end-0 z-40 mt-1 w-[min(24rem,calc(100vw-2rem))] p-2 shadow-overlay">
       <div class="flex items-center justify-between px-2 py-2"><h2 class="font-bold">{{ t('notifications.title') }}</h2><button v-if="unread" class="text-xs text-link" @click="markAll">{{ t('notifications.markAll') }}</button></div>

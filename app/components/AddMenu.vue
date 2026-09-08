@@ -1,8 +1,5 @@
 <script setup lang="ts">
 const { can } = useTenant()
-const { start } = useAddTransaction()
-const { show: showOperations } = useOperationsCenter()
-const { show: showInvitation } = useTeamInvitation()
 const { t } = useI18n()
 const route = useRoute()
 
@@ -17,7 +14,7 @@ const groups = computed(() => [
       key: flow,
       label: t(`add.flows.${flow}`),
       hint: t(`add.hints.${flow}`),
-      action: () => start(flow),
+      action: () => navigateTo(`/records/${flow}?create=1`),
     })),
   },
   {
@@ -29,16 +26,16 @@ const groups = computed(() => [
   {
     key: 'operations',
     items: [
-      ...(can('commitments.create') ? [{ key: 'commitment', label: t('add.items.commitment'), hint: t('add.itemHints.commitment'), action: () => showOperations('commitments') }] : []),
-      ...(can('recurring.manage') ? [{ key: 'recurring', label: t('add.items.recurring'), hint: t('add.itemHints.recurring'), action: () => showOperations('recurring') }] : []),
-      ...(can('counterparties.manage') ? [{ key: 'counterparty', label: t('add.items.counterparty'), hint: t('add.itemHints.counterparty'), action: () => showOperations('counterparties') }] : []),
-      ...(can('tags.manage') ? [{ key: 'tag', label: t('add.items.tag'), hint: t('add.itemHints.tag'), action: () => showOperations('tags') }] : []),
+      ...(can('commitments.create') ? [{ key: 'commitment', label: t('add.items.commitment'), hint: t('add.itemHints.commitment'), action: () => navigateTo('/records/commitments?create=1') }] : []),
+      ...(can('recurring.manage') ? [{ key: 'recurring', label: t('add.items.recurring'), hint: t('add.itemHints.recurring'), action: () => navigateTo('/records/recurring?create=1') }] : []),
+      ...(can('counterparties.manage') ? [{ key: 'counterparty', label: t('add.items.counterparty'), hint: t('add.itemHints.counterparty'), action: () => navigateTo('/records/counterparties?create=1') }] : []),
+      ...(can('tags.manage') ? [{ key: 'tag', label: t('add.items.tag'), hint: t('add.itemHints.tag'), action: () => navigateTo('/records/tags?create=1') }] : []),
     ] as AddItem[],
   },
   {
     key: 'workspace',
     items: can('members.invite')
-      ? [{ key: 'invitation', label: t('add.items.invitation'), hint: t('add.itemHints.invitation'), action: showInvitation }]
+      ? [{ key: 'invitation', label: t('add.items.invitation'), hint: t('add.itemHints.invitation'), action: () => navigateTo('/records/invitations?create=1') }]
       : [],
   },
 ].filter(group => group.items.length))
@@ -61,13 +58,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
   <div v-if="groups.length">
     <button
       type="button"
-      class="fixed bottom-5 end-5 z-40 grid size-14 place-items-center rounded-full border border-white/10 bg-[var(--bs-ink)] text-2xl text-white shadow-overlay transition-transform hover:scale-105 lg:bottom-8 lg:end-8"
+      class="fixed bottom-24 end-6 z-40 grid size-14 place-items-center rounded-full border border-transparent bg-primary text-[var(--bs-text-on-primary)] shadow-overlay transition-transform hover:scale-105 lg:bottom-8 lg:end-8"
       :aria-label="t('add.title')"
       :aria-expanded="open"
       aria-haspopup="dialog"
       @click="open = true"
     >
-      <span aria-hidden="true">+</span>
+      <AppIcon name="add" :size="24" />
     </button>
 
     <Teleport to="body">
@@ -83,10 +80,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
               <p class="text-xs font-bold uppercase tracking-[0.18em] text-fg-muted">{{ t('add.eyebrow') }}</p>
               <h2 class="mt-1 text-2xl font-extrabold">{{ t('add.title') }}</h2>
             </div>
-            <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="open = false">✕</button>
+            <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="open = false"><AppIcon name="close" /></button>
           </header>
 
-          <div class="flex-1 space-y-7 overflow-y-auto p-6">
+          <div class="flex-1 space-y-8 overflow-y-auto p-6">
             <section v-for="group in groups" :key="group.key">
               <h3 class="mb-2 text-xs font-bold uppercase tracking-[0.15em] text-fg-muted">{{ t(`add.groups.${group.key}`) }}</h3>
               <div class="grid gap-2">

@@ -39,8 +39,9 @@ const label = computed(() =>
   te(`status.${key.value}`) ? t(`status.${key.value}`) : key.value.replace(/_/g, ' '),
 )
 const klass = computed(() => TONES[key.value] ?? TONES.draft)
+const icon = computed(() => ['posted', 'paid', 'active'].includes(key.value) ? 'checkBadge' : key.value === 'failed' || key.value === 'overdue' || key.value === 'read_only' ? 'close' : 'notification')
 </script>
 
 <template>
-  <span class="ls-badge" :class="klass">{{ label }}</span>
+  <span class="ls-badge" :class="klass"><AppIcon :name="icon" :size="14" />{{ label }}</span>
 </template>

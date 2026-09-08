@@ -3,9 +3,9 @@ const { toasts, dismiss } = useToasts()
 const { t } = useI18n()
 
 const tones: Record<string, string> = {
-  success: 'border-[var(--bs-status-success)] bg-[var(--bs-status-success-bg)] text-[var(--bs-status-success)]',
-  error: 'border-[var(--bs-status-error)] bg-[var(--bs-status-error-bg)] text-[var(--bs-status-error)]',
-  info: 'border-[var(--bs-border)] bg-[var(--bs-surface)] text-fg',
+  success: 'border-[var(--bs-status-success)]',
+  error: 'border-[var(--bs-status-error)]',
+  info: 'border-[var(--bs-sky-steel)]',
 }
 </script>
 
@@ -18,7 +18,7 @@ const tones: Record<string, string> = {
     <div
       v-for="toast in toasts"
       :key="toast.id"
-      class="pointer-events-auto w-full max-w-sm rounded-control border px-4 py-3 shadow-overlay"
+      class="pointer-events-auto w-full max-w-sm rounded-control border bg-[var(--bs-deep-structure-navy)] px-4 py-3 text-[var(--bs-pearl-white)] shadow-overlay"
       :class="tones[toast.tone]"
     >
       <div class="flex items-start gap-3">
@@ -34,7 +34,7 @@ const tones: Record<string, string> = {
           :aria-label="t('common.dismiss')"
           @click="dismiss(toast.id)"
         >
-          ✕
+          <AppIcon name="close" :size="18" />
         </button>
       </div>
     </div>
