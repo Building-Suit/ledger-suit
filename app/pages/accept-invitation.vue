@@ -120,7 +120,11 @@ async function finish() {
     if (passwordError) throw passwordError
     const { data: authData } = await supabase.auth.getUser()
     if (!authData.user || authData.user.email?.toLowerCase() !== preview.value.email.toLowerCase()) throw new Error('Invitation identity mismatch')
-    const { error: profileError } = await supabase.from('profiles').update({ full_name: fullName.value.trim(), phone: phone.value.trim(), job_title: jobTitle.value.trim() }).eq('id', authData.user.id)
+    const { error: profileError } = await supabase.from('profiles').update({
+      full_name: fullName.value.trim(),
+      phone: phone.value.trim(),
+      job_title: jobTitle.value.trim(),
+    }).eq('id', authData.user.id)
     if (profileError) throw profileError
     const { error: invitationError } = await supabase.rpc('accept_organization_invitation', { p_token: token.value })
     if (invitationError) throw invitationError
@@ -201,7 +205,6 @@ onBeforeUnmount(() => clearInterval(timer))
           <FloatingField :label="t('access.inviteFlow.confirmPassword')">
             <input v-model="confirmPassword" type="password" minlength="8" autocomplete="new-password" class="ls-input" required dir="ltr">
           </FloatingField>
-
           <p v-if="errorMessage" role="alert" class="ls-error">{{ errorMessage }}</p>
           
           <button type="submit" :disabled="pending || password.length < 8 || confirmPassword.length < 8" class="ls-btn ls-btn-primary w-full">
