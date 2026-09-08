@@ -1,3 +1,4 @@
+import { STORAGE_KEY } from '~/composables/useTheme'
 /**
  * Apply only the root theme attribute before the page mounts. Component state is
  * restored in onMounted so SSR and the first client render remain identical.
@@ -5,7 +6,7 @@
 export default defineNuxtRouteMiddleware(() => {
   if (!import.meta.client) return
 
-  const preference = localStorage.getItem('ledger-suit.theme')
+  const preference = localStorage.getItem(STORAGE_KEY)
   const theme: 'light' | 'dark' | 'system'
     = preference === 'light' || preference === 'dark' || preference === 'system'
       ? preference

@@ -1,6 +1,6 @@
 export type ThemePreference = 'light' | 'dark' | 'system'
 
-const STORAGE_KEY = 'ledger-suit.theme'
+export const STORAGE_KEY = 'ledger-suit.theme'
 
 /**
  * Light / dark / follow-the-system.
