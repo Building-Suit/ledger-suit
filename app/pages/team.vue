@@ -88,15 +88,26 @@ const visibleMembers = computed(() => {
   })
 })
 
-const groupedCapabilities = computed(() => {
-  const groups = new Map<string, CapabilityRow[]>()
-  for (const capability of capabilities.value) {
-    const group = groups.get(capability.domain) ?? []
-    group.push(capability)
-    groups.set(capability.domain, group)
-  }
-  return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b))
-})
+const PERMISSION_MENU_GROUPS = [
+  { key: 'transactions', domains: ['transactions', 'attachments', 'categories', 'imports', 'exports', 'books'] },
+  { key: 'ledger', domains: ['accounts'] },
+  { key: 'operations', domains: ['commitments', 'recurring'] },
+  { key: 'directory', domains: ['counterparties', 'tags'] },
+  { key: 'workspace', domains: ['organization', 'members', 'billing', 'audit'] },
+  { key: 'insights', domains: ['reports'] },
+] as const
+
+const permissionMenuGroups = computed(() => PERMISSION_MENU_GROUPS.map(group => ({
+  key: group.key,
+  domains: group.domains.map(domain => ({
+    key: domain,
+    items: capabilities.value.filter(capability => capability.domain === domain),
+  })).filter(domain => domain.items.length),
+})).filter(group => group.domains.length))
+
+function capabilityTitle(capability: CapabilityRow) {
+  return locale.value === 'ar' ? capability.description_ar : capability.description
+}
 
 function systemDefaultsFor(role: Role) {
   return new Set(roleCapabilities.value.filter(item => item.role === role).map(item => item.capability_key))
@@ -234,59 +245,13 @@ async function removeMember(member: MemberRow) {
 }
 
 // ---------------------------------------------------------------------------
-// Permission matrix: opens in a large modal from a button. System-role columns
-// are reference only; custom-role columns are editable checkboxes.
+// Permission matrix: a read-only reference for system and custom roles.
 // ---------------------------------------------------------------------------
 const matrixOpen = ref(false)
-const matrixDraft = ref<Map<string, Set<string>>>(new Map())
-const matrixDirtyRoles = ref<Set<string>>(new Set())
-const matrixSaving = ref(false)
 
 function openMatrix() {
-  const draft = new Map<string, Set<string>>()
-  for (const role of customRoles.value) draft.set(role.id, customCapabilitiesFor(role.id))
-  matrixDraft.value = draft
-  matrixDirtyRoles.value = new Set()
   errorMessage.value = ''
   matrixOpen.value = true
-}
-
-function toggleMatrixCap(roleId: string, capability: string, checked: boolean) {
-  const next = new Set(matrixDraft.value.get(roleId) ?? [])
-  if (checked) next.add(capability)
-  else next.delete(capability)
-  matrixDraft.value = new Map(matrixDraft.value).set(roleId, next)
-  const dirty = new Set(matrixDirtyRoles.value)
-  dirty.add(roleId)
-  matrixDirtyRoles.value = dirty
-}
-
-async function saveMatrix() {
-  if (!matrixDirtyRoles.value.size) {
-    matrixOpen.value = false
-    return
-  }
-  matrixSaving.value = true
-  errorMessage.value = ''
-  try {
-    for (const roleId of matrixDirtyRoles.value) {
-      const role = customRoles.value.find(item => item.id === roleId)
-      if (!role) continue
-      const { error } = await supabase.rpc('update_organization_role', {
-        p_role_id: roleId,
-        p_name_en: role.name_en,
-        p_name_ar: role.name_ar,
-        p_capabilities: [...(matrixDraft.value.get(roleId) ?? [])],
-      })
-      if (error) throw error
-    }
-    matrixOpen.value = false
-    await loadAccess()
-    await loadOrganizations(user.value?.id, { force: true })
-    toasts.success(t('access.saved'))
-  }
-  catch (error) { errorMessage.value = describeError(error) }
-  finally { matrixSaving.value = false }
 }
 
 // ---------------------------------------------------------------------------
@@ -400,9 +365,13 @@ async function resendInvitation(invitation: InvitationRow) {
         <h1 class="mt-2 text-h1 font-bold">{{ t('access.title') }}</h1>
         <p class="mt-2 text-sm leading-6 text-fg-muted">{{ t('access.subtitle') }}</p>
       </div>
-      <button v-if="can('members.invite')" type="button" class="ls-btn ls-btn-primary" @click="showInvitation">
-        <AppIcon name="add" :size="18" /> {{ t('org.invite') }}
-      </button>
+      <div class="flex flex-wrap gap-2">
+        <button v-if="can('members.read')" type="button" class="ls-btn" @click="openMatrix">{{ t('access.permissionsMatrix') }}</button>
+        <button v-if="can('members.update')" type="button" class="ls-btn ls-btn-primary" @click="openCreateRole"><AppIcon name="add" :size="18" /> {{ t('access.newRole') }}</button>
+        <button v-if="can('members.invite')" type="button" class="ls-btn ls-btn-primary" @click="showInvitation">
+          <AppIcon name="add" :size="18" /> {{ t('org.invite') }}
+        </button>
+      </div>
     </header>
 
     <div class="ls-card flex flex-wrap gap-1 p-1.5" role="tablist" :aria-label="t('access.title')">
@@ -454,10 +423,6 @@ async function resendInvitation(invitation: InvitationRow) {
           <h2 class="text-lg font-bold">{{ t('access.roleSummary') }}</h2>
           <p class="mt-1 text-sm text-fg-muted">{{ t('access.roleSummaryHint') }}</p>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button v-if="can('members.update')" type="button" class="ls-btn" @click="openMatrix">{{ t('access.permissionsMatrix') }}</button>
-          <button v-if="can('members.update')" type="button" class="ls-btn ls-btn-primary" @click="openCreateRole"><AppIcon name="add" :size="18" /> {{ t('access.newRole') }}</button>
-        </div>
       </div>
 
       <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
@@ -491,14 +456,14 @@ async function resendInvitation(invitation: InvitationRow) {
     </template>
 
     <template v-else>
-      <div class="flex items-center justify-between gap-3"><p class="text-sm font-semibold text-fg-muted">{{ t('access.invitationCount', invitations.length) }}</p><button v-if="can('members.invite')" type="button" class="ls-btn ls-btn-primary ls-btn-sm" @click="showInvitation">{{ t('org.invite') }}</button></div>
+      <p class="text-sm font-semibold text-fg-muted">{{ t('access.invitationCount', invitations.length) }}</p>
       <div v-if="invitations.length" class="ls-card overflow-x-auto">
         <table class="ls-table">
           <thead><tr><th>{{ t('auth.email') }}</th><th>{{ t('access.role') }}</th><th>{{ t('access.status') }}</th><th>{{ t('access.invitedBy') }}</th><th>{{ t('access.sent') }}</th><th>{{ t('access.expires') }}</th><th class="text-end">{{ t('access.actions') }}</th></tr></thead>
           <tbody><tr v-for="invitation in invitations" :key="invitation.id"><td dir="ltr">{{ invitation.email }}</td><td>{{ roleLabel(invitation.role, invitation.role_id) }}</td><td><StatusBadge :status="invitation.status" /></td><td><p>{{ invitation.inviter?.full_name || '—' }}</p><p v-if="invitation.inviter?.job_title" class="text-xs text-fg-muted">{{ invitation.inviter.job_title }}</p></td><td class="whitespace-nowrap">{{ formatDate(invitation.created_at) }}</td><td class="whitespace-nowrap">{{ formatDate(invitation.expires_at) }}</td><td class="whitespace-nowrap text-end"><template v-if="invitation.status === 'pending'"><button v-if="can('members.invite')" type="button" class="ls-btn ls-btn-sm" :disabled="saving" @click="resendInvitation(invitation)">{{ t('access.resend') }}</button><button v-if="can('members.update')" type="button" class="ls-btn ls-btn-sm ms-1 text-danger" :disabled="saving" @click="revokeInvitation(invitation)">{{ t('access.revoke') }}</button></template></td></tr></tbody>
         </table>
       </div>
-      <EmptyState v-else :title="t('access.noInvitations')" :action-label="can('members.invite') ? t('org.invite') : undefined" @action="showInvitation" />
+      <EmptyState v-else :title="t('access.noInvitations')" />
     </template>
 
     <TeamMenu :show-trigger="false" />
@@ -530,18 +495,21 @@ async function resendInvitation(invitation: InvitationRow) {
             <div class="mt-6 overflow-x-auto">
               <table class="ls-table">
                 <thead><tr><th>{{ t('access.permission') }}</th><th v-for="role in roles" :key="role" class="text-center">{{ t(`org.roles.${role}`) }}</th><th v-for="role in customRoles" :key="role.id" class="text-center">{{ roleLabel(null, role.id) }}</th></tr></thead>
-                <tbody v-for="[domain, items] in groupedCapabilities" :key="domain">
-                  <tr class="bg-surface-muted"><td :colspan="roles.length + customRoles.length + 1" class="font-bold capitalize">{{ domain.replaceAll('_', ' ') }}</td></tr>
-                  <tr v-for="capability in items" :key="capability.key">
-                    <td><p class="font-semibold">{{ capability.description }}</p><p class="text-xs text-fg-muted" dir="rtl">{{ capability.description_ar }}</p><code class="text-xs text-fg-muted" dir="ltr">{{ capability.key }}</code></td>
-                    <td v-for="role in roles" :key="`${capability.key}-${role}`" class="text-center"><AppIcon v-if="hasRolePermission(role, capability.key)" name="check" :size="18" class="mx-auto text-success" /><span v-else class="text-fg-muted">—</span></td>
-                    <td v-for="role in customRoles" :key="`${capability.key}-${role.id}`" class="text-center"><input type="checkbox" class="size-4 accent-[var(--bs-accent)]" :disabled="!can('members.update')" :checked="matrixDraft.get(role.id)?.has(capability.key)" @change="toggleMatrixCap(role.id, capability.key, ($event.target as HTMLInputElement).checked)"></td>
-                  </tr>
-                </tbody>
+                <template v-for="group in permissionMenuGroups" :key="group.key">
+                  <tbody>
+                    <tr class="bg-fg text-background"><td :colspan="roles.length + customRoles.length + 1" class="font-bold">{{ t(`nav.groups.${group.key}`) }}</td></tr>
+                  </tbody>
+                  <tbody v-for="domain in group.domains" :key="domain.key">
+                    <tr class="bg-surface-muted"><td :colspan="roles.length + customRoles.length + 1" class="font-bold">{{ t(`access.permissionAreas.${domain.key}`) }}</td></tr>
+                    <tr v-for="capability in domain.items" :key="capability.key">
+                      <td><p class="font-semibold">{{ capabilityTitle(capability) }}</p></td>
+                      <td v-for="role in roles" :key="`${capability.key}-${role}`" class="text-center"><AppIcon v-if="hasRolePermission(role, capability.key)" name="check" :size="18" class="mx-auto text-success" /><span v-else class="text-fg-muted">—</span></td>
+                      <td v-for="role in customRoles" :key="`${capability.key}-${role.id}`" class="text-center"><AppIcon v-if="customCapabilitiesFor(role.id).has(capability.key)" name="check" :size="18" class="mx-auto text-success" /><span v-else class="text-fg-muted">—</span></td>
+                    </tr>
+                  </tbody>
+                </template>
               </table>
             </div>
-            <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
-            <div class="mt-6 flex justify-end gap-2"><button type="button" class="ls-btn" @click="matrixOpen = false">{{ t('common.cancel') }}</button><button type="button" class="ls-btn ls-btn-primary" :disabled="matrixSaving || !matrixDirtyRoles.size" @click="saveMatrix">{{ matrixSaving ? t('common.saving') : t('access.matrixSave') }}</button></div>
           </div>
         </div>
       </Transition>
@@ -556,7 +524,17 @@ async function resendInvitation(invitation: InvitationRow) {
               <FloatingField :label="t('access.roleNameAr')"><input v-model="roleForm.name_ar" type="text" class="ls-input" dir="rtl" required maxlength="80"></FloatingField>
             </div>
             <h3 class="mt-7 font-bold">{{ t('access.permission') }}</h3>
-            <div class="mt-4 grid gap-4 sm:grid-cols-2"><fieldset v-for="[domain, items] in groupedCapabilities" :key="domain" class="rounded-card border border-[var(--bs-border)] p-4"><legend class="px-1 text-sm font-bold capitalize">{{ domain.replaceAll('_', ' ') }}</legend><label v-for="capability in items" :key="capability.key" class="mt-3 flex cursor-pointer items-start gap-3 text-sm"><input type="checkbox" class="mt-1 size-4 accent-[var(--bs-accent)]" :checked="roleForm.caps.has(capability.key)" @change="toggleRoleCap(capability.key, ($event.target as HTMLInputElement).checked)"><span><span class="block font-semibold">{{ capability.description }}</span><span class="block text-xs text-fg-muted" dir="rtl">{{ capability.description_ar }}</span><code class="text-xs text-fg-muted" dir="ltr">{{ capability.key }}</code></span></label></fieldset></div>
+            <div class="mt-4 space-y-5">
+              <section v-for="group in permissionMenuGroups" :key="group.key">
+                <h4 class="rounded-control bg-fg px-4 py-2 text-sm font-bold text-background">{{ t(`nav.groups.${group.key}`) }}</h4>
+                <div class="mt-3 grid gap-4 sm:grid-cols-2">
+                  <fieldset v-for="domain in group.domains" :key="domain.key" class="rounded-card border border-[var(--bs-border)] p-4">
+                    <legend class="px-1 text-sm font-bold">{{ t(`access.permissionAreas.${domain.key}`) }}</legend>
+                    <label v-for="capability in domain.items" :key="capability.key" class="mt-3 flex cursor-pointer items-start gap-3 text-sm"><input type="checkbox" class="mt-1 size-4 accent-[var(--bs-accent)]" :checked="roleForm.caps.has(capability.key)" @change="toggleRoleCap(capability.key, ($event.target as HTMLInputElement).checked)"><span class="font-semibold">{{ capabilityTitle(capability) }}</span></label>
+                  </fieldset>
+                </div>
+              </section>
+            </div>
             <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
             <div class="mt-6 flex justify-end gap-2"><button type="button" class="ls-btn" @click="roleModalOpen = false">{{ t('common.cancel') }}</button><button class="ls-btn ls-btn-primary" :disabled="roleSaving">{{ roleSaving ? t('common.saving') : t('access.createRole') }}</button></div>
           </form>
