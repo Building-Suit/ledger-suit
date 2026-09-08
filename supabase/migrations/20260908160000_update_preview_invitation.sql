@@ -1,4 +1,5 @@
--- Update preview_organization_invitation to return user_exists
+-- Add the minimum account-state signal required by the invitation screen.
+-- The acceptance RPC remains the authorization boundary.
 
 drop function if exists public.preview_organization_invitation(text);
 

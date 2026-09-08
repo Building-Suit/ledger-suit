@@ -5,6 +5,7 @@ const port = process.env.PLAYWRIGHT_PORT ?? '3210'
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
+  workers: 1,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   expect: { timeout: process.env.CI ? 15_000 : 5_000 },

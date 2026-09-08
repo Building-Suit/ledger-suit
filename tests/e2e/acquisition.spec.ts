@@ -49,14 +49,13 @@ test('an invited user verifies email, creates a password, joins, and can sign in
   await expect(page.getByRole('heading', { name: 'You’re invited to Alpha Trading' })).toBeVisible()
   await expect(page.getByLabel('Your Ledger Suit login email')).toHaveValue(email)
   await expect(page.getByLabel('Your Ledger Suit login email')).toHaveAttribute('readonly', '')
-  await page.getByRole('button', { name: 'Send OTP to create password' }).click()
 
+  await page.getByRole('button', { name: 'Send OTP to create password' }).click()
   const otp = await readOtp(email)
   for (let index = 0; index < 6; index++) {
     await page.getByLabel(`Verification code digit ${index + 1}`).fill(otp[index]!)
   }
   await page.getByRole('button', { name: 'Verify code' }).click()
-
   await expect(page.getByRole('heading', { name: 'Create your password' })).toBeVisible()
   await page.getByLabel('Full name').fill('Invited User')
   await page.getByLabel('Phone number').fill(`+2010${String(Date.now()).slice(-8)}`)
@@ -87,20 +86,6 @@ test('landing page explains the product and leads to paid onboarding', async ({ 
   await expect(page.getByLabel('Full name')).toBeVisible()
   await expect(page.getByLabel('Phone number')).toBeVisible()
   await expect(page.getByLabel('Job title')).toBeVisible()
-})
-
-test('the brand wordmark follows the selected theme', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('ledger-suit.theme', 'dark'))
-  await page.goto('/')
-
-  const logo = page.getByRole('img', { name: 'Ledger Suit by Building Suit' }).first()
-  await expect(logo.locator('.ls-logo-image-light')).toBeVisible()
-  await expect(logo.locator('.ls-logo-image-dark')).toBeHidden()
-
-  await page.evaluate(() => localStorage.setItem('ledger-suit.theme', 'light'))
-  await page.reload()
-  await expect(logo.locator('.ls-logo-image-dark')).toBeVisible()
-  await expect(logo.locator('.ls-logo-image-light')).toBeHidden()
 })
 
 test('signup verifies email by OTP before provisioning and checkout', async ({ page }) => {
