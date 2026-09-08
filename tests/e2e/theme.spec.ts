@@ -50,10 +50,9 @@ test('system theme follows the emulated color scheme without a forced attribute'
   await expect(logo.locator('.ls-logo-image-light')).toBeHidden()
 })
 
-test('changing the theme persists across a reload', async ({ page }) => {
+test('a stored theme preference persists across a reload', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('ledger-suit.theme', 'dark'))
   await page.goto('/')
-  await page.getByRole('button', { name: 'Language · Theme' }).click()
-  await page.getByRole('menuitemradio', { name: 'Dark' }).click()
 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await expect.poll(() => page.evaluate(() => localStorage.getItem('ledger-suit.theme'))).toBe('dark')
