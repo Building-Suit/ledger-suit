@@ -1,6 +1,6 @@
 export type ThemePreference = 'light' | 'dark' | 'system'
 
-const STORAGE_KEY = 'ledger-suit.theme'
+export const STORAGE_KEY = 'ledger-suit.theme'
 
 /**
  * Light / dark / follow-the-system.
@@ -8,6 +8,10 @@ const STORAGE_KEY = 'ledger-suit.theme'
  * Writes `data-theme` on <html>, which is what the token layer keys off. When
  * the preference is "system" the attribute is removed entirely so the
  * prefers-color-scheme fallback in tokens.css takes over.
+ *
+ * On first load the attribute is set before paint by the inline script in
+ * nuxt.config.ts, so the stored theme is visible from the very first frame
+ * with no flash in either direction.
  */
 export function useTheme() {
   const preference = useState<ThemePreference>('theme', () => 'system')
@@ -16,19 +20,8 @@ export function useTheme() {
     if (!import.meta.client) return
 
     const root = document.documentElement
-
-    // Force dark mode first for light theme users to avoid flash of light mode
-    const currentTheme = root.getAttribute('data-theme') as ThemePreference | null
-    const shouldForceDarkFirst = value === 'light' && currentTheme !== 'dark'
-
-    if (shouldForceDarkFirst) {
-      // Briefly apply dark first, then switch to light with CSS transition
-      root.setAttribute('data-theme', 'dark')
-
-      // Wait for transition to complete, then apply the actual theme
-      setTimeout(() => {
-        root.setAttribute('data-theme', value)
-      }, 50) // Match CSS transition duration
+    if (value === 'system') {
+      root.removeAttribute('data-theme')
     }
     else {
       root.setAttribute('data-theme', value)
@@ -45,8 +38,10 @@ export function useTheme() {
     if (!import.meta.client) return
     const stored = localStorage.getItem(STORAGE_KEY) as ThemePreference | null
     preference.value = stored ?? 'system'
-    // Delay the actual application to allow dark-first transition
-    setTimeout(() => apply(preference.value), 50)
+    // The inline head script already set the attribute pre-paint; re-apply
+    // synchronously to cover clients where it did not run (private mode,
+    // storage disabled) or when the two could disagree.
+    apply(preference.value)
   }
 
   return { preference, set, restore }

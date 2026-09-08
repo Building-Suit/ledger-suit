@@ -77,10 +77,7 @@ async function sendOtp() {
   pending.value = true
   errorMessage.value = ''
   try {
-    const { error } = await supabase.auth.signInWithOtp({
-      email: preview.value.email,
-      options: { shouldCreateUser: true },
-    })
+    const { error } = await supabase.auth.signInWithOtp({ email: preview.value.email, options: { shouldCreateUser: true } })
     if (error) throw error
     otp.value = ''
     step.value = 'otp'
@@ -95,11 +92,7 @@ async function verifyOtp() {
   pending.value = true
   errorMessage.value = ''
   try {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: preview.value.email,
-      token: otp.value,
-      type: 'email',
-    })
+    const { data, error } = await supabase.auth.verifyOtp({ email: preview.value.email, token: otp.value, type: 'email' })
     if (error || !data.session) throw error ?? new Error('Session missing')
     step.value = 'password'
   }
@@ -190,13 +183,11 @@ onBeforeUnmount(() => clearInterval(timer))
           <template v-if="step === 'ready'">
             <button class="ls-btn ls-btn-primary w-full" :disabled="pending">{{ pending ? t('access.inviteFlow.sendingOtp') : t('access.inviteFlow.sendOtp') }}</button>
           </template>
-
           <template v-else-if="step === 'otp'">
             <OtpInput v-model="otp" :label="t('onboarding.otpLabel')" :disabled="pending" />
             <button class="ls-btn ls-btn-primary w-full" :disabled="pending || otp.length !== 6">{{ pending ? t('access.inviteFlow.verifyingOtp') : t('access.inviteFlow.verifyOtp') }}</button>
             <button type="button" class="w-full text-center text-sm font-bold text-link disabled:text-fg-muted" :disabled="pending || resendIn > 0" @click="sendOtp">{{ resendIn ? t('onboarding.otpResendIn', { time: `00:${String(resendIn).padStart(2, '0')}` }) : t('access.inviteFlow.resend') }}</button>
           </template>
-
           <template v-else>
           <FloatingField :label="t('onboarding.fullName')">
             <input v-model="fullName" type="text" autocomplete="name" class="ls-input" required>
@@ -214,7 +205,6 @@ onBeforeUnmount(() => clearInterval(timer))
           <FloatingField :label="t('access.inviteFlow.confirmPassword')">
             <input v-model="confirmPassword" type="password" minlength="8" autocomplete="new-password" class="ls-input" required dir="ltr">
           </FloatingField>
-
           <p v-if="errorMessage" role="alert" class="ls-error">{{ errorMessage }}</p>
           
           <button type="submit" :disabled="pending || password.length < 8 || confirmPassword.length < 8" class="ls-btn ls-btn-primary w-full">

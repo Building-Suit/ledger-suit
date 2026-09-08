@@ -17,6 +17,7 @@ export type MembershipRole = Database['public']['Enums']['organization_role']
 export interface TenantOrganization {
   id: string
   name: string
+  legal_name: string | null
   slug: string
   base_currency: string
   timezone: string
@@ -47,7 +48,11 @@ export function useTenant() {
   }
 
   function refreshOrganizationData() {
-    return nuxtApp.runWithContext(() => refreshNuxtData())
+    if (import.meta.client) {
+      window.location.reload()
+    } else {
+      return nuxtApp.runWithContext(() => refreshNuxtData())
+    }
   }
 
   const current = computed(
@@ -107,16 +112,20 @@ export function useTenant() {
       try {
         const { data, error } = await supabase
           .from('organization_members')
-          .select('role, organizations(id, name, slug, base_currency, timezone, status)')
+          .select('role, organizations(id, name, legal_name, slug, base_currency, timezone, status)')
           .eq('status', 'active')
 
         if (error) throw error
 
-        organizations.value = (data ?? [])
-          .flatMap((row) => {
-            const org = row.organizations as TenantOrganization | null
-            return org ? [{ ...org, role: row.role as MembershipRole }] : []
-          })
+        const uniqueOrgs = new Map<string, TenantOrganization & { role: MembershipRole }>()
+        ;(data ?? []).forEach((row) => {
+          const org = row.organizations as TenantOrganization | null
+          if (org && !uniqueOrgs.has(org.id)) {
+            uniqueOrgs.set(org.id, { ...org, role: row.role as MembershipRole })
+          }
+        })
+
+        organizations.value = Array.from(uniqueOrgs.values())
           .sort((a, b) => a.name.localeCompare(b.name))
 
         // Restore the last used organization, but only if the membership still
