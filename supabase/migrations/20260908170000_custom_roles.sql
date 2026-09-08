@@ -99,7 +99,23 @@ alter table public.role_capabilities
 
 -- Custom-role permission rows carry only role_id; the enum column becomes
 -- optional so both kinds of row can live in this table.
+-- The former primary key includes role, so it must be removed before role can
+-- become nullable. Two partial unique indexes retain the same uniqueness for
+-- system roles and add it for custom roles.
+alter table public.role_capabilities drop constraint if exists role_capabilities_pkey;
 alter table public.role_capabilities alter column role drop not null;
+
+alter table public.role_capabilities
+  add constraint role_capabilities_exactly_one_role
+  check ((role is null) <> (role_id is null));
+
+create unique index role_capabilities_system_role_key
+  on public.role_capabilities (role, capability_key)
+  where role_id is null;
+
+create unique index role_capabilities_custom_role_key
+  on public.role_capabilities (role_id, capability_key)
+  where role_id is not null;
 
 alter table public.organization_members
   add column if not exists role_id uuid references public.organization_roles (id) on delete set null;
