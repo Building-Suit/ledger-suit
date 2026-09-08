@@ -2568,6 +2568,16 @@ export type Database = {
         Args: { p_limit_key: string; p_organization_id: string }
         Returns: number
       }
+      manage_organization_member: {
+        Args: {
+          p_granted_capabilities?: string[]
+          p_member_id: string
+          p_revoked_capabilities?: string[]
+          p_role: Database["public"]["Enums"]["organization_role"]
+          p_status: Database["public"]["Enums"]["membership_status"]
+        }
+        Returns: string
+      }
       mark_all_notifications_read: {
         Args: { p_organization_id: string }
         Returns: number
@@ -2602,6 +2612,17 @@ export type Database = {
           p_reason?: string
         }
         Returns: string
+      }
+      preview_organization_invitation: {
+        Args: { p_token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          inviter_job_title: string
+          inviter_name: string
+          organization_name: string
+          role: Database["public"]["Enums"]["organization_role"]
+        }[]
       }
       record_asset_purchase: {
         Args: {
@@ -2734,6 +2755,17 @@ export type Database = {
         }
         Returns: string
       }
+      remove_organization_member: {
+        Args: { p_member_id: string }
+        Returns: string
+      }
+      renew_organization_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: {
+          invitation_id: string
+          invitation_token: string
+        }[]
+      }
       report_balance_sheet: {
         Args: { p_as_of_date?: string; p_organization_id: string }
         Returns: {
@@ -2826,6 +2858,10 @@ export type Database = {
           p_reversal_date?: string
           p_transaction_id: string
         }
+        Returns: string
+      }
+      revoke_organization_invitation: {
+        Args: { p_invitation_id: string }
         Returns: string
       }
       run_due_commitment_conversions: {

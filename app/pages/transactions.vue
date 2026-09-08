@@ -163,8 +163,7 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
-      <div class="min-w-48 flex-1">
-        <label class="sr-only" for="search">{{ t('transactions.searchLabel') }}</label>
+      <FloatingField class="min-w-48 flex-1" :label="t('transactions.searchLabel')">
         <input
           id="search"
           v-model="filters.search"
@@ -172,7 +171,7 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
           class="ls-input"
           :placeholder="t('transactions.searchPlaceholder')"
         >
-      </div>
+      </FloatingField>
       <button
         type="button"
         class="ls-btn"
@@ -190,50 +189,34 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
     </div>
 
     <div v-if="filtersOpen" class="ls-card grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div>
-        <label class="ls-label" for="from">{{ t('transactions.fromDate') }}</label>
-        <input id="from" v-model="filters.from" type="date" class="ls-input">
-      </div>
-      <div>
-        <label class="ls-label" for="to">{{ t('transactions.toDate') }}</label>
-        <input id="to" v-model="filters.to" type="date" class="ls-input">
-      </div>
-      <div>
-        <label class="ls-label" for="status">{{ t('transactions.status') }}</label>
+      <FloatingField :label="t('transactions.fromDate')"><input id="from" v-model="filters.from" type="date" class="ls-input"></FloatingField>
+      <FloatingField :label="t('transactions.toDate')"><input id="to" v-model="filters.to" type="date" class="ls-input"></FloatingField>
+      <FloatingField :label="t('transactions.status')">
         <select id="status" v-model="filters.status" class="ls-input">
           <option value="">{{ t('common.any') }}</option>
           <option v-for="s in STATUSES" :key="s" :value="s">{{ t(`status.${s}`) }}</option>
         </select>
-      </div>
-      <div>
-        <label class="ls-label" for="type">{{ t('transactions.type') }}</label>
+      </FloatingField>
+      <FloatingField :label="t('transactions.type')">
         <select id="type" v-model="filters.type" class="ls-input">
           <option value="">{{ t('common.any') }}</option>
           <option v-for="type in TYPES" :key="type" :value="type">{{ t(`types.${type}`) }}</option>
         </select>
-      </div>
-      <div>
-        <label class="ls-label" for="category">{{ t('transactions.category') }}</label>
+      </FloatingField>
+      <FloatingField :label="t('transactions.category')">
         <select id="category" v-model="filters.categoryId" class="ls-input">
           <option value="">{{ t('common.any') }}</option>
           <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
-      </div>
-      <div>
-        <label class="ls-label" for="account">{{ t('transactions.account') }}</label>
+      </FloatingField>
+      <FloatingField :label="t('transactions.account')">
         <select id="account" v-model="filters.accountId" class="ls-input">
           <option value="">{{ t('common.any') }}</option>
           <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
         </select>
-      </div>
-      <div>
-        <label class="ls-label" for="min">{{ t('transactions.minAmount') }}</label>
-        <input id="min" v-model="filters.minAmount" class="ls-input" inputmode="decimal" placeholder="0.00">
-      </div>
-      <div>
-        <label class="ls-label" for="max">{{ t('transactions.maxAmount') }}</label>
-        <input id="max" v-model="filters.maxAmount" class="ls-input" inputmode="decimal" placeholder="0.00">
-      </div>
+      </FloatingField>
+      <FloatingField :label="t('transactions.minAmount')"><input id="min" v-model="filters.minAmount" class="ls-input" inputmode="decimal" placeholder="0.00"></FloatingField>
+      <FloatingField :label="t('transactions.maxAmount')"><input id="max" v-model="filters.maxAmount" class="ls-input" inputmode="decimal" placeholder="0.00"></FloatingField>
     </div>
 
     <SectionSkeleton v-if="pending" variant="table" :rows="8" />

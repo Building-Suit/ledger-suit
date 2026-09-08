@@ -1,4 +1,12 @@
 <script setup lang="ts">
+withDefaults(defineProps<{
+  alwaysShowLabel?: boolean
+  embedded?: boolean
+}>(), {
+  alwaysShowLabel: false,
+  embedded: false,
+})
+
 const { t, locale, locales, setLocale } = useI18n()
 const { preference, set: setTheme } = useTheme()
 
@@ -98,7 +106,60 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <div v-if="embedded" class="space-y-3">
+    <section>
+      <p class="px-2 pb-1 text-xs font-semibold text-fg-muted">
+        {{ t('common.language') }}
+      </p>
+
+      <div class="grid grid-cols-2 gap-1">
+        <button
+          v-for="option in available"
+          :key="option.code"
+          type="button"
+          :aria-pressed="locale === option.code"
+          class="flex items-center justify-between rounded-chip px-2 py-2 text-start text-sm hover:bg-surface-muted"
+          :class="{ 'bg-surface-muted font-semibold': locale === option.code }"
+          @click="setLocale(option.code as typeof locale)"
+        >
+          <span>{{ option.name }}</span>
+          <AppIcon
+            v-if="locale === option.code"
+            name="check"
+            class="text-[var(--bs-status-success)]"
+          />
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <p class="px-2 pb-1 text-xs font-semibold text-fg-muted">
+        {{ t('common.theme') }}
+      </p>
+
+      <div class="space-y-1">
+        <button
+          v-for="option in THEMES"
+          :key="option.value"
+          type="button"
+          :aria-pressed="preference === option.value"
+          class="flex w-full items-center justify-between rounded-chip px-2 py-2 text-start text-sm hover:bg-surface-muted"
+          :class="{ 'bg-surface-muted font-semibold': preference === option.value }"
+          @click="setTheme(option.value)"
+        >
+          <span>{{ t(option.labelKey) }}</span>
+          <AppIcon
+            v-if="preference === option.value"
+            name="check"
+            class="text-[var(--bs-status-success)]"
+          />
+        </button>
+      </div>
+    </section>
+  </div>
+
   <div
+    v-else
     ref="root"
     class="relative"
   >
@@ -111,7 +172,7 @@ onBeforeUnmount(() => {
     >
       <AppIcon name="settings" />
 
-      <span class="hidden sm:inline">
+      <span :class="{ 'hidden sm:inline': !alwaysShowLabel }">
         {{ t('common.language') }} · {{ t('common.theme') }}
       </span>
     </button>

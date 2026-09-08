@@ -99,6 +99,38 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Keep scrollable panels visually quiet while still making the scroll position
+   easy to find. Firefox uses the standard properties; WebKit covers Chromium
+   and Safari. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bs-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 0.2rem solid transparent;
+  border-radius: 999px;
+  background: var(--bs-border-strong);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--bs-primary);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Arabic needs slightly more vertical room than Latin at the same size, and
    never uppercase or letter-spacing — see the typography guidelines. Matched to
    the prototype, which keys on direction as well as language. */
@@ -256,6 +288,10 @@ body {
     color: var(--bs-pearl-white);
   }
 
+  .ls-btn-danger:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--bs-status-error) 88%, black);
+  }
+
   .ls-btn-sm {
     min-height: var(--bs-tap-target-min);
     padding: var(--bs-space-2) var(--bs-space-3);
@@ -274,6 +310,35 @@ body {
     font-size: var(--bs-type-body-m-size);
     line-height: var(--bs-type-body-m-lh);
     transition: border-color var(--bs-motion-quick);
+  }
+
+  /* Shared floating-label shell. Controls retain their native semantics; the
+     label is associated by nesting, including for selects and date inputs. */
+  .ls-floating-field {
+    position: relative;
+    display: block;
+    padding-top: 0.45rem;
+  }
+
+  .ls-floating-field > .ls-input {
+    width: 100%;
+  }
+
+  .ls-floating-field__label {
+    position: absolute;
+    z-index: 1;
+    inset-inline-start: 0.65rem;
+    top: 0;
+    padding-inline: 0.25rem;
+    background: var(--bs-surface);
+    color: var(--bs-text-muted);
+    font-size: 0.75rem;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .ls-floating-field:focus-within .ls-floating-field__label {
+    color: var(--bs-primary);
   }
 
   .ls-input::placeholder {

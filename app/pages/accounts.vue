@@ -10,6 +10,7 @@ definePageMeta({ layout: 'default' })
 
 const supabase = useSupabaseClient<Database>()
 const route = useRoute()
+const router = useRouter()
 const { currentId, can, baseCurrency } = useTenant()
 const { t } = useI18n()
 const toasts = useToasts()
@@ -51,6 +52,15 @@ const GROUP_TYPES: Array<BalanceRow['type']> = [
   'asset', 'liability', 'equity', 'revenue', 'expense',
 ]
 
+const tab = computed<BalanceRow['type']>(() => {
+  const requested = String(route.query.tab ?? 'asset') as BalanceRow['type']
+  return GROUP_TYPES.includes(requested) ? requested : 'asset'
+})
+
+function selectTab(type: BalanceRow['type']) {
+  router.replace({ query: { ...route.query, tab: type } })
+}
+
 // Keep the selected organization as a rendering boundary too. RLS remains the
 // authority, but a cached response from a previous selection must never flash
 // under the next organization's heading while its refresh is in flight.
@@ -76,6 +86,8 @@ const groups = computed(() =>
   }),
 )
 
+const activeGroup = computed(() => groups.value.find(group => group.type === tab.value)!)
+
 const hasAccounts = computed(() => scopedBalances.value.length > 0)
 
 const editorOpen = ref(false)
@@ -87,14 +99,19 @@ const form = reactive({ name: '', code: '', type: 'asset' as BalanceRow['type'],
 const subtypeOptions: Record<BalanceRow['type'], string[]> = {
   asset: ['cash', 'bank', 'mobile_wallet', 'accounts_receivable', 'inventory', 'prepaid_expenses', 'equipment', 'vehicles', 'property', 'other_asset'],
   liability: ['accounts_payable', 'credit_card', 'loan', 'taxes_payable', 'accrued_expenses', 'other_liability'],
-  equity: ['owner_capital', 'retained_earnings', 'owner_drawings', 'other_equity'],
+  equity: ['owner_capital', 'retained_earnings', 'owner_drawings', 'opening_balance_equity', 'other_equity'],
   revenue: ['product_sales', 'service_revenue', 'commission', 'other_income'],
   expense: ['cost_of_sales', 'salaries', 'rent', 'utilities', 'marketing', 'transportation', 'software', 'professional_fees', 'bank_fees', 'interest_expense', 'depreciation', 'taxes', 'other_expense'],
 }
 
 function openCreate() {
   editing.value = null
-  Object.assign(form, { name: '', code: '', type: 'asset', subtype: 'bank' })
+  Object.assign(form, {
+    name: '',
+    code: '',
+    type: tab.value,
+    subtype: subtypeOptions[tab.value][0]!,
+  })
   editorError.value = null
   editorOpen.value = true
 }
@@ -171,29 +188,57 @@ async function archiveAccount(row: BalanceRow) {
       </div>
     </div>
 
+    <div class="flex gap-1 border-b border-[var(--bs-border)]" role="tablist" :aria-label="t('accounts.tabsLabel')">
+      <button
+        v-for="type in GROUP_TYPES"
+        :id="`account-tab-${type}`"
+        :key="type"
+        type="button"
+        role="tab"
+        :aria-controls="`account-panel-${type}`"
+        :aria-selected="tab === type"
+        class="ls-tab -mb-px whitespace-nowrap"
+        :class="{ 'ls-tab-active': tab === type }"
+        @click="selectTab(type)"
+      >
+        {{ t(`accounts.groups.${type}`) }}
+      </button>
+    </div>
+
     <SectionSkeleton v-if="balancesPending" variant="table" :rows="8" />
 
     <EmptyState
       v-else-if="!hasAccounts"
       :title="t('accounts.emptyTitle')"
       :description="t('accounts.emptyHint')"
+      :action-label="can('accounts.create') ? t('accounts.add') : undefined"
+      @action="openCreate"
     />
 
-    <div v-else class="space-y-6">
-      <section
-        v-for="group in groups"
-        :key="group.type"
-        class="ls-card overflow-hidden"
-        :aria-labelledby="`group-${group.type}`"
-      >
+    <section
+      v-else
+      :id="`account-panel-${activeGroup.type}`"
+      class="ls-card overflow-hidden"
+      role="tabpanel"
+      :aria-labelledby="`account-tab-${activeGroup.type}`"
+    >
         <div class="flex items-center justify-between border-b border-[var(--bs-border)] px-6 py-3">
-          <h2 :id="`group-${group.type}`" class="text-sm font-bold">{{ group.label }}</h2>
-          <MoneyText class="text-sm font-bold" :amount-minor="group.total" />
+          <h2 class="text-sm font-bold">{{ activeGroup.label }}</h2>
+          <MoneyText class="text-sm font-bold" :amount-minor="activeGroup.total" />
         </div>
 
-        <div class="overflow-x-auto">
+        <EmptyState
+          v-if="activeGroup.rows.length === 0"
+          class="m-4"
+          :title="t('accounts.emptyGroupTitle', { group: activeGroup.label })"
+          :description="t('accounts.emptyGroupHint')"
+          :action-label="can('accounts.create') ? t('accounts.add') : undefined"
+          @action="openCreate"
+        />
+
+        <div v-else class="overflow-x-auto">
           <table class="ls-table">
-            <caption class="sr-only">{{ t('accounts.caption', { group: group.label }) }}</caption>
+            <caption class="sr-only">{{ t('accounts.caption', { group: activeGroup.label }) }}</caption>
             <thead>
               <tr>
                 <th scope="col">{{ t('accounts.code') }}</th>
@@ -205,10 +250,10 @@ async function archiveAccount(row: BalanceRow) {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="account in group.rows" :key="account.account_id">
+              <tr v-for="account in activeGroup.rows" :key="account.account_id">
                 <td class="font-mono text-xs text-fg-muted" dir="ltr">{{ account.code || t('common.dash') }}</td>
                 <td>
-                  <span :class="{ 'ps-4': account.parent_account_id, 'font-semibold': group.parentIds.has(account.account_id) }">
+                  <span :class="{ 'ps-4': account.parent_account_id, 'font-semibold': activeGroup.parentIds.has(account.account_id) }">
                     {{ account.name }}
                   </span>
                   <span v-if="account.is_archived" class="ls-badge ms-2 bg-[var(--bs-surface-muted)] text-fg-muted">
@@ -234,8 +279,7 @@ async function archiveAccount(row: BalanceRow) {
             </tbody>
           </table>
         </div>
-      </section>
-    </div>
+    </section>
 
     <Teleport to="body">
       <div v-if="editorOpen" class="fixed inset-0 z-50 grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" @click.self="editorOpen = false">
@@ -244,11 +288,11 @@ async function archiveAccount(row: BalanceRow) {
             <h2 class="text-lg font-bold">{{ editing ? t('accounts.edit') : t('accounts.add') }}</h2>
             <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="editorOpen = false"><AppIcon name="close" /></button>
           </div>
-          <div><label class="ls-label" for="account-name">{{ t('accounts.name') }}</label><input id="account-name" v-model="form.name" class="ls-input" required></div>
-          <div><label class="ls-label" for="account-code">{{ t('accounts.code') }}</label><input id="account-code" v-model="form.code" class="ls-input" dir="ltr"></div>
+          <FloatingField :label="t('accounts.name')"><input id="account-name" v-model="form.name" class="ls-input" required></FloatingField>
+          <FloatingField :label="t('accounts.code')"><input id="account-code" v-model="form.code" class="ls-input" dir="ltr"></FloatingField>
           <template v-if="!editing">
-            <div><label class="ls-label" for="account-type">{{ t('accounts.type') }}</label><select id="account-type" v-model="form.type" class="ls-input"><option v-for="type in GROUP_TYPES" :key="type" :value="type">{{ t(`accounts.groups.${type}`) }}</option></select></div>
-            <div><label class="ls-label" for="account-subtype">{{ t('accounts.subtype') }}</label><select id="account-subtype" v-model="form.subtype" class="ls-input"><option v-for="subtype in subtypeOptions[form.type]" :key="subtype" :value="subtype">{{ subtype.replaceAll('_', ' ') }}</option></select></div>
+            <FloatingField :label="t('accounts.type')"><select id="account-type" v-model="form.type" class="ls-input"><option v-for="type in GROUP_TYPES" :key="type" :value="type">{{ t(`accounts.groups.${type}`) }}</option></select></FloatingField>
+            <FloatingField :label="t('accounts.subtype')"><select id="account-subtype" v-model="form.subtype" class="ls-input"><option v-for="subtype in subtypeOptions[form.type]" :key="subtype" :value="subtype">{{ subtype.replaceAll('_', ' ') }}</option></select></FloatingField>
           </template>
           <p v-if="editorError" class="ls-error" role="alert">{{ editorError }}</p>
           <div class="flex justify-end gap-2"><button type="button" class="ls-btn" @click="editorOpen = false">{{ t('common.cancel') }}</button><button class="ls-btn ls-btn-primary" :disabled="submitting">{{ submitting ? t('common.saving') : t('common.save') }}</button></div>

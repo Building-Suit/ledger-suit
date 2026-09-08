@@ -1,4 +1,4 @@
-const PUBLIC_PATHS = new Set(['/', '/login', '/signup', '/verify-email'])
+const PUBLIC_PATHS = new Set(['/', '/login', '/signup', '/verify-email', '/accept-invitation'])
 
 /**
  * Keep unpaid workspaces out of the product shell entirely. Database write

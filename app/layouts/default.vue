@@ -38,7 +38,7 @@ const NAV_GROUPS = computed(() => [
   },
   {
     key: 'workspace',
-    links: can('members.read') ? [{ to: '/records/invitations', label: 'nav.teamInvitations' }] : [],
+    links: can('members.read') ? [{ to: '/team', label: 'nav.teamInvitations' }] : [],
   },
   {
     key: 'insights',
@@ -46,8 +46,6 @@ const NAV_GROUPS = computed(() => [
   },
 ].filter(group => group.links.length))
 
-const supabase = useSupabaseClient()
-const user = useSupabaseUser()
 const route = useRoute()
 const { t } = useI18n()
 const { current, currentId, loadOrganizations, loading } = useTenant()
@@ -78,10 +76,6 @@ function isActive(to: string) {
   return route.path === to || route.path.startsWith(`${to}/`)
 }
 
-async function signOut() {
-  await supabase.auth.signOut()
-  await navigateTo('/login')
-}
 </script>
 
 <template>
@@ -122,10 +116,10 @@ async function signOut() {
             <span>{{ t('nav.dashboard') }}</span>
           </NuxtLink>
           <section v-for="group in NAV_GROUPS" :key="group.key">
-            <h2 class="mb-1.5 px-3 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-fg-muted">
+            <h2 class="mb-1.5 px-3 text-md font-bold uppercase tracking-[0.16em]">
               {{ t(`nav.groups.${group.key}`) }}
             </h2>
-            <div class="flex flex-col gap-0.5">
+            <div class="flex flex-col gap-0.5 ms-6">
               <NuxtLink
                 v-for="item in group.links"
                 :key="item.to"
@@ -140,17 +134,6 @@ async function signOut() {
           </section>
         </nav>
 
-        <div class="shrink-0 space-y-2 border-t border-[var(--bs-border)] pt-3">
-          <NuxtLink v-if="can('billing.read')" to="/billing" class="ls-btn ls-btn-sm w-full">
-            {{ t('billing.title') }}
-          </NuxtLink>
-          <TeamMenu />
-          <SettingsMenu />
-          <p class="truncate px-1 text-xs text-fg-muted">{{ user?.email }}</p>
-          <button type="button" class="ls-btn ls-btn-sm w-full" @click="signOut">
-            {{ t('common.signOut') }}
-          </button>
-        </div>
       </div>
     </aside>
 
@@ -177,6 +160,7 @@ async function signOut() {
         </div>
 
         <NotificationMenu />
+        <AccountMenu />
       </header>
 
       <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 pb-24 lg:px-8 lg:pb-6">
@@ -211,6 +195,7 @@ async function signOut() {
 
     <AddTransactionDialog />
     <OperationsCenter />
+    <FinancialSystemMap />
     <ToastHost />
   </div>
 </template>
