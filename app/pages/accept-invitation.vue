@@ -85,8 +85,8 @@ async function finish() {
     if (data.user) await tenant.loadOrganizations(data.user.id, { force: true })
     await navigateTo('/dashboard')
   }
-  catch (err: any) { 
-    errorMessage.value = err?.message || t('auth.failed') 
+  catch (err: unknown) { 
+    errorMessage.value = (err as Error)?.message || t('auth.failed') 
   }
   finally { pending.value = false }
 }
