@@ -316,7 +316,19 @@ $$;
 -- ---------------------------------------------------------------------------
 -- Invitations and membership: carry a custom role id end to end
 -- ---------------------------------------------------------------------------
-create or replace function public.create_organization_invitation(
+-- Adding role_id changes the function signatures. Drop the predecessor
+-- overloads so callers using the existing three- and five-argument forms are
+-- resolved through the new defaults rather than becoming ambiguous.
+drop function if exists public.create_organization_invitation(uuid, text, public.organization_role);
+drop function if exists public.manage_organization_member(
+  uuid,
+  public.organization_role,
+  public.membership_status,
+  text[],
+  text[]
+);
+
+create function public.create_organization_invitation(
   p_organization_id uuid,
   p_email text,
   p_role public.organization_role default 'viewer',
@@ -369,7 +381,7 @@ begin
 end;
 $$;
 
-create or replace function public.manage_organization_member(
+create function public.manage_organization_member(
   p_member_id uuid,
   p_role public.organization_role,
   p_status public.membership_status,
@@ -511,7 +523,13 @@ begin
 end;
 $$;
 
-create or replace function public.preview_organization_invitation(p_token text)
+-- This function was introduced by the preceding invitation-preview migration
+-- with a smaller TABLE return type. PostgreSQL cannot alter OUT parameters via
+-- CREATE OR REPLACE, so drop that earlier definition before adding role and
+-- account-state fields.
+drop function if exists public.preview_organization_invitation(text);
+
+create function public.preview_organization_invitation(p_token text)
 returns table (
   email text,
   organization_name text,
