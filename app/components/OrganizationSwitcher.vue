@@ -23,8 +23,9 @@ async function choose(id: string) {
       :aria-label="t('org.switcher')"
       @click="open = !open"
     >
-      <span class="min-w-0 truncate text-start">
-        {{ current?.name ?? t('org.none') }}
+      <span class="flex flex-col min-w-0 text-start">
+        <span class="truncate">{{ current?.name ?? t('org.none') }}</span>
+        <span v-if="current?.legal_name" class="truncate text-[10px] text-fg-muted">{{ current.legal_name }}</span>
       </span>
       <AppIcon name="arrowDown" class="text-fg-muted" />
     </button>
@@ -44,6 +45,7 @@ async function choose(id: string) {
         >
           <span class="min-w-0">
             <span class="block truncate">{{ org.name }}</span>
+            <span v-if="org.legal_name" class="block truncate text-[10px] text-fg-muted">{{ org.legal_name }}</span>
             <span class="block text-xs text-fg-muted">
               {{ t(`org.roles.${org.role}`) }} · {{ org.base_currency }}
             </span>

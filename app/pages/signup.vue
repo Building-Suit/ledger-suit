@@ -43,6 +43,15 @@ const otpExpiresIn = computed(() => Math.max(0, Math.ceil((otpExpiresAt.value - 
 const resendIn = computed(() => Math.max(0, Math.ceil((resendAvailableAt.value - now.value) / 1000)))
 const otpExpired = computed(() => awaitingOtp.value && otpExpiresIn.value === 0)
 
+const submitButtonText = computed(() => {
+  if (pending.value) {
+    if (step.value === 1) return t('onboarding.checkingAvailability')
+    if (step.value === 2) return t('onboarding.checkingLegalName')
+    return t('onboarding.sendingOtp')
+  }
+  return step.value < 3 ? t('common.continue') : t('onboarding.continueToPayment')
+})
+
 function formatCountdown(seconds: number) {
   const minutes = Math.floor(seconds / 60).toString().padStart(2, '0')
   const remainder = (seconds % 60).toString().padStart(2, '0')
@@ -78,7 +87,7 @@ watch(() => form.countryCode, (code) => {
   if (country) { form.timezone = country.timezone; form.currency = country.currency }
 })
 
-function next() {
+async function next() {
   errorMessage.value = ''
   if (step.value === 1 && (!form.fullName.trim() || !form.phone.trim() || !form.jobTitle.trim() || !form.email.trim() || form.password.length < 8)) {
     errorMessage.value = t('onboarding.completeRequired')
@@ -88,7 +97,49 @@ function next() {
     errorMessage.value = t('onboarding.completeRequired')
     return
   }
-  step.value++
+
+  pending.value = true
+  try {
+    if (step.value === 1) {
+      const { data, error } = await supabase.rpc('check_owner_availability', {
+        p_email: form.email.trim(),
+        p_phone: form.phone.trim()
+      })
+      if (error) throw error
+      if (data) {
+        const { email_taken, phone_taken } = data as { email_taken: boolean, phone_taken: boolean }
+        if (email_taken && phone_taken) {
+          errorMessage.value = t('onboarding.bothTaken')
+          return
+        }
+        if (email_taken) {
+          errorMessage.value = t('onboarding.emailTaken')
+          return
+        }
+        if (phone_taken) {
+          errorMessage.value = t('onboarding.phoneTaken')
+          return
+        }
+      }
+    }
+
+    if (step.value === 2) {
+      const { data: isAvailable, error } = await supabase.rpc('check_legal_name_availability', {
+        p_legal_name: form.legalName.trim()
+      })
+      if (error) throw error
+      if (!isAvailable) {
+        errorMessage.value = t('onboarding.legalNameTaken')
+        return
+      }
+    }
+
+    step.value++
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : t('errors.generic')
+  } finally {
+    pending.value = false
+  }
 }
 
 async function openCheckout(organizationId: string) {
@@ -256,7 +307,7 @@ watchEffect(() => {
           </div>
 
           <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
-          <button class="ls-btn ls-btn-primary mt-8 w-full" :disabled="pending">{{ pending ? t('onboarding.sendingOtp') : step < 3 ? t('common.continue') : t('onboarding.continueToPayment') }}</button>
+          <button class="ls-btn ls-btn-primary mt-8 w-full" :disabled="pending">{{ submitButtonText }}</button>
           <p v-if="step === 3" class="mt-3 text-center text-xs text-fg-muted">{{ t('billing.paymentRequired') }}</p>
         </form>
 
