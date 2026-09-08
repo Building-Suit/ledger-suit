@@ -32,6 +32,7 @@ export function useTenant() {
   const nuxtApp = useNuxtApp()
   const supabase = useSupabaseClient<Database>()
   const user = useSupabaseUser()
+  const organizationCookie = useCookie<string | null>(STORAGE_KEY, { maxAge: 60 * 60 * 24 * 365, path: '/' })
 
   const organizations = useState<TenantOrganization[]>('tenant:organizations', () => [])
   const currentId = useState<string | null>('tenant:currentId', () => null)
@@ -114,6 +115,7 @@ export function useTenant() {
           .from('organization_members')
           .select('role, organizations(id, name, legal_name, slug, base_currency, timezone, status)')
           .eq('status', 'active')
+          .eq('user_id', userId)
 
         if (error) throw error
 
@@ -130,13 +132,16 @@ export function useTenant() {
 
         // Restore the last used organization, but only if the membership still
         // exists — a removed member must not keep a stale tenant selected.
-        const remembered = import.meta.client ? localStorage.getItem(STORAGE_KEY) : null
+        const remembered = organizationCookie.value
         const valid = organizations.value.some(o => o.id === remembered)
 
         const nextOrganizationId = valid ? remembered : (organizations.value[0]?.id ?? null)
         if (currentId.value !== nextOrganizationId) {
           clearOrganizationData()
           currentId.value = nextOrganizationId
+          if (nextOrganizationId && nextOrganizationId !== remembered) {
+            organizationCookie.value = nextOrganizationId
+          }
         }
         await loadCapabilities()
         loadedUserId.value = userId
@@ -156,11 +161,17 @@ export function useTenant() {
 
     // Drop every tenant-scoped payload before the new organization renders.
     clearOrganizationData()
-    capabilities.value = []
-    currentId.value = id
-    if (import.meta.client) localStorage.setItem(STORAGE_KEY, id)
+    
+    // Fetch capabilities before changing currentId to prevent watchers from firing
+    // and failing capability checks before they are ready.
+    const { data } = await supabase.rpc('my_capabilities', {
+      p_organization_id: id,
+    })
+    capabilities.value = (data as string[] | null) ?? []
 
-    await loadCapabilities()
+    currentId.value = id
+    organizationCookie.value = id
+
     await refreshOrganizationData()
   }
 

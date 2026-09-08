@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(10);
+select plan(12);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
                         email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
@@ -36,8 +36,15 @@ select ok((select onboarding_completed_at is not null from public.profiles where
 select is((select count(*) from public.organization_members where user_id = auth.uid() and role = 'owner'), 1::bigint, 'one owner membership is created');
 select is((select business_type::text from public.organizations where id = (select organization_id from onboarding_ids)), 'limited_liability', 'business type is stored');
 select is((select tax_identifier from public.organizations where id = (select organization_id from onboarding_ids)), 'TAX-ONBOARD-01', 'tax identifier is stored');
+select is((select legal_name from public.organizations where id = (select organization_id from onboarding_ids)), 'Ready Books LLC', 'legal business name is stored in normalized form');
 select is((select count(*) from public.accounts where organization_id = (select organization_id from onboarding_ids)), 0::bigint, 'chart of accounts starts empty');
 select is((select count(*) from public.subscriptions where organization_id = (select organization_id from onboarding_ids)), 1::bigint, 'one checkout-required subscription is provisioned');
+
+select throws_ok(
+  $$select public.create_organization('Duplicate Books', 'EGP'::char(3), 'EG'::char(2), 'Africa/Cairo', '  ready books llc  ', 1::smallint)$$,
+  '23505', 'LEGAL_NAME_ALREADY_EXISTS: legal business name must be unique',
+  'legal business names are unique regardless of case and surrounding whitespace'
+);
 
 select throws_ok(
   $$select public.complete_account_onboarding('Again', '+201000000000', 'Founder', 'Again', 'Again LLC', 'other', 'EG'::char(2), 'Africa/Cairo', 'EGP'::char(3), 1::smallint, null)$$,
