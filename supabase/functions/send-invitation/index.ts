@@ -5,6 +5,7 @@ interface InvitationBody {
   organizationId?: string
   email?: string
   role?: 'admin' | 'accountant' | 'data_entry' | 'viewer'
+  roleId?: string | null
   invitationId?: string
 }
 
@@ -12,7 +13,7 @@ Deno.serve(async (request) => {
   const preflight = handleOptions(request)
   if (preflight) return preflight
   try {
-    const { organizationId, email, role, invitationId } = await readJson<InvitationBody>(request)
+    const { organizationId, email, role, roleId, invitationId } = await readJson<InvitationBody>(request)
     const supabase = await authenticatedClient(request)
     const { data, error } = invitationId
       ? await supabase.rpc('renew_organization_invitation', { p_invitation_id: invitationId })
@@ -20,6 +21,7 @@ Deno.serve(async (request) => {
           p_organization_id: organizationId,
           p_email: email?.trim().toLowerCase(),
           p_role: role,
+          p_role_id: roleId ?? null,
         })
     if (error) throw error
     const invitation = (data as Array<{ invitation_token: string, invitation_id: string }> | null)?.[0]
@@ -27,7 +29,7 @@ Deno.serve(async (request) => {
 
     const { data: invitationRecord, error: invitationError } = await supabase
       .from('organization_invitations')
-      .select('email, role, organizations(name)')
+      .select('email, role, role_id, organizations(name)')
       .eq('id', invitation.invitation_id)
       .single()
     if (invitationError || !invitationRecord) throw invitationError ?? new Error('Invitation could not be loaded')
@@ -44,7 +46,15 @@ Deno.serve(async (request) => {
     const organizationName = organization?.name ?? 'your organization'
     const senderName = sender?.full_name?.trim() || 'A Ledger Suit administrator'
     const senderTitle = sender?.job_title?.trim() || 'Workspace administrator'
-    const roleName = String(invitationRecord.role).replaceAll('_', ' ')
+    let roleName = String(invitationRecord.role).replaceAll('_', ' ')
+    if (invitationRecord.role_id) {
+      const { data: customRole } = await supabase
+        .from('organization_roles')
+        .select('name_en')
+        .eq('id', invitationRecord.role_id)
+        .maybeSingle()
+      if (customRole?.name_en) roleName = customRole.name_en
+    }
 
     const appUrl = requiredEnv('APP_BASE_URL').replace(/\/$/, '')
     const actionUrl = `${appUrl}/accept-invitation?token=${encodeURIComponent(invitation.invitation_token)}`

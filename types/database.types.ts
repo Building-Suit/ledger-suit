@@ -312,16 +312,19 @@ export type Database = {
       capabilities: {
         Row: {
           description: string
+          description_ar: string
           domain: string
           key: string
         }
         Insert: {
           description: string
+          description_ar: string
           domain: string
           key: string
         }
         Update: {
           description?: string
+          description_ar?: string
           domain?: string
           key?: string
         }
@@ -827,6 +830,7 @@ export type Database = {
           invited_by: string | null
           organization_id: string
           role: Database["public"]["Enums"]["organization_role"]
+          role_id: string | null
           status: Database["public"]["Enums"]["invitation_status"]
           token_hash: string
           updated_at: string
@@ -841,6 +845,7 @@ export type Database = {
           invited_by?: string | null
           organization_id: string
           role?: Database["public"]["Enums"]["organization_role"]
+          role_id?: string | null
           status?: Database["public"]["Enums"]["invitation_status"]
           token_hash: string
           updated_at?: string
@@ -855,6 +860,7 @@ export type Database = {
           invited_by?: string | null
           organization_id?: string
           role?: Database["public"]["Enums"]["organization_role"]
+          role_id?: string | null
           status?: Database["public"]["Enums"]["invitation_status"]
           token_hash?: string
           updated_at?: string
@@ -893,6 +899,7 @@ export type Database = {
           organization_id: string
           revoked_capabilities: string[]
           role: Database["public"]["Enums"]["organization_role"]
+          role_id: string | null
           status: Database["public"]["Enums"]["membership_status"]
           updated_at: string
           user_id: string
@@ -906,6 +913,7 @@ export type Database = {
           organization_id: string
           revoked_capabilities?: string[]
           role?: Database["public"]["Enums"]["organization_role"]
+          role_id?: string | null
           status?: Database["public"]["Enums"]["membership_status"]
           updated_at?: string
           user_id: string
@@ -919,6 +927,7 @@ export type Database = {
           organization_id?: string
           revoked_capabilities?: string[]
           role?: Database["public"]["Enums"]["organization_role"]
+          role_id?: string | null
           status?: Database["public"]["Enums"]["membership_status"]
           updated_at?: string
           user_id?: string
@@ -1278,18 +1287,59 @@ export type Database = {
           },
         ]
       }
+      organization_roles: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          name_ar: string
+          name_en: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          name_ar: string
+          name_en: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          name_ar?: string
+          name_en?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_capabilities: {
         Row: {
           capability_key: string
-          role: Database["public"]["Enums"]["organization_role"]
+          role: Database["public"]["Enums"]["organization_role"] | null
+          role_id: string | null
         }
         Insert: {
           capability_key: string
-          role: Database["public"]["Enums"]["organization_role"]
+          role?: Database["public"]["Enums"]["organization_role"] | null
+          role_id?: string | null
         }
         Update: {
           capability_key?: string
-          role?: Database["public"]["Enums"]["organization_role"]
+          role?: Database["public"]["Enums"]["organization_role"] | null
+          role_id?: string | null
         }
         Relationships: [
           {
@@ -2372,6 +2422,19 @@ export type Database = {
         Args: { p_token: string }
         Returns: string
       }
+      check_legal_name_availability: {
+        Args: {
+          p_legal_name: string
+        }
+        Returns: boolean
+      }
+      check_owner_availability: {
+        Args: {
+          p_email: string
+          p_phone: string
+        }
+        Returns: Json
+      }
       apply_stripe_subscription_event: {
         Args: {
           p_cancel_at_period_end?: boolean
@@ -2539,11 +2602,22 @@ export type Database = {
           p_email: string
           p_organization_id: string
           p_role?: Database["public"]["Enums"]["organization_role"]
+          p_role_id?: string
         }
         Returns: {
           invitation_id: string
           invitation_token: string
         }[]
+      }
+      create_organization_role: {
+        Args: {
+          p_capabilities: string[]
+          p_key: string
+          p_name_ar: string
+          p_name_en: string
+          p_organization_id: string
+        }
+        Returns: string
       }
       create_recurring_rule: {
         Args: {
@@ -2568,12 +2642,17 @@ export type Database = {
         Args: { p_limit_key: string; p_organization_id: string }
         Returns: number
       }
+      delete_organization_role: {
+        Args: { p_role_id: string }
+        Returns: string
+      }
       manage_organization_member: {
         Args: {
           p_granted_capabilities?: string[]
           p_member_id: string
           p_revoked_capabilities?: string[]
           p_role: Database["public"]["Enums"]["organization_role"]
+          p_role_id?: string
           p_status: Database["public"]["Enums"]["membership_status"]
         }
         Returns: string
@@ -2622,7 +2701,19 @@ export type Database = {
           inviter_name: string
           organization_name: string
           role: Database["public"]["Enums"]["organization_role"]
+          role_key: string | null
+          role_name_ar: string | null
+          role_name_en: string | null
         }[]
+      }
+      update_organization_role: {
+        Args: {
+          p_capabilities: string[]
+          p_name_ar: string
+          p_name_en: string
+          p_role_id: string
+        }
+        Returns: string
       }
       record_asset_purchase: {
         Args: {

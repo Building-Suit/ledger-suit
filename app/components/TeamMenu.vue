@@ -8,28 +8,41 @@ withDefaults(defineProps<{
 })
 
 const supabase = useSupabaseClient<Database>()
-const { currentId, can } = useTenant()
+const { currentId, can, roleLabel } = useTenant()
 const { t } = useI18n()
 const { open, show, close, markChanged } = useTeamInvitation()
 const email = ref('')
-const role = ref<Database['public']['Enums']['organization_role']>('viewer')
+const role = ref<string>('system:viewer')
+const customRoles = ref<Array<{ id: string, name_en: string, name_ar: string }>>([])
 const pending = ref(false)
 const errorMessage = ref('')
 const describeError = useErrorMessage()
 const toasts = useToasts()
 
+watch(open, async (isOpen) => {
+  if (!isOpen || !currentId.value) return
+  const { data } = await supabase.from('organization_roles').select('id, key, name_en, name_ar').eq('organization_id', currentId.value).order('created_at')
+  customRoles.value = data ?? []
+})
+
 async function invite() {
   if (!currentId.value) return
   pending.value = true; errorMessage.value = ''
+  const isCustom = role.value.startsWith('custom:')
   try {
     const { data, error } = await supabase.functions.invoke('send-invitation', {
-      body: { organizationId: currentId.value, email: email.value, role: role.value },
+      body: {
+        organizationId: currentId.value,
+        email: email.value,
+        role: isCustom ? 'viewer' : role.value.slice(7),
+        roleId: isCustom ? role.value.slice(7) : null,
+      },
     })
     if (error) throw new Error(await edgeFunctionErrorMessage(error, t('errors.generic')))
     markChanged()
     if (!data?.sent) throw new Error(data?.warning ?? t('errors.generic'))
     email.value = ''
-    role.value = 'viewer'
+    role.value = 'system:viewer'
     close()
     toasts.success(t('access.inviteSent'))
   }
@@ -50,7 +63,8 @@ async function invite() {
           <p class="text-sm leading-6 text-fg-muted">{{ t('access.inviteDescription') }}</p>
           <FloatingField :label="t('auth.email')"><input v-model="email" type="email" class="ls-input" :placeholder="t('auth.email')" autocomplete="email" dir="ltr" required></FloatingField>
           <FloatingField :label="t('team.role')"><select v-model="role" class="ls-input">
-            <option v-for="key in ['admin','accountant','data_entry','viewer']" :key="key" :value="key">{{ t(`org.roles.${key}`) }}</option>
+            <option v-for="key in ['admin','accountant','data_entry','viewer']" :key="key" :value="`system:${key}`">{{ t(`org.roles.${key}`) }}</option>
+            <option v-for="custom in customRoles" :key="custom.id" :value="`custom:${custom.id}`">{{ roleLabel(null, custom.id) }}</option>
           </select></FloatingField>
           <div class="flex items-start gap-3 rounded-control bg-surface-muted p-4"><AppIcon name="mail" class="mt-0.5 shrink-0 text-accent" /><div><p class="text-sm font-bold">{{ t('access.emailDelivery') }}</p><p class="mt-1 text-xs leading-5 text-fg-muted">{{ t('access.emailDeliveryHint') }}</p></div></div>
           <button class="ls-btn ls-btn-primary w-full" :disabled="pending">{{ pending ? t('onboarding.sendingOtp') : t('org.createInvite') }}</button>
