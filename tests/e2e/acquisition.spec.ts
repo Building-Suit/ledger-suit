@@ -58,6 +58,9 @@ test('an invited user verifies email, creates a password, joins, and can sign in
   await page.getByRole('button', { name: 'Verify code' }).click()
 
   await expect(page.getByRole('heading', { name: 'Create your password' })).toBeVisible()
+  await page.getByLabel('Full name').fill('Invited User')
+  await page.getByLabel('Phone number').fill(`+2010${String(Date.now()).slice(-8)}`)
+  await page.getByLabel('Job title').fill('Accountant')
   await page.getByLabel('New password').fill(password)
   await page.getByLabel('Confirm password').fill(password)
   await page.getByRole('button', { name: 'Create password & join workspace' }).click()
@@ -91,13 +94,13 @@ test('the brand wordmark follows the selected theme', async ({ page }) => {
   await page.goto('/')
 
   const logo = page.getByRole('img', { name: 'Ledger Suit by Building Suit' }).first()
-  await expect(logo.locator('.ls-logo-image-dark')).toBeVisible()
-  await expect(logo.locator('.ls-logo-image-light')).toBeHidden()
+  await expect(logo.locator('.ls-logo-image-light')).toBeVisible()
+  await expect(logo.locator('.ls-logo-image-dark')).toBeHidden()
 
   await page.evaluate(() => localStorage.setItem('ledger-suit.theme', 'light'))
   await page.reload()
-  await expect(logo.locator('.ls-logo-image-light')).toBeVisible()
-  await expect(logo.locator('.ls-logo-image-dark')).toBeHidden()
+  await expect(logo.locator('.ls-logo-image-dark')).toBeVisible()
+  await expect(logo.locator('.ls-logo-image-light')).toBeHidden()
 })
 
 test('signup verifies email by OTP before provisioning and checkout', async ({ page }) => {

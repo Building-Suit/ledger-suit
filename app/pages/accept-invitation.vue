@@ -52,7 +52,7 @@ async function loadPreview() {
   preview.value = invitation
 
   if (invitation.user_exists) {
-    if (user.value && user.value.email === invitation.email) {
+    if (user.value?.email?.toLowerCase() === invitation.email.toLowerCase()) {
       try {
         const { error: acceptError } = await supabase.rpc('accept_organization_invitation', { p_token: token.value })
         if (acceptError) throw acceptError
@@ -64,10 +64,10 @@ async function loadPreview() {
         step.value = 'invalid'
         return
       }
-    } else {
-      await navigateTo(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
-      return
     }
+    if (user.value) await supabase.auth.signOut()
+    await navigateTo(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    return
   }
 
   step.value = 'ready'
@@ -128,19 +128,18 @@ async function finish() {
     if (passwordError) throw passwordError
     
     const { data: authData } = await supabase.auth.getUser()
-    if (authData.user) {
-      const { error: profileError } = await supabase.from('profiles').update({
-        full_name: fullName.value,
-        phone: phone.value,
-        job_title: jobTitle.value
-      }).eq('id', authData.user.id)
-      if (profileError) throw profileError
-    }
+    if (!authData.user || authData.user.email?.toLowerCase() !== preview.value.email.toLowerCase()) throw new Error('Invitation identity mismatch')
+    const { error: profileError } = await supabase.from('profiles').update({
+      full_name: fullName.value.trim(),
+      phone: phone.value.trim(),
+      job_title: jobTitle.value.trim(),
+    }).eq('id', authData.user.id)
+    if (profileError) throw profileError
     
     const { error: invitationError } = await supabase.rpc('accept_organization_invitation', { p_token: token.value })
     if (invitationError) throw invitationError
     
-    if (authData.user) await tenant.loadOrganizations(authData.user.id, { force: true })
+    await tenant.loadOrganizations(authData.user.id, { force: true })
     await navigateTo('/dashboard')
   }
   catch { errorMessage.value = t('auth.failed') }
@@ -194,9 +193,9 @@ onBeforeUnmount(() => clearInterval(timer))
           </div>
 
           <div v-else class="mt-8 space-y-4">
-            <FloatingField :label="t('onboarding.fullNameLabel')"><input v-model="fullName" type="text" class="ls-input" required></FloatingField>
-            <FloatingField :label="t('onboarding.phoneLabel')"><input v-model="phone" type="tel" class="ls-input" dir="ltr" required></FloatingField>
-            <FloatingField :label="t('onboarding.jobTitleLabel')"><input v-model="jobTitle" type="text" class="ls-input" required></FloatingField>
+            <FloatingField :label="t('onboarding.fullName')"><input v-model="fullName" type="text" autocomplete="name" class="ls-input" required></FloatingField>
+            <FloatingField :label="t('onboarding.phone')"><input v-model="phone" type="tel" autocomplete="tel" class="ls-input" dir="ltr" required></FloatingField>
+            <FloatingField :label="t('onboarding.jobTitle')"><input v-model="jobTitle" type="text" autocomplete="organization-title" class="ls-input" required></FloatingField>
             <div><FloatingField :label="t('access.inviteFlow.password')"><input v-model="password" type="password" minlength="8" autocomplete="new-password" class="ls-input" required dir="ltr"></FloatingField><p class="ls-hint">{{ t('access.inviteFlow.passwordHint') }}</p></div>
             <FloatingField :label="t('access.inviteFlow.confirmPassword')"><input v-model="confirmPassword" type="password" minlength="8" autocomplete="new-password" class="ls-input" required dir="ltr"></FloatingField>
             <button class="ls-btn ls-btn-primary w-full" :disabled="pending || password.length < 8 || confirmPassword.length < 8">{{ pending ? t('access.inviteFlow.finishing') : t('access.inviteFlow.finish') }}</button>
