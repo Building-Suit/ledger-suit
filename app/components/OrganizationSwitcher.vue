@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { organizations, current, setOrganization } = useTenant()
+const { organizations, current, setOrganization, roleLabel } = useTenant()
 const { t } = useI18n()
 
 const open = ref(false)
@@ -47,7 +47,7 @@ async function choose(id: string) {
             <span class="block truncate">{{ org.name }}</span>
             <span v-if="org.legal_name" class="block truncate text-[10px] text-fg-muted">{{ org.legal_name }}</span>
             <span class="block text-xs text-fg-muted">
-              {{ t(`org.roles.${org.role}`) }} · {{ org.base_currency }}
+              {{ roleLabel(org.role, org.role_id) }} · {{ org.base_currency }}
             </span>
           </span>
           <AppIcon v-if="org.id === current?.id" name="check" class="text-[var(--bs-status-success)]" />

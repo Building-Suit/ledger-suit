@@ -17,6 +17,7 @@ interface MemberRow {
   id: string
   user_id: string
   role: Role
+  role_id: string | null
   status: MemberStatus
   granted_capabilities: string[]
   revoked_capabilities: string[]
@@ -28,6 +29,7 @@ interface InvitationRow {
   id: string
   email: string
   role: Role
+  role_id: string | null
   status: Database['public']['Enums']['invitation_status']
   created_at: string
   expires_at: string
@@ -38,11 +40,19 @@ interface CapabilityRow {
   key: string
   domain: string
   description: string
+  description_ar: string
+}
+
+interface CustomRoleRow {
+  id: string
+  key: string
+  name_en: string
+  name_ar: string
 }
 
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
-const { current, currentId, can, loadOrganizations } = useTenant()
+const { current, currentId, can, loadOrganizations, roleLabel } = useTenant()
 const { show: showInvitation, revision: invitationRevision } = useTeamInvitation()
 const { t, locale } = useI18n()
 const toasts = useToasts()
@@ -57,7 +67,8 @@ const search = ref('')
 const members = ref<MemberRow[]>([])
 const invitations = ref<InvitationRow[]>([])
 const capabilities = ref<CapabilityRow[]>([])
-const roleCapabilities = ref<Array<{ role: Role, capability_key: string }>>([])
+const roleCapabilities = ref<Array<{ role: Role | null, role_id: string | null, capability_key: string }>>([])
+const customRoles = ref<CustomRoleRow[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
 
@@ -87,16 +98,24 @@ const groupedCapabilities = computed(() => {
   return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b))
 })
 
-function defaultsFor(role: Role) {
+function systemDefaultsFor(role: Role) {
   return new Set(roleCapabilities.value.filter(item => item.role === role).map(item => item.capability_key))
 }
 
+function customCapabilitiesFor(roleId: string) {
+  return new Set(roleCapabilities.value.filter(item => item.role_id === roleId).map(item => item.capability_key))
+}
+
 function rolePermissionCount(role: Role) {
-  return defaultsFor(role).size
+  return systemDefaultsFor(role).size
+}
+
+function customPermissionCount(roleId: string) {
+  return customCapabilitiesFor(roleId).size
 }
 
 function hasRolePermission(role: Role, capability: string) {
-  return defaultsFor(role).has(capability)
+  return systemDefaultsFor(role).has(capability)
 }
 
 function formatDate(value: string) {
@@ -111,28 +130,31 @@ async function loadAccess() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [memberResult, invitationResult, capabilityResult, roleResult] = await Promise.all([
+    const [memberResult, invitationResult, capabilityResult, roleResult, customRoleResult] = await Promise.all([
       supabase
         .from('organization_members')
-        .select('id, user_id, role, status, granted_capabilities, revoked_capabilities, joined_at, profile:profiles!organization_members_user_id_fkey(email, full_name, job_title)')
+        .select('id, user_id, role, role_id, status, granted_capabilities, revoked_capabilities, joined_at, profile:profiles!organization_members_user_id_fkey(email, full_name, job_title)')
         .eq('organization_id', currentId.value)
         .order('created_at'),
       supabase
         .from('organization_invitations')
-        .select('id, email, role, status, created_at, expires_at, inviter:profiles!organization_invitations_invited_by_fkey(full_name, job_title)')
+        .select('id, email, role, role_id, status, created_at, expires_at, inviter:profiles!organization_invitations_invited_by_fkey(full_name, job_title)')
         .eq('organization_id', currentId.value)
         .order('created_at', { ascending: false }),
-      supabase.from('capabilities').select('key, domain, description').order('domain').order('key'),
-      supabase.from('role_capabilities').select('role, capability_key'),
+      supabase.from('capabilities').select('key, domain, description, description_ar').order('domain').order('key'),
+      supabase.from('role_capabilities').select('role, role_id, capability_key'),
+      supabase.from('organization_roles').select('id, key, name_en, name_ar').eq('organization_id', currentId.value).order('created_at'),
     ])
     if (memberResult.error) throw memberResult.error
     if (invitationResult.error) throw invitationResult.error
     if (capabilityResult.error) throw capabilityResult.error
     if (roleResult.error) throw roleResult.error
+    if (customRoleResult.error) throw customRoleResult.error
     members.value = (memberResult.data ?? []) as unknown as MemberRow[]
     invitations.value = (invitationResult.data ?? []) as unknown as InvitationRow[]
     capabilities.value = capabilityResult.data ?? []
     roleCapabilities.value = roleResult.data ?? []
+    customRoles.value = customRoleResult.data ?? []
   }
   catch (error) { errorMessage.value = describeError(error) }
   finally { loading.value = false }
@@ -141,14 +163,21 @@ async function loadAccess() {
 watch(currentId, () => void loadAccess(), { immediate: true })
 watch(invitationRevision, () => void loadAccess())
 
+// ---------------------------------------------------------------------------
+// Member access editor: a role menu only. The role menu lists system roles
+// plus every custom role defined in this workspace.
+// ---------------------------------------------------------------------------
 const editingMember = ref<MemberRow | null>(null)
-const editRole = ref<Role>('viewer')
+const editRoleChoice = ref<string>('system:viewer')
 const editStatus = ref<MemberStatus>('active')
 const saving = ref(false)
 
+const editedSystemRole = computed<Role | null>(() => editRoleChoice.value.startsWith('system:') ? editRoleChoice.value.slice(7) as Role : null)
+const editedCustomRoleId = computed<string | null>(() => editRoleChoice.value.startsWith('custom:') ? editRoleChoice.value.slice(7) : null)
+
 function openEditor(member: MemberRow) {
   editingMember.value = member
-  editRole.value = member.role
+  editRoleChoice.value = member.role_id ? `custom:${member.role_id}` : `system:${member.role}`
   editStatus.value = member.status
   errorMessage.value = ''
 }
@@ -157,15 +186,17 @@ async function saveMember() {
   if (!editingMember.value) return
   saving.value = true
   errorMessage.value = ''
-  // Changing the role resets any per-member capability overrides to the new role's defaults;
-  // keeping the same role preserves existing overrides.
-  const roleChanged = editingMember.value.role !== editRole.value
+  // Changing the role resets any per-member capability overrides to the new
+  // role's defaults; keeping the same role preserves existing overrides.
+  const roleChanged = editingMember.value.role_id !== editedCustomRoleId.value
+    || (editedCustomRoleId.value === null && editingMember.value.role !== editedSystemRole.value)
   const granted = roleChanged ? [] : editingMember.value.granted_capabilities
   const revoked = roleChanged ? [] : editingMember.value.revoked_capabilities
   try {
     const { error } = await supabase.rpc('manage_organization_member', {
       p_member_id: editingMember.value.id,
-      p_role: editRole.value,
+      p_role: editedSystemRole.value ?? 'viewer',
+      p_role_id: editedCustomRoleId.value ?? undefined,
       p_status: editStatus.value,
       p_granted_capabilities: granted,
       p_revoked_capabilities: revoked,
@@ -183,7 +214,7 @@ async function saveMember() {
 async function quickStatus(member: MemberRow) {
   const nextStatus: MemberStatus = member.status === 'active' ? 'suspended' : 'active'
   editingMember.value = member
-  editRole.value = member.role
+  editRoleChoice.value = member.role_id ? `custom:${member.role_id}` : `system:${member.role}`
   editStatus.value = nextStatus
   await saveMember()
 }
@@ -200,6 +231,137 @@ async function removeMember(member: MemberRow) {
   }
   catch (error) { errorMessage.value = describeError(error) }
   finally { saving.value = false }
+}
+
+// ---------------------------------------------------------------------------
+// Permission matrix: opens in a large modal from a button. System-role columns
+// are reference only; custom-role columns are editable checkboxes.
+// ---------------------------------------------------------------------------
+const matrixOpen = ref(false)
+const matrixDraft = ref<Map<string, Set<string>>>(new Map())
+const matrixDirtyRoles = ref<Set<string>>(new Set())
+const matrixSaving = ref(false)
+
+function openMatrix() {
+  const draft = new Map<string, Set<string>>()
+  for (const role of customRoles.value) draft.set(role.id, customCapabilitiesFor(role.id))
+  matrixDraft.value = draft
+  matrixDirtyRoles.value = new Set()
+  errorMessage.value = ''
+  matrixOpen.value = true
+}
+
+function toggleMatrixCap(roleId: string, capability: string, checked: boolean) {
+  const next = new Set(matrixDraft.value.get(roleId) ?? [])
+  if (checked) next.add(capability)
+  else next.delete(capability)
+  matrixDraft.value = new Map(matrixDraft.value).set(roleId, next)
+  const dirty = new Set(matrixDirtyRoles.value)
+  dirty.add(roleId)
+  matrixDirtyRoles.value = dirty
+}
+
+async function saveMatrix() {
+  if (!matrixDirtyRoles.value.size) {
+    matrixOpen.value = false
+    return
+  }
+  matrixSaving.value = true
+  errorMessage.value = ''
+  try {
+    for (const roleId of matrixDirtyRoles.value) {
+      const role = customRoles.value.find(item => item.id === roleId)
+      if (!role) continue
+      const { error } = await supabase.rpc('update_organization_role', {
+        p_role_id: roleId,
+        p_name_en: role.name_en,
+        p_name_ar: role.name_ar,
+        p_capabilities: [...(matrixDraft.value.get(roleId) ?? [])],
+      })
+      if (error) throw error
+    }
+    matrixOpen.value = false
+    await loadAccess()
+    await loadOrganizations(user.value?.id, { force: true })
+    toasts.success(t('access.saved'))
+  }
+  catch (error) { errorMessage.value = describeError(error) }
+  finally { matrixSaving.value = false }
+}
+
+// ---------------------------------------------------------------------------
+// Custom role create/edit: bilingual names plus the permission list.
+// ---------------------------------------------------------------------------
+const roleModalOpen = ref(false)
+const roleForm = ref<{ id: string | null, name_en: string, name_ar: string, caps: Set<string> }>({ id: null, name_en: '', name_ar: '', caps: new Set() })
+const roleSaving = ref(false)
+
+function openCreateRole() {
+  roleForm.value = { id: null, name_en: '', name_ar: '', caps: new Set(['organization.read']) }
+  errorMessage.value = ''
+  roleModalOpen.value = true
+}
+
+function openEditRole(role: CustomRoleRow) {
+  roleForm.value = { id: role.id, name_en: role.name_en, name_ar: role.name_ar, caps: customCapabilitiesFor(role.id) }
+  errorMessage.value = ''
+  roleModalOpen.value = true
+}
+
+function toggleRoleCap(key: string, checked: boolean) {
+  const next = new Set(roleForm.value.caps)
+  if (checked) next.add(key)
+  else next.delete(key)
+  roleForm.value = { ...roleForm.value, caps: next }
+}
+
+function slugKey(name: string) {
+  const slug = name.toLowerCase().replaceAll(/[^a-z0-9]+/g, '_').replaceAll(/^_+|_+$/g, '').slice(0, 40)
+  return slug.length >= 2 ? slug : 'role'
+}
+
+async function saveRole() {
+  roleSaving.value = true
+  errorMessage.value = ''
+  try {
+    if (roleForm.value.id) {
+      const { error } = await supabase.rpc('update_organization_role', {
+        p_role_id: roleForm.value.id,
+        p_name_en: roleForm.value.name_en,
+        p_name_ar: roleForm.value.name_ar,
+        p_capabilities: [...roleForm.value.caps],
+      })
+      if (error) throw error
+    }
+    else {
+      const { error } = await supabase.rpc('create_organization_role', {
+        p_organization_id: currentId.value!,
+        p_key: slugKey(roleForm.value.name_en),
+        p_name_en: roleForm.value.name_en,
+        p_name_ar: roleForm.value.name_ar,
+        p_capabilities: [...roleForm.value.caps],
+      })
+      if (error) throw error
+    }
+    roleModalOpen.value = false
+    await loadAccess()
+    await loadOrganizations(user.value?.id, { force: true })
+    toasts.success(t('access.saved'))
+  }
+  catch (error) { errorMessage.value = describeError(error) }
+  finally { roleSaving.value = false }
+}
+
+async function deleteRole(role: CustomRoleRow) {
+  if (!confirm(t('access.deleteRoleConfirm'))) return
+  errorMessage.value = ''
+  try {
+    const { error } = await supabase.rpc('delete_organization_role', { p_role_id: role.id })
+    if (error) throw error
+    await loadAccess()
+    toasts.success(t('access.removed'))
+  }
+  catch (error) { errorMessage.value = describeError(error) }
 }
 
 async function revokeInvitation(invitation: InvitationRow) {
@@ -259,7 +421,7 @@ async function resendInvitation(invitation: InvitationRow) {
     </div>
 
     <SectionSkeleton v-if="loading" variant="table" :rows="6" />
-    <p v-else-if="errorMessage && !editingMember" class="ls-error" role="alert">{{ errorMessage }}</p>
+    <p v-else-if="errorMessage && !editingMember && !matrixOpen && !roleModalOpen" class="ls-error" role="alert">{{ errorMessage }}</p>
 
     <template v-else-if="activeTab === 'members'">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -275,7 +437,7 @@ async function resendInvitation(invitation: InvitationRow) {
           <tbody>
             <tr v-for="member in visibleMembers" :key="member.id">
               <td><div class="flex items-center gap-3"><span class="grid size-9 shrink-0 place-items-center rounded-full bg-surface-muted font-black">{{ (member.profile?.full_name || member.profile?.email || '?').slice(0, 1).toUpperCase() }}</span><div><p class="font-bold">{{ member.profile?.full_name || member.profile?.email }}</p><p class="text-xs text-fg-muted" dir="ltr">{{ member.profile?.email }}</p><p v-if="member.profile?.job_title" class="text-xs text-fg-muted">{{ member.profile.job_title }}</p></div></div></td>
-              <td><span class="ls-badge bg-surface-muted">{{ t(`org.roles.${member.role}`) }}</span><span v-if="member.granted_capabilities.length || member.revoked_capabilities.length" class="ms-1 text-xs text-fg-muted">{{ t('access.customized') }}</span></td>
+              <td><span class="ls-badge bg-surface-muted">{{ roleLabel(member.role, member.role_id) }}</span><span v-if="member.granted_capabilities.length || member.revoked_capabilities.length" class="ms-1 text-xs text-fg-muted">{{ t('access.customized') }}</span></td>
               <td><StatusBadge :status="member.status" /></td>
               <td class="whitespace-nowrap">{{ formatDate(member.joined_at) }}</td>
               <td class="whitespace-nowrap text-end"><button v-if="can('members.update') && member.role !== 'owner'" type="button" class="ls-btn ls-btn-sm" @click="openEditor(member)">{{ t('access.editAccess') }}</button><button v-if="can('members.update') && member.role !== 'owner' && member.user_id !== user?.id" type="button" class="ls-btn ls-btn-sm ms-1" @click="quickStatus(member)">{{ t(member.status === 'active' ? 'access.suspend' : 'access.reactivate') }}</button><button v-if="can('members.remove') && member.role !== 'owner' && member.user_id !== user?.id" type="button" class="ls-btn ls-btn-sm ms-1 text-danger" @click="removeMember(member)">{{ t('access.remove') }}</button></td>
@@ -287,28 +449,44 @@ async function resendInvitation(invitation: InvitationRow) {
     </template>
 
     <template v-else-if="activeTab === 'roles'">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold">{{ t('access.roleSummary') }}</h2>
+          <p class="mt-1 text-sm text-fg-muted">{{ t('access.roleSummaryHint') }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button v-if="can('members.update')" type="button" class="ls-btn" @click="openMatrix">{{ t('access.permissionsMatrix') }}</button>
+          <button v-if="can('members.update')" type="button" class="ls-btn ls-btn-primary" @click="openCreateRole"><AppIcon name="add" :size="18" /> {{ t('access.newRole') }}</button>
+        </div>
+      </div>
+
+      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <article v-for="role in roles" :key="role" class="ls-card p-5">
+          <span class="grid size-10 place-items-center rounded-control bg-brand-navy text-brand-gold"><AppIcon :name="role === 'viewer' ? 'user' : 'team'" /></span>
+          <h3 class="mt-4 font-bold">{{ t(`org.roles.${role}`) }}</h3>
+          <p class="mt-2 min-h-16 text-sm leading-5 text-fg-muted">{{ t(`access.roles.${role}`) }}</p>
+          <p class="mt-4 text-xs font-bold text-fg-muted">{{ rolePermissionCount(role) }} / {{ capabilities.length }} {{ t('access.permissionsMatrix').toLocaleLowerCase() }}</p>
+        </article>
+      </div>
+
       <section>
-        <h2 class="text-lg font-bold">{{ t('access.roleSummary') }}</h2>
-        <p class="mt-1 text-sm text-fg-muted">{{ t('access.roleSummaryHint') }}</p>
-        <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <article v-for="role in roles" :key="role" class="ls-card p-5">
-            <span class="grid size-10 place-items-center rounded-control bg-brand-navy text-brand-gold"><AppIcon :name="role === 'viewer' ? 'user' : 'team'" /></span>
-            <h3 class="mt-4 font-bold">{{ t(`org.roles.${role}`) }}</h3>
-            <p class="mt-2 min-h-16 text-sm leading-5 text-fg-muted">{{ t(`access.roles.${role}`) }}</p>
-            <p class="mt-4 text-xs font-bold text-fg-muted">{{ rolePermissionCount(role) }} / {{ capabilities.length }} {{ t('access.permissionsMatrix').toLocaleLowerCase() }}</p>
+        <h2 class="text-lg font-bold">{{ t('access.customRoles') }}</h2>
+        <p class="mt-1 text-sm text-fg-muted">{{ t('access.customRolesHint') }}</p>
+        <div v-if="customRoles.length" class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <article v-for="role in customRoles" :key="role.id" class="ls-card p-5">
+            <div class="flex items-start justify-between gap-2">
+              <span class="grid size-10 place-items-center rounded-control bg-brand-navy text-brand-gold"><AppIcon name="team" /></span>
+              <div v-if="can('members.update')" class="flex gap-1">
+                <button type="button" class="ls-btn ls-btn-sm" @click="openEditRole(role)">{{ t('access.editAccess') }}</button>
+                <button type="button" class="ls-btn ls-btn-sm text-danger" @click="deleteRole(role)">{{ t('access.remove') }}</button>
+              </div>
+            </div>
+            <h3 class="mt-4 font-bold">{{ roleLabel(null, role.id) }}</h3>
+            <p class="text-xs text-fg-muted" dir="ltr">{{ role.name_en }} · {{ role.name_ar }}</p>
+            <p class="mt-4 text-xs font-bold text-fg-muted">{{ customPermissionCount(role.id) }} / {{ capabilities.length }} {{ t('access.permissionsMatrix').toLocaleLowerCase() }}</p>
           </article>
         </div>
-      </section>
-
-      <section class="ls-card overflow-x-auto">
-        <div class="border-b border-[var(--bs-border)] p-5"><h2 class="text-lg font-bold">{{ t('access.permissionsMatrix') }}</h2></div>
-        <table class="ls-table">
-          <thead><tr><th>{{ t('access.permission') }}</th><th v-for="role in roles" :key="role" class="text-center">{{ t(`org.roles.${role}`) }}</th></tr></thead>
-          <tbody v-for="[domain, items] in groupedCapabilities" :key="domain">
-            <tr class="bg-surface-muted"><td :colspan="roles.length + 1" class="font-bold capitalize">{{ domain.replaceAll('_', ' ') }}</td></tr>
-            <tr v-for="capability in items" :key="capability.key"><td><p class="font-semibold">{{ capability.description }}</p><code class="text-xs text-fg-muted" dir="ltr">{{ capability.key }}</code></td><td v-for="role in roles" :key="`${capability.key}-${role}`" class="text-center"><AppIcon v-if="hasRolePermission(role, capability.key)" name="check" :size="18" class="mx-auto text-success" /><span v-else class="text-fg-muted">—</span></td></tr>
-          </tbody>
-        </table>
+        <EmptyState v-else class="mt-4" :title="t('access.noCustomRoles')" />
       </section>
     </template>
 
@@ -317,7 +495,7 @@ async function resendInvitation(invitation: InvitationRow) {
       <div v-if="invitations.length" class="ls-card overflow-x-auto">
         <table class="ls-table">
           <thead><tr><th>{{ t('auth.email') }}</th><th>{{ t('access.role') }}</th><th>{{ t('access.status') }}</th><th>{{ t('access.invitedBy') }}</th><th>{{ t('access.sent') }}</th><th>{{ t('access.expires') }}</th><th class="text-end">{{ t('access.actions') }}</th></tr></thead>
-          <tbody><tr v-for="invitation in invitations" :key="invitation.id"><td dir="ltr">{{ invitation.email }}</td><td>{{ t(`org.roles.${invitation.role}`) }}</td><td><StatusBadge :status="invitation.status" /></td><td><p>{{ invitation.inviter?.full_name || '—' }}</p><p v-if="invitation.inviter?.job_title" class="text-xs text-fg-muted">{{ invitation.inviter.job_title }}</p></td><td class="whitespace-nowrap">{{ formatDate(invitation.created_at) }}</td><td class="whitespace-nowrap">{{ formatDate(invitation.expires_at) }}</td><td class="whitespace-nowrap text-end"><template v-if="invitation.status === 'pending'"><button v-if="can('members.invite')" type="button" class="ls-btn ls-btn-sm" :disabled="saving" @click="resendInvitation(invitation)">{{ t('access.resend') }}</button><button v-if="can('members.update')" type="button" class="ls-btn ls-btn-sm ms-1 text-danger" :disabled="saving" @click="revokeInvitation(invitation)">{{ t('access.revoke') }}</button></template></td></tr></tbody>
+          <tbody><tr v-for="invitation in invitations" :key="invitation.id"><td dir="ltr">{{ invitation.email }}</td><td>{{ roleLabel(invitation.role, invitation.role_id) }}</td><td><StatusBadge :status="invitation.status" /></td><td><p>{{ invitation.inviter?.full_name || '—' }}</p><p v-if="invitation.inviter?.job_title" class="text-xs text-fg-muted">{{ invitation.inviter.job_title }}</p></td><td class="whitespace-nowrap">{{ formatDate(invitation.created_at) }}</td><td class="whitespace-nowrap">{{ formatDate(invitation.expires_at) }}</td><td class="whitespace-nowrap text-end"><template v-if="invitation.status === 'pending'"><button v-if="can('members.invite')" type="button" class="ls-btn ls-btn-sm" :disabled="saving" @click="resendInvitation(invitation)">{{ t('access.resend') }}</button><button v-if="can('members.update')" type="button" class="ls-btn ls-btn-sm ms-1 text-danger" :disabled="saving" @click="revokeInvitation(invitation)">{{ t('access.revoke') }}</button></template></td></tr></tbody>
         </table>
       </div>
       <EmptyState v-else :title="t('access.noInvitations')" :action-label="can('members.invite') ? t('org.invite') : undefined" @action="showInvitation" />
@@ -326,6 +504,7 @@ async function resendInvitation(invitation: InvitationRow) {
     <TeamMenu :show-trigger="false" />
 
     <Teleport to="body">
+      <!-- Edit access: role menu only -->
       <Transition name="ls-modal">
         <div v-if="editingMember" class="fixed inset-0 z-[70] grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" @click.self="editingMember = null">
           <form class="ls-modal-panel ls-card max-h-[90dvh] w-full max-w-md overflow-y-auto p-6 shadow-overlay" @submit.prevent="saveMember">
@@ -333,11 +512,53 @@ async function resendInvitation(invitation: InvitationRow) {
             <fieldset class="mt-6">
               <legend class="text-sm font-bold">{{ t('access.role') }}</legend>
               <div class="mt-3 grid gap-2">
-                <label v-for="role in assignableRoles" :key="role" class="flex cursor-pointer items-center justify-between gap-3 rounded-card border p-3 text-sm transition-colors" :class="editRole === role ? 'border-fg bg-surface-muted' : 'border-[var(--bs-border)] hover:bg-surface-muted'"><span class="flex items-center gap-3"><input v-model="editRole" type="radio" name="edit-member-role" :value="role" class="size-4 accent-[var(--bs-accent)]"><span class="font-bold">{{ t(`org.roles.${role}`) }}</span></span><span class="text-xs text-fg-muted">{{ rolePermissionCount(role) }} / {{ capabilities.length }} {{ t('access.permissionsMatrix').toLocaleLowerCase() }}</span></label>
+                <label v-for="role in assignableRoles" :key="role" class="flex cursor-pointer items-center justify-between gap-3 rounded-card border p-3 text-sm transition-colors" :class="editRoleChoice === `system:${role}` ? 'border-fg bg-surface-muted' : 'border-[var(--bs-border)] hover:bg-surface-muted'"><span class="flex items-center gap-3"><input v-model="editRoleChoice" type="radio" name="edit-member-role" :value="`system:${role}`" class="size-4 accent-[var(--bs-accent)]"><span class="font-bold">{{ t(`org.roles.${role}`) }}</span></span><span class="text-xs text-fg-muted">{{ rolePermissionCount(role) }} / {{ capabilities.length }} {{ t('access.permissionsMatrix').toLocaleLowerCase() }}</span></label>
+                <label v-for="role in customRoles" :key="role.id" class="flex cursor-pointer items-center justify-between gap-3 rounded-card border p-3 text-sm transition-colors" :class="editRoleChoice === `custom:${role.id}` ? 'border-fg bg-surface-muted' : 'border-[var(--bs-border)] hover:bg-surface-muted'"><span class="flex items-center gap-3"><input v-model="editRoleChoice" type="radio" name="edit-member-role" :value="`custom:${role.id}`" class="size-4 accent-[var(--bs-accent)]"><span class="font-bold">{{ roleLabel(null, role.id) }}</span></span><span class="text-xs text-fg-muted">{{ customPermissionCount(role.id) }} / {{ capabilities.length }} {{ t('access.permissionsMatrix').toLocaleLowerCase() }}</span></label>
               </div>
             </fieldset>
             <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
             <div class="mt-6 flex justify-end gap-2"><button type="button" class="ls-btn" @click="editingMember = null">{{ t('common.cancel') }}</button><button class="ls-btn ls-btn-primary" :disabled="saving">{{ saving ? t('common.saving') : t('access.saveAccess') }}</button></div>
+          </form>
+        </div>
+      </Transition>
+
+      <!-- Permission matrix -->
+      <Transition name="ls-modal">
+        <div v-if="matrixOpen" class="fixed inset-0 z-[70] grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" @click.self="matrixOpen = false">
+          <div class="ls-modal-panel ls-card max-h-[92dvh] w-full max-w-6xl overflow-y-auto p-6 shadow-overlay">
+            <div class="flex items-start justify-between gap-4"><div><h2 class="text-lg font-bold">{{ t('access.permissionsMatrix') }}</h2><p class="mt-1 text-sm text-fg-muted">{{ t('access.matrixHint') }}</p></div><button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="matrixOpen = false"><AppIcon name="close" /></button></div>
+            <div class="mt-6 overflow-x-auto">
+              <table class="ls-table">
+                <thead><tr><th>{{ t('access.permission') }}</th><th v-for="role in roles" :key="role" class="text-center">{{ t(`org.roles.${role}`) }}</th><th v-for="role in customRoles" :key="role.id" class="text-center">{{ roleLabel(null, role.id) }}</th></tr></thead>
+                <tbody v-for="[domain, items] in groupedCapabilities" :key="domain">
+                  <tr class="bg-surface-muted"><td :colspan="roles.length + customRoles.length + 1" class="font-bold capitalize">{{ domain.replaceAll('_', ' ') }}</td></tr>
+                  <tr v-for="capability in items" :key="capability.key">
+                    <td><p class="font-semibold">{{ capability.description }}</p><p class="text-xs text-fg-muted" dir="rtl">{{ capability.description_ar }}</p><code class="text-xs text-fg-muted" dir="ltr">{{ capability.key }}</code></td>
+                    <td v-for="role in roles" :key="`${capability.key}-${role}`" class="text-center"><AppIcon v-if="hasRolePermission(role, capability.key)" name="check" :size="18" class="mx-auto text-success" /><span v-else class="text-fg-muted">—</span></td>
+                    <td v-for="role in customRoles" :key="`${capability.key}-${role.id}`" class="text-center"><input type="checkbox" class="size-4 accent-[var(--bs-accent)]" :disabled="!can('members.update')" :checked="matrixDraft.get(role.id)?.has(capability.key)" @change="toggleMatrixCap(role.id, capability.key, ($event.target as HTMLInputElement).checked)"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
+            <div class="mt-6 flex justify-end gap-2"><button type="button" class="ls-btn" @click="matrixOpen = false">{{ t('common.cancel') }}</button><button type="button" class="ls-btn ls-btn-primary" :disabled="matrixSaving || !matrixDirtyRoles.size" @click="saveMatrix">{{ matrixSaving ? t('common.saving') : t('access.matrixSave') }}</button></div>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Create / edit custom role -->
+      <Transition name="ls-modal">
+        <div v-if="roleModalOpen" class="fixed inset-0 z-[70] grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" @click.self="roleModalOpen = false">
+          <form class="ls-modal-panel ls-card max-h-[90dvh] w-full max-w-3xl overflow-y-auto p-6 shadow-overlay" @submit.prevent="saveRole">
+            <div class="flex items-start justify-between gap-4"><div><h2 class="text-lg font-bold">{{ roleForm.id ? t('access.editRole') : t('access.newRole') }}</h2></div><button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="roleModalOpen = false"><AppIcon name="close" /></button></div>
+            <div class="mt-6 grid gap-4 sm:grid-cols-2">
+              <FloatingField :label="t('access.roleNameEn')"><input v-model="roleForm.name_en" type="text" class="ls-input" dir="ltr" required maxlength="80"></FloatingField>
+              <FloatingField :label="t('access.roleNameAr')"><input v-model="roleForm.name_ar" type="text" class="ls-input" dir="rtl" required maxlength="80"></FloatingField>
+            </div>
+            <h3 class="mt-7 font-bold">{{ t('access.permission') }}</h3>
+            <div class="mt-4 grid gap-4 sm:grid-cols-2"><fieldset v-for="[domain, items] in groupedCapabilities" :key="domain" class="rounded-card border border-[var(--bs-border)] p-4"><legend class="px-1 text-sm font-bold capitalize">{{ domain.replaceAll('_', ' ') }}</legend><label v-for="capability in items" :key="capability.key" class="mt-3 flex cursor-pointer items-start gap-3 text-sm"><input type="checkbox" class="mt-1 size-4 accent-[var(--bs-accent)]" :checked="roleForm.caps.has(capability.key)" @change="toggleRoleCap(capability.key, ($event.target as HTMLInputElement).checked)"><span><span class="block font-semibold">{{ capability.description }}</span><span class="block text-xs text-fg-muted" dir="rtl">{{ capability.description_ar }}</span><code class="text-xs text-fg-muted" dir="ltr">{{ capability.key }}</code></span></label></fieldset></div>
+            <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
+            <div class="mt-6 flex justify-end gap-2"><button type="button" class="ls-btn" @click="roleModalOpen = false">{{ t('common.cancel') }}</button><button class="ls-btn ls-btn-primary" :disabled="roleSaving">{{ roleSaving ? t('common.saving') : t('access.createRole') }}</button></div>
           </form>
         </div>
       </Transition>

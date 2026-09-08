@@ -8,6 +8,9 @@ interface InvitationPreview {
   email: string
   organization_name: string
   role: Database['public']['Enums']['organization_role']
+  role_key: string | null
+  role_name_en: string | null
+  role_name_ar: string | null
   inviter_name: string
   inviter_job_title: string | null
   expires_at: string
@@ -16,12 +19,17 @@ interface InvitationPreview {
 
 const supabase = useSupabaseClient<Database>()
 const route = useRoute()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { restore } = useTheme()
 const tenant = useTenant()
 
 const token = computed(() => typeof route.query.token === 'string' ? route.query.token.trim() : '')
 const preview = ref<InvitationPreview | null>(null)
+const previewRoleLabel = computed(() => {
+  if (!preview.value) return ''
+  if (preview.value.role_name_en) return locale.value === 'ar' ? preview.value.role_name_ar : preview.value.role_name_en
+  return t(`org.roles.${preview.value.role}`)
+})
 const step = ref<InviteStep>('loading')
 const user = useSupabaseUser()
 const fullName = ref('')
@@ -171,7 +179,7 @@ onBeforeUnmount(() => clearInterval(timer))
             <h1 v-if="step === 'ready'" class="mt-2 text-xl font-extrabold tracking-[-.03em]" dir="ltr">{{ t('access.inviteFlow.title', { organization: preview.organization_name }) }}</h1>
             <h1 v-else-if="step === 'otp'" class="mt-2 text-xl font-extrabold tracking-[-.03em]">{{ t('access.inviteFlow.otpTitle') }}</h1>
             <h1 v-else class="mt-2 text-xl font-extrabold tracking-[-.03em]">{{ t('access.inviteFlow.passwordTitle') }}</h1>
-            <p v-if="step === 'ready'" class="mt-2 text-sm text-fg-muted">{{ t('access.inviteFlow.subtitle', { name: preview.inviter_name, jobTitle: preview.inviter_job_title || t('org.roles.admin'), role: t(`org.roles.${preview.role}`) }) }}</p>
+            <p v-if="step === 'ready'" class="mt-2 text-sm text-fg-muted">{{ t('access.inviteFlow.subtitle', { name: preview.inviter_name, jobTitle: preview.inviter_job_title || t('org.roles.admin'), role: previewRoleLabel }) }}</p>
             <p v-else-if="step === 'otp'" class="mt-2 text-sm text-fg-muted">{{ t('access.inviteFlow.otpBody', { email: preview.email }) }}</p>
             <p v-else class="mt-2 text-sm text-fg-muted">{{ t('access.inviteFlow.passwordBody') }}</p>
           </div>

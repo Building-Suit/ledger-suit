@@ -23,6 +23,7 @@ export interface TenantOrganization {
   timezone: string
   status: string
   role: MembershipRole
+  role_id: string | null
 }
 
 const STORAGE_KEY = 'ledger-suit.organization'
@@ -37,6 +38,8 @@ export function useTenant() {
   const organizations = useState<TenantOrganization[]>('tenant:organizations', () => [])
   const currentId = useState<string | null>('tenant:currentId', () => null)
   const capabilities = useState<string[]>('tenant:capabilities', () => [])
+  const customRoleNames = useState<Map<string, { name_en: string, name_ar: string }>>('tenant:customRoleNames', () => new Map())
+  const customRoleKeys = useState<Map<string, string>>('tenant:customRoleKeys', () => new Map())
   const loading = useState<boolean>('tenant:loading', () => false)
   const loadedUserId = useState<string | null>('tenant:loadedUserId', () => null)
 
@@ -49,11 +52,7 @@ export function useTenant() {
   }
 
   function refreshOrganizationData() {
-    if (import.meta.client) {
-      window.location.reload()
-    } else {
-      return nuxtApp.runWithContext(() => refreshNuxtData())
-    }
+    return nuxtApp.runWithContext(() => refreshNuxtData())
   }
 
   const current = computed(
@@ -67,18 +66,51 @@ export function useTenant() {
     return capabilities.value.includes(capability)
   }
 
+  /**
+   * Readable role label. Custom roles resolve to their localized name
+   * (Arabic under ar, English otherwise) with the key as a fallback; system
+   * roles resolve through i18n.
+   */
+  function roleLabel(role: string | null | undefined, roleId?: string | null): string {
+    const { t, locale } = useI18n()
+    if (roleId) {
+      const custom = customRoleNames.value.get(roleId)
+      if (custom) return locale.value === 'ar' ? custom.name_ar : custom.name_en
+      const fallback = customRoleKeys.value.get(roleId)
+      if (fallback) return fallback
+    }
+    if (role) return t(`org.roles.${role}`)
+    return ''
+  }
+
   async function loadCapabilities() {
     if (!currentId.value) {
       capabilities.value = []
+      customRoleNames.value = new Map()
+      customRoleKeys.value = new Map()
       return
     }
 
-    const { data, error } = await supabase.rpc('my_capabilities', {
-      p_organization_id: currentId.value,
-    })
+    const [capabilityResult, roleResult] = await Promise.all([
+      supabase.rpc('my_capabilities', { p_organization_id: currentId.value }),
+      supabase
+        .from('organization_roles')
+        .select('id, key, name_en, name_ar')
+        .eq('organization_id', currentId.value),
+    ])
 
-    if (error) throw error
-    capabilities.value = (data as string[] | null) ?? []
+    if (capabilityResult.error) throw capabilityResult.error
+    capabilities.value = (capabilityResult.data as string[] | null) ?? []
+
+    if (roleResult.error) throw roleResult.error
+    const names = new Map<string, { name_en: string, name_ar: string }>()
+    const keys = new Map<string, string>()
+    for (const role of roleResult.data ?? []) {
+      names.set(role.id, { name_en: role.name_en, name_ar: role.name_ar })
+      keys.set(role.id, role.key)
+    }
+    customRoleNames.value = names
+    customRoleKeys.value = keys
   }
 
   async function loadOrganizations(authenticatedUserId?: string, options: { force?: boolean } = {}) {
@@ -92,9 +124,11 @@ export function useTenant() {
 
     if (loadedUserId.value && loadedUserId.value !== userId) {
       // A second sign-in can happen without a document reload. Remove every
-      // payload belonging to the previous identity before loading the next.
-      clearOrganizationData()
-      organizations.value = []
+      // payload belonging to the previous identity before loading the next.        // Drop the previous tenant's custom roles along with its payloads.
+        clearOrganizationData()
+        customRoleNames.value = new Map()
+        customRoleKeys.value = new Map()
+        organizations.value = []
       currentId.value = null
       capabilities.value = []
       loadedUserId.value = null
@@ -113,21 +147,17 @@ export function useTenant() {
       try {
         const { data, error } = await supabase
           .from('organization_members')
-          .select('role, organizations(id, name, legal_name, slug, base_currency, timezone, status)')
+          .select('role, role_id, organizations(id, name, legal_name, slug, base_currency, timezone, status)')
           .eq('status', 'active')
           .eq('user_id', userId)
 
         if (error) throw error
 
-        const uniqueOrgs = new Map<string, TenantOrganization & { role: MembershipRole }>()
-        ;(data ?? []).forEach((row) => {
-          const org = row.organizations as TenantOrganization | null
-          if (org && !uniqueOrgs.has(org.id)) {
-            uniqueOrgs.set(org.id, { ...org, role: row.role as MembershipRole })
-          }
-        })
-
-        organizations.value = Array.from(uniqueOrgs.values())
+        organizations.value = (data ?? [])
+          .flatMap((row) => {
+            const org = row.organizations as TenantOrganization | null
+            return org ? [{ ...org, role: row.role as MembershipRole, role_id: row.role_id ?? null }] : []
+          })
           .sort((a, b) => a.name.localeCompare(b.name))
 
         // Restore the last used organization, but only if the membership still
@@ -180,9 +210,12 @@ export function useTenant() {
     current,
     currentId,
     capabilities,
+    customRoleNames,
+    customRoleKeys,
     baseCurrency,
     loading,
     can,
+    roleLabel,
     loadOrganizations,
     setOrganization,
   }

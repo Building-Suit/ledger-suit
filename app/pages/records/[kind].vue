@@ -11,7 +11,7 @@ type TransactionRow = Database['public']['Functions']['search_transactions']['Re
 
 const route = useRoute()
 const supabase = useSupabaseClient<Database>()
-const { currentId, baseCurrency, can } = useTenant()
+const { currentId, baseCurrency, can, roleLabel } = useTenant()
 const { writesAllowed } = useBilling()
 const { start, revision: transactionRevision } = useAddTransaction()
 const { show: showOperations, revision: operationRevision } = useOperationsCenter()
@@ -83,7 +83,7 @@ const { data: rows, pending, refresh } = useLazyAsyncData<Array<TransactionRow |
     return (data ?? []) as GenericRow[]
   }
 
-  const { data, error } = await supabase.from('organization_invitations').select('id, email, role, status, created_at, expires_at').eq('organization_id', currentId.value).order('created_at', { ascending: false })
+  const { data, error } = await supabase.from('organization_invitations').select('id, email, role, role_id, status, created_at, expires_at').eq('organization_id', currentId.value).order('created_at', { ascending: false })
   if (error) throw error
   return (data ?? []) as GenericRow[]
 }, { watch: [currentId, kind], default: () => [] })
@@ -201,7 +201,7 @@ const date = (row: TransactionRow | GenericRow, key: string) => {
 
       <table v-else-if="kind === 'tags'" class="ls-table"><thead><tr><th>{{ t('operations.name') }}</th><th>{{ t('recordPages.color') }}</th><th>{{ t('recordPages.created') }}</th></tr></thead><tbody><tr v-for="row in rows" :key="text(row, 'id')"><td>{{ text(row, 'name') }}</td><td><span class="inline-flex items-center gap-2"><span class="size-3 rounded-full" :style="{ backgroundColor: text(row, 'color') }" />{{ text(row, 'color') }}</span></td><td>{{ date(row, 'created_at') }}</td></tr></tbody></table>
 
-      <table v-else class="ls-table"><thead><tr><th>{{ t('auth.email') }}</th><th>{{ t('recordPages.role') }}</th><th>{{ t('transactions.status') }}</th><th>{{ t('recordPages.created') }}</th><th>{{ t('recordPages.expires') }}</th></tr></thead><tbody><tr v-for="row in rows" :key="text(row, 'id')"><td>{{ text(row, 'email') }}</td><td>{{ t(`org.roles.${text(row, 'role')}`) }}</td><td><StatusBadge :status="text(row, 'status')" /></td><td>{{ date(row, 'created_at') }}</td><td>{{ date(row, 'expires_at') }}</td></tr></tbody></table>
+      <table v-else class="ls-table"><thead><tr><th>{{ t('auth.email') }}</th><th>{{ t('recordPages.role') }}</th><th>{{ t('transactions.status') }}</th><th>{{ t('recordPages.created') }}</th><th>{{ t('recordPages.expires') }}</th></tr></thead><tbody><tr v-for="row in rows" :key="text(row, 'id')"><td>{{ text(row, 'email') }}</td><td>{{ roleLabel(text(row, 'role'), text(row, 'role_id')) }}</td><td><StatusBadge :status="text(row, 'status')" /></td><td>{{ date(row, 'created_at') }}</td><td>{{ date(row, 'expires_at') }}</td></tr></tbody></table>
     </div>
 
     <p v-if="actionError && !commitmentAction.id" class="ls-error" role="alert">{{ actionError }}</p>

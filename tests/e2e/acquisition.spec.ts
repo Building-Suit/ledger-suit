@@ -90,10 +90,11 @@ test('landing page explains the product and leads to paid onboarding', async ({ 
 
 test('signup verifies email by OTP before provisioning and checkout', async ({ page }) => {
   const email = `otp-${Date.now()}@ledgersuit.test`
+  const appOrigin = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? '3210'}`
   await page.route('**/functions/v1/stripe-checkout', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({ url: 'http://127.0.0.1:3210/billing/ready?session_id=otp-test' }),
+    body: JSON.stringify({ url: `${appOrigin}/billing/ready?session_id=otp-test` }),
   }))
 
   await page.goto('/signup')
