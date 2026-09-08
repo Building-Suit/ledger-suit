@@ -164,13 +164,13 @@ async function reverse() {
   <Teleport to="body">
     <div
       v-if="transactionId"
-      class="fixed inset-0 z-50 flex justify-end ls-scrim"
+      class="fixed inset-0 z-50 grid place-items-center ls-scrim p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="transaction-detail-title"
       @click.self="emit('close')"
     >
-      <div class="flex h-full w-full max-w-xl flex-col overflow-hidden border-s border-[var(--bs-border)] bg-surface">
+      <div class="ls-modal-panel ls-card flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden shadow-overlay">
         <header class="flex items-start justify-between gap-3 border-b border-[var(--bs-border)] px-6 py-4">
           <div class="min-w-0">
             <h2 id="transaction-detail-title" class="truncate text-base font-bold">
@@ -181,7 +181,7 @@ async function reverse() {
               <span v-if="transaction?.type">{{ t(`types.${transaction.type}`) }}</span>
             </p>
           </div>
-          <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="emit('close')">✕</button>
+          <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="emit('close')"><AppIcon name="close" /></button>
         </header>
 
         <div class="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-4">
@@ -249,13 +249,13 @@ async function reverse() {
 
           <section aria-labelledby="tags-heading">
             <h3 id="tags-heading" class="mb-2 text-sm font-bold">{{ t('operations.tabs.tags') }}</h3>
-            <div class="mb-2 flex flex-wrap gap-2"><span v-for="row in assignedTags" :key="row.tag_id" class="ls-badge bg-surface-muted"><span class="me-1 inline-block h-2 w-2 rounded-full" :style="{ backgroundColor: row.tags?.color ?? '#64748b' }" />{{ row.tags?.name }}<button v-if="can('transactions.create')" class="ms-1" :aria-label="t('common.dismiss')" @click="removeTag(row.tag_id)">×</button></span></div>
-            <div v-if="can('transactions.create')" class="flex gap-2"><select v-model="selectedTagId" class="ls-input"><option value="">{{ t('common.none') }}</option><option v-for="tag in tags" :key="tag.id" :value="tag.id">{{ tag.name }}</option></select><button class="ls-btn" @click="assignTag">{{ t('operations.assign') }}</button></div>
+            <div class="mb-2 flex flex-wrap gap-2"><span v-for="row in assignedTags" :key="row.tag_id" class="ls-badge bg-surface-muted"><span class="me-1 inline-block h-2 w-2 rounded-full" :style="{ backgroundColor: row.tags?.color ?? 'var(--bs-slate-gray)' }" />{{ row.tags?.name }}<button v-if="can('transactions.create')" class="ms-1" :aria-label="t('common.dismiss')" @click="removeTag(row.tag_id)"><AppIcon name="close" :size="14" /></button></span></div>
+            <div v-if="can('transactions.create')" class="flex gap-2"><FloatingField class="flex-1" :label="t('operations.tabs.tags')"><select v-model="selectedTagId" class="ls-input"><option value="">{{ t('common.none') }}</option><option v-for="tag in tags" :key="tag.id" :value="tag.id">{{ tag.name }}</option></select></FloatingField><button class="ls-btn" @click="assignTag">{{ t('operations.assign') }}</button></div>
           </section>
 
           <section aria-labelledby="attachments-heading">
             <div class="mb-2 flex items-center justify-between"><h3 id="attachments-heading" class="text-sm font-bold">{{ t('operations.attachments') }}</h3><label v-if="can('attachments.create')" class="ls-btn ls-btn-sm cursor-pointer">{{ uploading ? t('common.saving') : t('operations.upload') }}<input type="file" class="sr-only" accept="application/pdf,image/png,image/jpeg,image/webp" :disabled="uploading" @change="uploadAttachment"></label></div>
-            <div v-if="attachments.length" class="space-y-2"><div v-for="item in attachments" :key="item.id" class="flex items-center justify-between rounded-control bg-surface-muted px-3 py-2 text-sm"><button class="truncate text-link" @click="downloadAttachment(item)">{{ item.file_name }}</button><button v-if="can('attachments.delete')" class="ls-btn ls-btn-sm" @click="deleteAttachment(item)">×</button></div></div><p v-else class="text-sm text-fg-muted">{{ t('operations.noAttachments') }}</p>
+            <div v-if="attachments.length" class="space-y-2"><div v-for="item in attachments" :key="item.id" class="flex items-center justify-between rounded-control bg-surface-muted px-3 py-2 text-sm"><button class="truncate text-link" @click="downloadAttachment(item)">{{ item.file_name }}</button><button v-if="can('attachments.delete')" class="ls-btn ls-btn-sm" :aria-label="t('common.delete')" @click="deleteAttachment(item)"><AppIcon name="delete" :size="18" /></button></div></div><p v-else class="text-sm text-fg-muted">{{ t('operations.noAttachments') }}</p>
           </section>
 
           <p

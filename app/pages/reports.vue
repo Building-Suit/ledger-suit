@@ -199,10 +199,10 @@ function exportBalanceSheet() {
 </script>
 
 <template>
-  <div class="space-y-5">
-    <h1 class="text-2xl font-extrabold">{{ t('reports.title') }}</h1>
+  <div class="space-y-6">
+    <h1 class="text-h1 font-bold">{{ t('reports.title') }}</h1>
 
-    <div class="flex gap-1 overflow-x-auto border-b border-[var(--bs-border)]" role="tablist">
+    <div class="flex gap-1 border-b border-[var(--bs-border)]" role="tablist">
       <button
         v-for="item in TABS"
         :key="item.key"
@@ -219,28 +219,18 @@ function exportBalanceSheet() {
 
     <div class="flex flex-wrap items-end gap-3">
       <template v-if="['profit-loss', 'cash-flow', 'ledger'].includes(tab)">
-        <div>
-          <label class="ls-label" for="from">{{ t('reports.from') }}</label>
-          <input id="from" v-model="from" type="date" class="ls-input">
-        </div>
-        <div>
-          <label class="ls-label" for="to">{{ t('reports.to') }}</label>
-          <input id="to" v-model="to" type="date" class="ls-input">
-        </div>
+        <FloatingField :label="t('reports.from')"><input id="from" v-model="from" type="date" class="ls-input"></FloatingField>
+        <FloatingField :label="t('reports.to')"><input id="to" v-model="to" type="date" class="ls-input"></FloatingField>
       </template>
-      <div v-else>
-        <label class="ls-label" for="asof">{{ t('reports.asOf') }}</label>
-        <input id="asof" v-model="asOf" type="date" class="ls-input">
-      </div>
+      <FloatingField v-else :label="t('reports.asOf')"><input id="asof" v-model="asOf" type="date" class="ls-input"></FloatingField>
 
-      <div v-if="tab === 'ledger'" class="min-w-56">
-        <label class="ls-label" for="ledger-account">{{ t('reports.account') }}</label>
+      <FloatingField v-if="tab === 'ledger'" class="min-w-56" :label="t('reports.account')">
         <select id="ledger-account" v-model="ledgerAccountId" class="ls-input">
           <option v-for="a in accounts" :key="a.id" :value="a.id">
             {{ a.code ? `${a.code} · ` : '' }}{{ a.name }}
           </option>
         </select>
-      </div>
+      </FloatingField>
     </div>
 
     <!-- Overview -->
@@ -268,7 +258,7 @@ function exportBalanceSheet() {
 
       <SectionSkeleton v-if="trialBalancePending" variant="table" :rows="7" />
       <section v-else class="ls-card overflow-hidden" aria-labelledby="tb-heading">
-        <div class="flex items-center justify-between px-5 py-4">
+        <div class="flex items-center justify-between px-6 py-4">
           <h2 id="tb-heading" class="text-base font-bold">{{ t('reports.trialBalance') }}</h2>
           <p class="text-sm font-semibold" :class="trialTotals.debit === trialTotals.credit ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'">
             {{ trialTotals.debit === trialTotals.credit ? t('reports.inBalance') : t('reports.outOfBalance') }}

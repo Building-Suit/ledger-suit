@@ -16,6 +16,7 @@
     "optional": "optional",
     "dash": "—",
     "signOut": "Sign out",
+    "accountMenu": "Account menu",
     "exportCsv": "Export CSV",
     "showAsTable": "Show as a table",
     "dismiss": "Dismiss",
@@ -27,12 +28,131 @@
     "back": "Back",
     "continue": "Continue"
   },
+  "financialMap": {
+    "open": "Open the financial system map",
+    "button": "How it works",
+    "eyebrow": "System map",
+    "title": "How your financial system works",
+    "subtitle": "Follow the tree from setup to entry, posting, ledger truth, and the results you use to run the business.",
+    "steps": {
+      "setup": "1 · Start here",
+      "record": "2 · Record or schedule",
+      "validate": "3 · Validate and post",
+      "ledger": "4 · Ledger truth",
+      "results": "5 · Read the results"
+    },
+    "setup": {
+      "title": "Set up the financial foundation",
+      "body": "Your organization creates the secure boundary and base currency. Build the accounts your business needs, then record the first real business event.",
+      "reviewAccounts": "Review accounts",
+      "firstEntry": "Record first expense",
+      "organization": "Organization",
+      "organizationHint": "Owns and protects every record",
+      "accounts": "Chart of accounts",
+      "accountsHint": "Where debit and credit lines land",
+      "categories": "Categories",
+      "categoriesHint": "Friendly labels mapped to ledger accounts"
+    },
+    "sourcesTitle": "Three paths can request a posting",
+    "sourcesHint": "They collect business details differently, but none can bypass the same accounting rules.",
+    "manual": {
+      "title": "Manual transaction",
+      "body": "Choose what happened; Ledger Suit derives the debit and credit accounts for you.",
+      "link": "View transactions",
+      "flows": {
+        "income": "Income → asset + revenue",
+        "expense": "Expense → expense + payment account",
+        "transfer": "Transfer → between your accounts",
+        "asset": "Asset purchase → asset + payment account",
+        "liability": "New liability → asset + debt",
+        "repayment": "Repayment → debt + interest/fees",
+        "owner": "Owner funds → asset + equity/drawings",
+        "adjustment": "Adjustment → balanced custom journal"
+      }
+    },
+    "commitments": {
+      "title": "Commitment",
+      "body": "Tracks money due to you or owed by you, with due dates, reminders, partial settlement, postponement, and cancellation.",
+      "rule": "Outside the ledger until it is settled or automatically converted.",
+      "link": "Manage commitments"
+    },
+    "recurring": {
+      "title": "Recurring rule",
+      "body": "Creates unique scheduled occurrences from a reusable income, expense, or liability-payment template.",
+      "rule": "Reaches the ledger only after confirmation or a successful automatic post.",
+      "link": "Manage recurring rules"
+    },
+    "converges": "All posting paths converge here",
+    "engine": {
+      "title": "Protected posting engine",
+      "body": "One controlled database transaction either posts the complete journal or posts nothing.",
+      "checks": {
+        "access": "Membership, capability, and subscription allow the action",
+        "period": "The accounting date is not in a locked period",
+        "accounts": "Every account is active and belongs to this organization",
+        "balance": "Currency amounts are valid and total debits equal credits",
+        "atomic": "Transaction, lines, and audit record succeed together"
+      }
+    },
+    "ledger": {
+      "eventLabel": "Business event",
+      "event": "Posted transaction",
+      "eventHint": "What happened, when, reference, source, and counterparty.",
+      "linesLabel": "Accounting effect",
+      "lines": "Debit and credit entries",
+      "linesHint": "At least two immutable lines, stored in transaction and base currency.",
+      "rule": "Posted entries are the single source of truth · Debits always equal credits"
+    },
+    "resultsFrom": "Every result is derived from posted entries",
+    "resultsTitle": "Where the result appears",
+    "resultsHint": "Drafts, unsettled commitments, and unposted schedules do not change any official figure.",
+    "results": {
+      "open": "Open",
+      "accounts": {
+        "title": "Account balances",
+        "body": "Live balances and entry counts are calculated from ledger lines. No separate stored balance can drift."
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "body": "Assets, liabilities, net worth, cash, revenue, expenses, profit, and recent activity."
+      },
+      "reports": {
+        "title": "Financial reports",
+        "body": "Official views aggregate only posted ledger entries for the selected date or period.",
+        "items": {
+          "profitLoss": "Profit & Loss",
+          "balanceSheet": "Balance Sheet",
+          "cashFlow": "Cash Flow",
+          "trialBalance": "Trial Balance",
+          "generalLedger": "General Ledger"
+        }
+      },
+      "audit": {
+        "title": "Audit and corrections",
+        "body": "Posted history is immutable. A correction creates a mirrored reversal, then a corrected transaction; the original remains visible."
+      }
+    },
+    "boundary": {
+      "title": "Context, not balances:",
+      "body": "Counterparties explain who was involved; tags organize analysis; attachments preserve evidence. They enrich a transaction but never change its accounting amounts."
+    }
+  },
   "nav": {
     "primary": "Primary",
     "dashboard": "Dashboard",
     "transactions": "Transactions",
+    "allTransactions": "All transactions",
     "accounts": "Accounts",
     "reports": "Reports",
+    "teamInvitations": "Access & permissions",
+    "groups": {
+      "transactions": "Transactions",
+      "ledger": "Ledger",
+      "operations": "Operations",
+      "directory": "Directory",
+      "workspace": "Workspace",
+      "insights": "Insights"
+    },
     "open": "Open navigation",
     "close": "Close navigation"
   },
@@ -73,6 +193,88 @@
       "accountant": "Accountant",
       "data_entry": "Data entry",
       "viewer": "Viewer"
+    }
+  },
+  "access": {
+    "eyebrow": "Workspace administration",
+    "title": "Roles, permissions & invitations",
+    "subtitle": "Control who can access this workspace, what they can do, and how new teammates join.",
+    "members": "Members",
+    "rolesPermissions": "Roles & permissions",
+    "invitations": "Invitations",
+    "memberCount": "{count} member | {count} members",
+    "invitationCount": "{count} invitation | {count} invitations",
+    "searchMembers": "Search members",
+    "name": "Name",
+    "jobTitle": "Job title",
+    "joined": "Joined",
+    "actions": "Actions",
+    "editAccess": "Edit access",
+    "editAccessFor": "Edit access for {name}",
+    "role": "Role",
+    "status": "Status",
+    "active": "Active",
+    "suspended": "Suspended",
+    "suspend": "Suspend",
+    "reactivate": "Reactivate",
+    "remove": "Remove",
+    "removeConfirm": "Remove this member from the workspace? They will immediately lose access.",
+    "permissionOverrides": "Permission overrides",
+    "permissionOverridesHint": "Start with the role defaults, then tailor this member’s access. Revoked permissions always win.",
+    "customized": "Customized",
+    "saveAccess": "Save access",
+    "saved": "Access updated",
+    "removed": "Member removed",
+    "roleSummary": "Role access at a glance",
+    "roleSummaryHint": "These defaults apply automatically. Individual member overrides appear in the Members tab.",
+    "permissionsMatrix": "Permission matrix",
+    "permission": "Permission",
+    "allPermissions": "All permissions",
+    "domain": "Area",
+    "invitedBy": "Invited by",
+    "sent": "Sent",
+    "expires": "Expires",
+    "resend": "Send again",
+    "revoke": "Revoke",
+    "revoked": "Invitation revoked",
+    "resent": "A fresh invitation email was sent",
+    "noMembers": "No members match your search.",
+    "noInvitations": "No invitations yet.",
+    "inviteDescription": "We’ll email a secure 14-day invitation with your name, job title, the Ledger Suit brand, and password setup instructions.",
+    "inviteSent": "Invitation email sent",
+    "emailDelivery": "Delivered by email",
+    "emailDeliveryHint": "The invitee verifies a one-time code before choosing a password.",
+    "roles": {
+      "owner": "Complete workspace and billing control",
+      "admin": "Manage the team and all day-to-day workspace operations",
+      "accountant": "Full accounting control without team or billing administration",
+      "data_entry": "Create and post routine records without sensitive corrections",
+      "viewer": "Read-only access to financial records and reports"
+    },
+    "inviteFlow": {
+      "eyebrow": "Secure workspace invitation",
+      "title": "You’re invited to {organization}",
+      "subtitle": "{name}, {jobTitle}, invited you to join as {role}.",
+      "emailLabel": "Your Ledger Suit login email",
+      "sendOtp": "Send OTP to create password",
+      "sendingOtp": "Sending secure code…",
+      "otpTitle": "Check your email",
+      "otpBody": "Enter the 6-digit code sent to {email}.",
+      "verifyOtp": "Verify code",
+      "verifyingOtp": "Verifying…",
+      "passwordTitle": "Create your password",
+      "passwordBody": "Use this email and password for future Ledger Suit sign-ins.",
+      "password": "New password",
+      "confirmPassword": "Confirm password",
+      "passwordHint": "Use at least 8 characters.",
+      "finish": "Create password & join workspace",
+      "finishing": "Securing your account…",
+      "invalid": "This invitation is invalid, revoked, or expired.",
+      "otpFailed": "The code is invalid or expired. Request a new one and try again.",
+      "passwordMismatch": "The passwords do not match.",
+      "security": "The invitation is tied to this email address and expires after 14 days. Your password is never shared with the sender.",
+      "resend": "Send a new code",
+      "backToLogin": "Back to sign in"
     }
   },
   "dashboard": {
@@ -162,6 +364,7 @@
   },
   "accounts": {
     "title": "Accounts",
+    "tabsLabel": "Account types",
     "showArchived": "Show archived",
     "code": "Code",
     "account": "Account",
@@ -171,8 +374,10 @@
     "archived": "Archived",
     "liquid": "Liquid",
     "caption": "{group} accounts and their balances",
-    "emptyTitle": "Your default chart of accounts is ready.",
-    "emptyHint": "Accounts appear here as soon as your organization is set up.",
+    "emptyTitle": "Create your first account",
+    "emptyHint": "Your chart of accounts starts empty so you can build it around your business.",
+    "emptyGroupTitle": "No {group} accounts yet",
+    "emptyGroupHint": "Add an account to this section when you need it.",
     "add": "Add account",
     "edit": "Edit",
     "archive": "Archive",
@@ -317,6 +522,22 @@
       "mustBalance": "Debits must equal credits before this can be posted.",
       "descriptionAndReason": "A description and a reason are both required."
     }
+  },
+  "recordPages": {
+    "allTransactions": "All transactions",
+    "count": "{count} records",
+    "add": "Add {item}",
+    "empty": "No {item} records yet",
+    "emptyHint": "New records will appear here after they are created.",
+    "kind": "Type",
+    "schedule": "Schedule",
+    "nextRun": "Next run",
+    "color": "Color",
+    "created": "Created",
+    "expires": "Expires",
+    "role": "Role",
+    "addCounterparty": "Add counterparty",
+    "addTag": "Add tag"
   },
   "status": {
     "draft": "Draft",
@@ -513,7 +734,7 @@
     "countries": { "EG": "Egypt", "SA": "Saudi Arabia", "AE": "United Arab Emirates", "GB": "United Kingdom", "US": "United States" },
     "months": { "1": "January", "2": "February", "3": "March", "4": "April", "5": "May", "6": "June", "7": "July", "8": "August", "9": "September", "10": "October", "11": "November", "12": "December" },
     "readyTitle": "Your workspace will be ready immediately",
-    "readyAccounts": "A complete starter chart of accounts",
+    "readyAccounts": "An empty chart of accounts you control",
     "paymentExplanation": "You will create the account and workspace, then continue to Stripe to add a payment method and activate the 14-day trial.",
     "creating": "Creating your workspace…",
     "continueToPayment": "Create account and continue to Stripe",

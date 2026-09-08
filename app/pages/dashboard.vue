@@ -104,7 +104,7 @@ const payableHint = computed(() =>
 
 <template>
   <div class="space-y-8">
-    <h1 class="text-2xl font-extrabold">{{ t('dashboard.title') }}</h1>
+    <h1 class="text-h1 font-bold">{{ t('dashboard.title') }}</h1>
 
     <div v-if="recentPending" class="space-y-6">
       <SectionSkeleton variant="cards" />
@@ -180,7 +180,7 @@ const payableHint = computed(() =>
               <button type="button" class="ls-btn ls-btn-sm" :class="{ 'ls-btn-primary': customRange }" @click="customRange = !customRange">{{ t('dashboard.custom') }}</button>
             </div>
           </div>
-          <div v-if="customRange" class="mb-4 flex flex-wrap gap-2"><input v-model="customFrom" type="date" class="ls-input w-auto"><input v-model="customTo" type="date" class="ls-input w-auto"></div>
+          <div v-if="customRange" class="mb-4 flex flex-wrap gap-2"><FloatingField class="w-auto" :label="t('reports.from')"><input v-model="customFrom" type="date" class="ls-input w-auto"></FloatingField><FloatingField class="w-auto" :label="t('reports.to')"><input v-model="customTo" type="date" class="ls-input w-auto"></FloatingField></div>
           <RevenueExpenseChart :series="series ?? []" />
         </section>
 
@@ -206,7 +206,7 @@ const payableHint = computed(() =>
       <section v-else-if="can('commitments.read')" class="ls-card overflow-hidden" aria-labelledby="commitments-heading">
         <div class="flex items-center justify-between px-6 py-4"><h2 id="commitments-heading" class="text-base font-bold">{{ t('dashboard.commitments') }}</h2><button class="ls-btn ls-btn-sm" @click="showOperations('commitments')">{{ t('dashboard.manage') }}</button></div>
         <div v-if="commitments.length" class="overflow-x-auto"><table class="ls-table"><tbody><tr v-for="(item, index) in commitments" :key="item.id ?? index"><td>{{ item.title }}</td><td>{{ formatDate(item.due_date, locale) }}</td><td><StatusBadge :status="item.display_status ?? 'unknown'" /></td><td class="ls-num"><MoneyText :amount-minor="item.outstanding_minor ?? 0" :currency="item.currency_code ?? undefined" /></td></tr></tbody></table></div>
-        <p v-else class="px-6 pb-5 text-sm text-fg-muted">{{ t('dashboard.noCommitments') }}</p>
+        <p v-else class="px-6 pb-6 text-sm text-fg-muted">{{ t('dashboard.noCommitments') }}</p>
       </section>
 
       <SectionSkeleton v-if="recentPending" variant="table" :rows="8" />
@@ -235,7 +235,7 @@ const payableHint = computed(() =>
                 <td class="max-w-64 truncate">{{ row.description || t('common.dash') }}</td>
                 <td>{{ row.category_name || t('common.dash') }}</td>
                 <td class="whitespace-nowrap text-fg-muted">
-                  {{ row.from_account_name }} → {{ row.to_account_name }}
+                  {{ row.from_account_name }} <AppIcon name="arrowRight" :size="14" directional class="inline-block" /> {{ row.to_account_name }}
                 </td>
                 <td><StatusBadge :status="row.status" /></td>
                 <td class="ls-num">

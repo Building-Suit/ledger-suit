@@ -12,7 +12,7 @@ import type { Database } from '~~/types/database.types'
 
 const supabase = useSupabaseClient<Database>()
 const { currentId, baseCurrency, can } = useTenant()
-const { open, flow, close } = useAddTransaction()
+const { open, flow, close, markChanged } = useAddTransaction()
 const toasts = useToasts()
 const { t } = useI18n()
 const describeError = useErrorMessage()
@@ -320,9 +320,10 @@ async function submit() {
     const { error } = await supabase.rpc(rpc.fn as never, rpc.args as never)
     if (error) throw error
 
+    markChanged()
+    clearNuxtData(key => key.startsWith('org:') && !key.startsWith('org:record-page:'))
     toasts.success(t('add.savedTitle'), t('add.savedBody'))
     close()
-    await refreshNuxtData()
   }
   catch (err) {
     fieldError.value = describeError(err)
@@ -345,13 +346,13 @@ async function submit() {
       aria-labelledby="add-transaction-title"
       @click.self="close()"
     >
-      <div class="ls-card flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-b-none shadow-overlay sm:rounded-modal">
+      <div class="ls-modal-panel ls-card flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-b-none shadow-overlay sm:rounded-modal">
         <header class="flex items-center justify-between border-b border-[var(--bs-border)] px-6 py-4">
           <h2 id="add-transaction-title" class="text-base font-bold">
             {{ t(`add.flows.${flow}`) }}
           </h2>
           <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="close()">
-            ✕
+            <AppIcon name="close" />
           </button>
         </header>
 
@@ -619,7 +620,7 @@ async function submit() {
                   :aria-label="t('add.removeLine', { index: index + 1 })"
                   @click="removeLine(index)"
                 >
-                  ✕
+                  <AppIcon name="delete" :size="18" />
                 </button>
               </div>
             </div>

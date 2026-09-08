@@ -26,7 +26,7 @@ async function choose(id: string) {
       <span class="min-w-0 truncate text-start">
         {{ current?.name ?? t('org.none') }}
       </span>
-      <span aria-hidden="true" class="text-fg-muted">▾</span>
+      <AppIcon name="arrowDown" class="text-fg-muted" />
     </button>
 
     <ul
@@ -48,7 +48,7 @@ async function choose(id: string) {
               {{ t(`org.roles.${org.role}`) }} · {{ org.base_currency }}
             </span>
           </span>
-          <span v-if="org.id === current?.id" aria-hidden="true">✓</span>
+          <AppIcon v-if="org.id === current?.id" name="check" class="text-[var(--bs-status-success)]" />
         </button>
       </li>
     </ul>

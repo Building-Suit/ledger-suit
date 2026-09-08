@@ -33,6 +33,11 @@
   --color-warning: var(--bs-status-warning);
   --color-danger: var(--bs-status-error);
   --color-info: var(--bs-status-info);
+  --color-brand-navy: var(--bs-building-navy);
+  --color-brand-navy-deep: var(--bs-deep-structure-navy);
+  --color-brand-gold: var(--bs-premium-gold);
+  --color-brand-gold-highlight: var(--bs-highlight-gold);
+  --color-brand-sky: var(--bs-sky-steel);
 
   /* The 8px scale, so `gap-bs-4` and friends cannot drift from the tokens. */
   --spacing-bs-1: var(--bs-space-1);
@@ -94,6 +99,38 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Keep scrollable panels visually quiet while still making the scroll position
+   easy to find. Firefox uses the standard properties; WebKit covers Chromium
+   and Safari. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bs-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 0.2rem solid transparent;
+  border-radius: 999px;
+  background: var(--bs-border-strong);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--bs-primary);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Arabic needs slightly more vertical room than Latin at the same size, and
    never uppercase or letter-spacing — see the typography guidelines. Matched to
    the prototype, which keys on direction as well as language. */
@@ -152,6 +189,7 @@ body {
     border: 1px solid var(--bs-border);
     background: var(--bs-surface);
     box-shadow: var(--bs-elevation-1);
+    transition: transform var(--bs-motion-standard), box-shadow var(--bs-motion-standard), border-color var(--bs-motion-quick);
   }
 
   /* Flat variant for cards that sit inside another card. */
@@ -182,12 +220,16 @@ body {
       background var(--bs-motion-quick),
       color var(--bs-motion-quick),
       border-color var(--bs-motion-quick),
-      opacity var(--bs-motion-quick);
+      opacity var(--bs-motion-quick),
+      transform var(--bs-motion-quick);
   }
 
   .ls-btn:hover:not(:disabled) {
     background: var(--bs-surface-muted);
+    transform: translateY(-1px);
   }
+
+  .ls-btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
 
   .ls-btn:disabled {
     cursor: not-allowed;
@@ -229,10 +271,25 @@ body {
     background: var(--bs-accent-hover);
   }
 
+  .ls-btn-on-brand {
+    border-color: color-mix(in oklab, var(--bs-pearl-white) 48%, transparent);
+    background: transparent;
+    color: var(--bs-pearl-white);
+  }
+
+  .ls-btn-on-brand:hover:not(:disabled) {
+    border-color: var(--bs-pearl-white);
+    background: color-mix(in oklab, var(--bs-pearl-white) 10%, transparent);
+  }
+
   .ls-btn-danger {
     border-color: transparent;
     background: var(--bs-status-error);
-    color: #fff;
+    color: var(--bs-pearl-white);
+  }
+
+  .ls-btn-danger:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--bs-status-error) 88%, black);
   }
 
   .ls-btn-sm {
@@ -255,6 +312,35 @@ body {
     transition: border-color var(--bs-motion-quick);
   }
 
+  /* Shared floating-label shell. Controls retain their native semantics; the
+     label is associated by nesting, including for selects and date inputs. */
+  .ls-floating-field {
+    position: relative;
+    display: block;
+    padding-top: 0.45rem;
+  }
+
+  .ls-floating-field > .ls-input {
+    width: 100%;
+  }
+
+  .ls-floating-field__label {
+    position: absolute;
+    z-index: 1;
+    inset-inline-start: 0.65rem;
+    top: 0;
+    padding-inline: 0.25rem;
+    background: var(--bs-surface);
+    color: var(--bs-text-muted);
+    font-size: 0.75rem;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .ls-floating-field:focus-within .ls-floating-field__label {
+    color: var(--bs-primary);
+  }
+
   .ls-input::placeholder {
     color: var(--bs-text-disabled);
   }
@@ -263,7 +349,7 @@ body {
     border-color: var(--bs-border-strong);
   }
 
-  /* Focused fields use a neutral halo drawn from the theme foreground. */
+  /* Focused fields use the canonical Premium Gold ring. */
   .ls-input:focus,
   .ls-input:focus-visible {
     border-color: var(--bs-focus-ring);
@@ -341,6 +427,8 @@ body {
     vertical-align: middle;
   }
 
+  .ls-table tbody tr { transition: background var(--bs-motion-quick); }
+
   /* Figures align to the end of the column and use tabular figures so digits
      line up down the column in both directions. */
   .ls-num {
@@ -369,7 +457,7 @@ body {
     color: var(--bs-text);
   }
 
-  /* Active navigation uses a restrained graphite rail. */
+  /* Active navigation uses the canonical lit-gold rail. */
   .ls-nav-link-active,
   .ls-nav-link-active:hover {
     background: color-mix(in oklab, var(--bs-accent) 16%, transparent);
@@ -396,7 +484,7 @@ body {
     color: var(--bs-text);
   }
 
-  /* Active tabs use the monochrome accent role. */
+  /* Active tabs use the canonical gold accent role. */
   .ls-tab-active {
     border-color: var(--bs-accent);
     color: var(--bs-text);
@@ -405,14 +493,76 @@ body {
   /* Modal and drawer backdrops use the themed scrim, not an ad-hoc black. */
   .ls-scrim {
     background: var(--bs-scrim);
+    animation: ls-scrim-in var(--bs-motion-standard) both;
   }
 }
+
+.ls-modal-panel { animation: ls-modal-in var(--bs-motion-standard) both; transform-origin: center; }
+
+.ls-modal-enter-active,
+.ls-modal-leave-active { transition: opacity var(--bs-motion-standard); }
+.ls-modal-enter-active .ls-modal-panel,
+.ls-modal-leave-active .ls-modal-panel { transition: transform var(--bs-motion-standard), opacity var(--bs-motion-quick); }
+.ls-modal-enter-from,
+.ls-modal-leave-to { opacity: 0; }
+.ls-modal-enter-from .ls-modal-panel,
+.ls-modal-leave-to .ls-modal-panel { opacity: 0; transform: translateY(16px) scale(0.97); }
+
+.ls-page-enter-active,
+.ls-page-leave-active { transition: opacity var(--bs-motion-standard), transform var(--bs-motion-standard); }
+.ls-page-enter-from { opacity: 0; transform: translateY(8px); }
+.ls-page-leave-to { opacity: 0; transform: translateY(-4px); }
+
+@keyframes ls-scrim-in { from { opacity: 0; } }
+@keyframes ls-modal-in { from { opacity: 0; transform: translateY(16px) scale(0.97); } }
 
 .ls-hero-grid {
   background-image:
     linear-gradient(to right, color-mix(in oklab, var(--bs-gray-500) 13%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in oklab, var(--bs-gray-500) 13%, transparent) 1px, transparent 1px);
   background-size: 48px 48px;
+}
+
+.ls-brand-hero {
+  color: var(--bs-pearl-white);
+  background: var(--bs-gradient-navy);
+}
+
+.ls-brand-hero-muted {
+  color: var(--bs-sky-steel);
+}
+
+.ls-landing-hero {
+  color: var(--bs-pearl-white);
+  background: var(--bs-gradient-navy);
+}
+
+.ls-landing-hero .ls-hero-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--bs-premium-gold) 14%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--bs-premium-gold) 14%, transparent) 1px, transparent 1px);
+}
+
+.ls-hero-preview {
+  --bs-surface: var(--bs-charcoal);
+  --bs-surface-muted: var(--bs-graphite);
+  --bs-text: var(--bs-gray-50);
+  --bs-text-muted: var(--bs-gray-400);
+  --bs-border: var(--bs-gray-800);
+  --bs-border-strong: var(--bs-gray-500);
+  color: var(--bs-text);
+}
+
+.ls-hero-preview .bg-surface-muted {
+  background-color: var(--bs-graphite);
+}
+
+.ls-hero-preview .text-fg-muted {
+  color: var(--bs-gray-400);
+}
+
+.ls-hero-preview .border-\[var\(--bs-border\)\] {
+  border-color: var(--bs-gray-800);
 }
 
 @keyframes ls-skeleton-pulse {

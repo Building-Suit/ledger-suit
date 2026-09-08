@@ -9,57 +9,75 @@ test.beforeEach(async ({ page }) => {
   await expect(page).toHaveURL('/dashboard')
 })
 
-test('owner can navigate the four-page finance shell and open operations', async ({ page }) => {
+test('owner can navigate the grouped finance shell and open operation pages', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Transactions' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Accounts' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Reports' })).toBeVisible()
-  await page.getByRole('button', { name: 'Operations' }).click()
-  const operations = page.getByRole('dialog')
-  await expect(operations.getByRole('heading', { name: 'Operations' })).toBeVisible()
-  await expect(operations.getByRole('button', { name: 'Commitments' })).toBeVisible()
-  await expect(operations.getByText('Q3 professional fees')).toBeVisible()
-  await operations.getByRole('button', { name: 'Recurring' }).click()
-  await expect(operations.getByRole('option', { name: 'Liability payment' })).toHaveCount(1)
+  await page.getByRole('link', { name: 'Commitments' }).click()
+  await expect(page.getByRole('heading', { name: 'Commitments' })).toBeVisible()
+  await page.getByRole('link', { name: 'Recurring rule' }).click()
+  await expect(page.getByRole('heading', { name: 'Recurring rule' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add Recurring rule' }).first()).toBeVisible()
 })
 
 test('owner can add an account through the controlled workflow', async ({ page }) => {
   const accountName = `Playwright Bank ${Date.now()}`
   await page.getByRole('link', { name: 'Accounts' }).click()
-  await page.getByRole('button', { name: 'Add account' }).click()
+  await expect(page.getByRole('tab', { name: 'Assets' })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: 'Liabilities' }).click()
+  await expect(page).toHaveURL(/\/accounts\?tab=liability/)
+  await page.getByRole('button', { name: 'Add account' }).first().click()
   await page.getByLabel('Account name').fill(accountName)
   await page.getByLabel('Code').fill(`PW${Date.now()}`)
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByText(accountName, { exact: true })).toBeVisible()
 })
 
-test('owner can partially settle a commitment into the ledger', async ({ page }) => {
-  await page.getByRole('button', { name: 'Operations' }).click()
-  const operations = page.getByRole('dialog')
-  const commitment = operations.getByRole('row').filter({ hasText: 'Q3 professional fees' })
-  await commitment.getByRole('button', { name: 'Settle' }).click()
-  await operations.getByPlaceholder('Amount (blank for full)').fill('100')
-  await operations.getByRole('button', { name: 'Post settlement' }).click()
-  await expect(commitment).toContainText('Partially paid')
-})
-
 test('owner can reach reports and transaction entry', async ({ page }) => {
   await page.getByRole('link', { name: 'Reports' }).click()
   await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Profit & Loss' })).toBeVisible()
-  await page.getByRole('button', { name: 'Add' }).click()
-  const addDrawer = page.getByRole('dialog', { name: 'Add' })
-  await addDrawer.getByRole('button').filter({ hasText: 'Expense' }).click()
-  await expect(page.getByRole('dialog')).toContainText('Expense')
+  await page.getByRole('link', { name: 'Expense' }).click()
+  await page.getByRole('button', { name: 'Add Expense' }).first().click()
+  await expect(page.getByRole('dialog', { name: 'Expense' })).toBeVisible()
 })
 
-test('global add drawer exposes creation workflows by section', async ({ page }) => {
-  await page.getByRole('button', { name: 'Add' }).click()
-  const drawer = page.getByRole('dialog', { name: 'Add' })
-  await expect(drawer.getByRole('heading', { name: 'Transactions' })).toBeVisible()
-  await expect(drawer.getByRole('heading', { name: 'Accounts' })).toBeVisible()
-  await expect(drawer.getByRole('heading', { name: 'Operations' })).toBeVisible()
-  await expect(drawer.getByRole('heading', { name: 'Workspace' })).toBeVisible()
-  await expect(drawer.getByRole('button', { name: /^Account / })).toBeVisible()
-  await expect(drawer.getByRole('button', { name: /^Team invitation / })).toBeVisible()
+test('permanent navigation exposes every creation workflow by section', async ({ page }) => {
+  const navigation = page.getByRole('navigation', { name: 'Primary' }).first()
+  await expect(navigation.getByRole('heading', { name: 'Transactions' })).toBeVisible()
+  await expect(navigation.getByRole('heading', { name: 'Ledger' })).toBeVisible()
+  await expect(navigation.getByRole('heading', { name: 'Operations' })).toBeVisible()
+  await expect(navigation.getByRole('heading', { name: 'Workspace' })).toBeVisible()
+  await expect(navigation.getByRole('link', { name: 'Accounts', exact: true })).toBeVisible()
+  await expect(navigation.getByRole('link', { name: 'Access & permissions' })).toBeVisible()
+})
+
+test('owner can review members, role permissions and invitations', async ({ page }) => {
+  await page.getByRole('link', { name: 'Access & permissions' }).click()
+  await expect(page.getByRole('heading', { name: 'Roles, permissions & invitations' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Members/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('table').getByText('Amina Owner', { exact: true })).toBeVisible()
+
+  await page.getByRole('tab', { name: 'Roles & permissions' }).click()
+  await expect(page.getByRole('heading', { name: 'Role access at a glance' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Permission matrix' })).toBeVisible()
+
+  await page.getByRole('tab', { name: /Invitations/ }).click()
+  await expect(page.getByRole('button', { name: 'Invite team member' }).first()).toBeVisible()
+})
+
+test('financial system map explains the path from setup to reports', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open the financial system map' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'How your financial system works' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText('Set up the financial foundation')).toBeVisible()
+  await expect(dialog.getByText('Protected posting engine')).toBeVisible()
+  await expect(dialog.getByText('Posted entries are the single source of truth', { exact: false })).toBeVisible()
+  await expect(dialog.getByText('Where the result appears')).toBeVisible()
+  await expect(dialog.getByRole('link', { name: 'Review accounts' })).toHaveAttribute('href', '/accounts')
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
 })

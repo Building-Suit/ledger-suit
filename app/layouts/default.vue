@@ -1,16 +1,51 @@
 <script setup lang="ts">
-// The four primary financial pages, and nothing else. Everything secondary
-// (categories, members, currencies, audit log, subscription) belongs in
-// Settings or a contextual panel — see spec section 4.
-const NAV = [
-  { to: '/dashboard', key: 'dashboard', icon: '◧' },
-  { to: '/transactions', key: 'transactions', icon: '≡' },
-  { to: '/accounts', key: 'accounts', icon: '▤' },
-  { to: '/reports', key: 'reports', icon: '◔' },
-]
+const PRIMARY_NAV = [
+  { to: '/dashboard', key: 'dashboard', icon: 'dashboard' },
+  { to: '/transactions', key: 'transactions', icon: 'transactions' },
+  { to: '/accounts', key: 'accounts', icon: 'wallet' },
+  { to: '/reports', key: 'reports', icon: 'reports' },
+] as const
 
-const supabase = useSupabaseClient()
-const user = useSupabaseUser()
+const TRANSACTION_LINKS = ADD_FLOWS.map(flow => ({
+  to: `/records/${flow}`,
+  label: `add.flows.${flow}`,
+}))
+
+const NAV_GROUPS = computed(() => [
+  {
+    key: 'transactions',
+    links: [
+      ...(can('transactions.read') ? [{ to: '/transactions', label: 'nav.allTransactions' }, ...TRANSACTION_LINKS] : []),
+    ],
+  },
+  {
+    key: 'ledger',
+    links: can('accounts.read') ? [{ to: '/accounts', label: 'nav.accounts' }] : [],
+  },
+  {
+    key: 'operations',
+    links: [
+      ...(can('commitments.read') ? [{ to: '/records/commitments', label: 'operations.tabs.commitments' }] : []),
+      ...(can('recurring.read') ? [{ to: '/records/recurring', label: 'add.items.recurring' }] : []),
+    ],
+  },
+  {
+    key: 'directory',
+    links: [
+      ...(can('counterparties.read') ? [{ to: '/records/counterparties', label: 'operations.tabs.counterparties' }] : []),
+      ...(can('tags.read') ? [{ to: '/records/tags', label: 'operations.tabs.tags' }] : []),
+    ],
+  },
+  {
+    key: 'workspace',
+    links: can('members.read') ? [{ to: '/team', label: 'nav.teamInvitations' }] : [],
+  },
+  {
+    key: 'insights',
+    links: can('reports.read') ? [{ to: '/reports', label: 'nav.reports' }] : [],
+  },
+].filter(group => group.links.length))
+
 const route = useRoute()
 const { t } = useI18n()
 const { current, currentId, loadOrganizations, loading } = useTenant()
@@ -19,10 +54,8 @@ const {
   accessState,
   checkoutRequired,
   readOnly,
-  writesAllowed,
   load: loadBilling,
 } = useBilling()
-const { show: showOperations } = useOperationsCenter()
 const { restore } = useTheme()
 
 const mobileNavOpen = ref(false)
@@ -43,10 +76,6 @@ function isActive(to: string) {
   return route.path === to || route.path.startsWith(`${to}/`)
 }
 
-async function signOut() {
-  await supabase.auth.signOut()
-  await navigateTo('/login')
-}
 </script>
 
 <template>
@@ -59,7 +88,7 @@ async function signOut() {
       class="fixed inset-y-0 start-0 z-40 w-64 border-e border-[var(--bs-border)] bg-surface lg:sticky lg:top-4 lg:block lg:h-[calc(100dvh-2rem)] lg:w-auto lg:rounded-modal lg:border lg:shadow-card"
       :class="mobileNavOpen ? 'block' : 'hidden'"
     >
-      <div class="flex h-full flex-col gap-6 p-4">
+      <div class="flex h-full min-h-0 flex-col gap-4 p-4">
         <div class="flex items-center justify-between">
           <NuxtLink to="/dashboard" class="inline-flex" :aria-label="t('app.name')">
             <AppLogo class="h-14 w-auto max-w-52" />
@@ -70,37 +99,41 @@ async function signOut() {
             :aria-label="t('nav.close')"
             @click="mobileNavOpen = false"
           >
-            ✕
+            <AppIcon name="close" />
           </button>
         </div>
 
         <OrganizationSwitcher />
 
-        <nav :aria-label="t('nav.primary')" class="flex flex-col gap-1">
+        <nav :aria-label="t('nav.primary')" class="min-h-0 flex-1 space-y-5 overflow-y-auto pe-1">
           <NuxtLink
-            v-for="item in NAV"
-            :key="item.to"
-            :to="item.to"
+            to="/dashboard"
             class="ls-nav-link"
-            :class="{ 'ls-nav-link-active': isActive(item.to) }"
-            :aria-current="isActive(item.to) ? 'page' : undefined"
+            :class="{ 'ls-nav-link-active': isActive('/dashboard') }"
+            :aria-current="isActive('/dashboard') ? 'page' : undefined"
           >
-            <span aria-hidden="true" class="w-4 text-center">{{ item.icon }}</span>
-            <span>{{ t(`nav.${item.key}`) }}</span>
+            <AppIcon name="dashboard" />
+            <span>{{ t('nav.dashboard') }}</span>
           </NuxtLink>
+          <section v-for="group in NAV_GROUPS" :key="group.key">
+            <h2 class="mb-1.5 px-3 text-md font-bold uppercase tracking-[0.16em]">
+              {{ t(`nav.groups.${group.key}`) }}
+            </h2>
+            <div class="flex flex-col gap-0.5 ms-6">
+              <NuxtLink
+                v-for="item in group.links"
+                :key="item.to"
+                :to="item.to"
+                class="ls-nav-link py-2"
+                :class="{ 'ls-nav-link-active': isActive(item.to) }"
+                :aria-current="isActive(item.to) ? 'page' : undefined"
+              >
+                <span>{{ t(item.label) }}</span>
+              </NuxtLink>
+            </div>
+          </section>
         </nav>
 
-        <div class="mt-auto space-y-2 border-t border-[var(--bs-border)] pt-3">
-          <NuxtLink v-if="can('billing.read')" to="/billing" class="ls-btn ls-btn-sm w-full">
-            {{ t('billing.title') }}
-          </NuxtLink>
-          <TeamMenu />
-          <SettingsMenu />
-          <p class="truncate px-1 text-xs text-fg-muted">{{ user?.email }}</p>
-          <button type="button" class="ls-btn ls-btn-sm w-full" @click="signOut">
-            {{ t('common.signOut') }}
-          </button>
-        </div>
       </div>
     </aside>
 
@@ -119,27 +152,24 @@ async function signOut() {
           :aria-label="t('nav.open')"
           @click="mobileNavOpen = true"
         >
-          ☰
+          <AppIcon name="menu" />
         </button>
 
         <div class="min-w-0 flex-1">
           <p class="truncate text-sm font-semibold">{{ current?.name }}</p>
         </div>
 
-        <button
-          v-if="writesAllowed && (can('commitments.read') || can('recurring.read'))"
-          type="button" class="ls-btn ls-btn-sm" @click="showOperations('commitments')"
-        >{{ t('operations.title') }}</button>
         <NotificationMenu />
+        <AccountMenu />
       </header>
 
-      <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 lg:px-8">
+      <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 pb-24 lg:px-8 lg:pb-6">
         <div v-if="loading" class="text-sm text-fg-muted">{{ t('app.loading') }}</div>
 
         <OrganizationSetup v-else-if="!current" />
 
         <template v-else>
-          <div v-if="readOnly" class="mb-5 rounded-control border border-warning bg-[var(--bs-status-warning-bg)] p-4 text-sm" role="status">
+          <div v-if="readOnly" class="mb-6 rounded-control border border-warning bg-[var(--bs-status-warning-bg)] p-4 text-sm" role="status">
             <p class="font-semibold">{{ t('billing.readOnlyTitle') }}</p>
             <p>{{ t('billing.readOnlyBody') }}</p>
             <NuxtLink v-if="can('billing.manage')" to="/billing" class="mt-2 inline-block text-link">{{ t('billing.fixBilling') }}</NuxtLink>
@@ -149,9 +179,23 @@ async function signOut() {
       </main>
     </div>
 
+    <nav class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-[var(--bs-border)] bg-surface px-2 pb-[env(safe-area-inset-bottom)] shadow-raised lg:hidden" :aria-label="t('nav.primary')">
+      <NuxtLink
+        v-for="item in PRIMARY_NAV"
+        :key="`mobile-${item.to}`"
+        :to="item.to"
+        class="flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium text-fg-muted"
+        :class="{ 'text-accent': isActive(item.to) }"
+        :aria-current="isActive(item.to) ? 'page' : undefined"
+      >
+        <AppIcon :name="item.icon" :size="22" />
+        <span>{{ t(`nav.${item.key}`) }}</span>
+      </NuxtLink>
+    </nav>
+
     <AddTransactionDialog />
     <OperationsCenter />
-    <AddMenu v-if="writesAllowed && current && !checkoutRequired" />
+    <FinancialSystemMap />
     <ToastHost />
   </div>
 </template>

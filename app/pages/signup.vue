@@ -215,54 +215,54 @@ watchEffect(() => {
       </NuxtLink>
       <div class="flex items-center gap-2"><SettingsMenu /><NuxtLink to="/login" class="ls-btn ls-btn-sm">{{ t('auth.signIn') }}</NuxtLink></div></header>
 
-      <div class="mx-auto mt-10 grid max-w-5xl gap-8 lg:grid-cols-[.72fr_1.28fr]">
-        <aside class="rounded-modal bg-[var(--bs-ink)] p-7 text-[var(--bs-paper)] lg:sticky lg:top-6 lg:self-start">
-          <p class="text-xs font-bold uppercase tracking-[.2em] text-[var(--bs-gray-400)]">{{ t('onboarding.eyebrow') }}</p>
+      <div class="mx-auto mt-12 grid max-w-5xl gap-8 lg:grid-cols-[.72fr_1.28fr]">
+        <aside class="ls-brand-hero rounded-modal p-8 lg:sticky lg:top-6 lg:self-start">
+          <p class="ls-brand-hero-muted text-xs font-bold uppercase tracking-[.2em]">{{ t('onboarding.eyebrow') }}</p>
           <h1 class="mt-4 text-3xl font-black tracking-[-.04em]">{{ t('onboarding.title') }}</h1>
-          <p class="mt-3 text-sm leading-6 text-[var(--bs-gray-400)]">{{ t('onboarding.subtitle') }}</p>
-          <ol class="mt-9 space-y-5">
-            <li v-for="index in 3" :key="index" class="flex gap-3" :class="index > step ? 'opacity-40' : ''"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[var(--bs-gray-600)] text-xs font-bold" :class="index === step ? 'bg-[var(--bs-paper)] text-[var(--bs-ink)]' : ''">{{ index }}</span><div><p class="font-bold text-[var(--bs-paper)]">{{ t(`onboarding.steps.${index}.title`) }}</p><p class="text-xs text-[var(--bs-gray-400)]">{{ t(`onboarding.steps.${index}.body`) }}</p></div></li>
+          <p class="ls-brand-hero-muted mt-3 text-sm leading-6">{{ t('onboarding.subtitle') }}</p>
+          <ol class="mt-8 space-y-6">
+            <li v-for="index in 3" :key="index" class="flex gap-3" :class="index > step ? 'opacity-40' : ''"><span class="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--bs-steel-border)] text-xs font-bold" :class="index === step ? 'bg-[var(--bs-premium-gold)] text-[var(--bs-deep-structure-navy)]' : ''">{{ index }}</span><div><p class="font-bold">{{ t(`onboarding.steps.${index}.title`) }}</p><p class="ls-brand-hero-muted text-xs">{{ t(`onboarding.steps.${index}.body`) }}</p></div></li>
           </ol>
         </aside>
 
-        <form v-if="!awaitingOtp" class="ls-card p-6 sm:p-9" :data-hydrated="hydrated" @submit.prevent="step < 3 ? next() : createAccount()">
-          <div class="mb-7 flex items-center justify-between"><div><p class="text-xs font-bold text-fg-muted">{{ t('onboarding.stepCount', { step }) }}</p><h2 class="mt-1 text-2xl font-black">{{ t(`onboarding.steps.${step}.title`) }}</h2></div><button v-if="step > 1" type="button" class="ls-btn ls-btn-sm" @click="step--">{{ t('common.back') }}</button></div>
+        <form v-if="!awaitingOtp" class="ls-card p-6 sm:p-8" :data-hydrated="hydrated" @submit.prevent="step < 3 ? next() : createAccount()">
+          <div class="mb-8 flex items-center justify-between"><div><p class="text-xs font-bold text-fg-muted">{{ t('onboarding.stepCount', { step }) }}</p><h2 class="mt-1 text-2xl font-black">{{ t(`onboarding.steps.${step}.title`) }}</h2></div><button v-if="step > 1" type="button" class="ls-btn ls-btn-sm" @click="step--">{{ t('common.back') }}</button></div>
 
           <div v-if="step === 1" class="grid gap-4 sm:grid-cols-2">
-            <div class="sm:col-span-2"><label class="ls-label" for="owner-name">{{ t('onboarding.fullName') }}</label><input id="owner-name" v-model="form.fullName" class="ls-input" autocomplete="name" required></div>
-            <div><label class="ls-label" for="owner-phone">{{ t('onboarding.phone') }}</label><input id="owner-phone" v-model="form.phone" class="ls-input" autocomplete="tel" dir="ltr" required></div>
-            <div><label class="ls-label" for="owner-role">{{ t('onboarding.jobTitle') }}</label><input id="owner-role" v-model="form.jobTitle" class="ls-input" required></div>
-            <div><label class="ls-label" for="owner-email">{{ t('auth.email') }}</label><input id="owner-email" v-model="form.email" type="email" class="ls-input" autocomplete="email" dir="ltr" required></div>
-            <div><label class="ls-label" for="owner-password">{{ t('auth.password') }}</label><input id="owner-password" v-model="form.password" type="password" minlength="8" class="ls-input" autocomplete="new-password" dir="ltr" required><p class="ls-hint">{{ t('onboarding.passwordHint') }}</p></div>
+            <FloatingField class="sm:col-span-2" :label="t('onboarding.fullName')"><input id="owner-name" v-model="form.fullName" class="ls-input" autocomplete="name" required></FloatingField>
+            <FloatingField :label="t('onboarding.phone')"><input id="owner-phone" v-model="form.phone" class="ls-input" autocomplete="tel" dir="ltr" required></FloatingField>
+            <FloatingField :label="t('onboarding.jobTitle')"><input id="owner-role" v-model="form.jobTitle" class="ls-input" required></FloatingField>
+            <FloatingField :label="t('auth.email')"><input id="owner-email" v-model="form.email" type="email" class="ls-input" autocomplete="email" dir="ltr" required></FloatingField>
+            <div><FloatingField :label="t('auth.password')"><input id="owner-password" v-model="form.password" type="password" minlength="8" class="ls-input" autocomplete="new-password" dir="ltr" required></FloatingField><p class="ls-hint">{{ t('onboarding.passwordHint') }}</p></div>
           </div>
 
           <div v-else-if="step === 2" class="grid gap-4 sm:grid-cols-2">
-            <div><label class="ls-label" for="org-display-name">{{ t('org.name') }}</label><input id="org-display-name" v-model="form.organizationName" class="ls-input" required></div>
-            <div><label class="ls-label" for="org-legal-name">{{ t('onboarding.legalName') }}</label><input id="org-legal-name" v-model="form.legalName" class="ls-input" required></div>
-            <div><label class="ls-label" for="org-type">{{ t('onboarding.businessType') }}</label><select id="org-type" v-model="form.businessType" class="ls-input"><option v-for="type in businessTypes" :key="type" :value="type">{{ t(`onboarding.businessTypes.${type}`) }}</option></select></div>
-            <div><label class="ls-label" for="org-country">{{ t('onboarding.country') }}</label><select id="org-country" v-model="form.countryCode" class="ls-input"><option v-for="country in countries" :key="country.code" :value="country.code">{{ t(`onboarding.countries.${country.code}`) }}</option></select></div>
-            <div><label class="ls-label" for="org-currency">{{ t('accounts.currency') }}</label><select id="org-currency" v-model="form.currency" class="ls-input"><option v-for="currency in ['EGP','SAR','AED','USD','GBP','EUR']" :key="currency">{{ currency }}</option></select></div>
-            <div><label class="ls-label" for="org-timezone">{{ t('onboarding.timezone') }}</label><input id="org-timezone" v-model="form.timezone" class="ls-input" dir="ltr" required></div>
-            <div><label class="ls-label" for="org-fiscal">{{ t('onboarding.fiscalYear') }}</label><select id="org-fiscal" v-model.number="form.fiscalYearStartMonth" class="ls-input"><option v-for="month in 12" :key="month" :value="month">{{ t(`onboarding.months.${month}`) }}</option></select></div>
-            <div><label class="ls-label" for="org-tax">{{ t('onboarding.taxIdentifier') }}</label><input id="org-tax" v-model="form.taxIdentifier" class="ls-input"><p class="ls-hint">{{ t('onboarding.optional') }}</p></div>
+            <FloatingField :label="t('org.name')"><input id="org-display-name" v-model="form.organizationName" class="ls-input" required></FloatingField>
+            <FloatingField :label="t('onboarding.legalName')"><input id="org-legal-name" v-model="form.legalName" class="ls-input" required></FloatingField>
+            <FloatingField :label="t('onboarding.businessType')"><select id="org-type" v-model="form.businessType" class="ls-input"><option v-for="type in businessTypes" :key="type" :value="type">{{ t(`onboarding.businessTypes.${type}`) }}</option></select></FloatingField>
+            <FloatingField :label="t('onboarding.country')"><select id="org-country" v-model="form.countryCode" class="ls-input"><option v-for="country in countries" :key="country.code" :value="country.code">{{ t(`onboarding.countries.${country.code}`) }}</option></select></FloatingField>
+            <FloatingField :label="t('accounts.currency')"><select id="org-currency" v-model="form.currency" class="ls-input"><option v-for="currency in ['EGP','SAR','AED','USD','GBP','EUR']" :key="currency">{{ currency }}</option></select></FloatingField>
+            <FloatingField :label="t('onboarding.timezone')"><input id="org-timezone" v-model="form.timezone" class="ls-input" dir="ltr" required></FloatingField>
+            <FloatingField :label="t('onboarding.fiscalYear')"><select id="org-fiscal" v-model.number="form.fiscalYearStartMonth" class="ls-input"><option v-for="month in 12" :key="month" :value="month">{{ t(`onboarding.months.${month}`) }}</option></select></FloatingField>
+            <div><FloatingField :label="t('onboarding.taxIdentifier')"><input id="org-tax" v-model="form.taxIdentifier" class="ls-input"></FloatingField><p class="ls-hint">{{ t('onboarding.optional') }}</p></div>
           </div>
 
-          <div v-else class="space-y-5">
+          <div v-else class="space-y-6">
             <div class="grid gap-3 sm:grid-cols-2">
-              <label v-for="option in (['monthly','yearly'] as const)" :key="option" class="cursor-pointer rounded-card border p-5" :class="form.interval === option ? 'border-fg bg-surface-muted' : 'border-[var(--bs-border)]'"><input v-model="form.interval" type="radio" class="sr-only" :value="option"><span class="font-bold">{{ t(`billing.${option}`) }}</span><span class="mt-2 block text-2xl font-black">{{ t(`billing.${option}Price`) }}</span><span v-if="option === 'yearly'" class="mt-2 inline-block rounded-full bg-fg px-2 py-1 text-xs font-bold text-background">{{ t('landing.bestValue') }}</span></label>
+              <label v-for="option in (['monthly','yearly'] as const)" :key="option" class="cursor-pointer rounded-card border p-6" :class="form.interval === option ? 'border-fg bg-surface-muted' : 'border-[var(--bs-border)]'"><input v-model="form.interval" type="radio" class="sr-only" :value="option"><span class="font-bold">{{ t(`billing.${option}`) }}</span><span class="mt-2 block text-2xl font-black">{{ t(`billing.${option}Price`) }}</span><span v-if="option === 'yearly'" class="mt-2 inline-block rounded-full bg-fg px-2 py-1 text-xs font-bold text-background">{{ t('landing.bestValue') }}</span></label>
             </div>
-            <div class="rounded-card border border-[var(--bs-border)] bg-surface-muted p-5"><h3 class="font-bold">{{ t('onboarding.readyTitle') }}</h3><ul class="mt-3 grid gap-2 text-sm text-fg-muted sm:grid-cols-2"><li>✓ {{ t('billing.featureAccounting') }}</li><li>✓ {{ t('billing.featureAutomation') }}</li><li>✓ {{ t('billing.featureTeam') }}</li><li>✓ {{ t('onboarding.readyAccounts') }}</li></ul></div>
+            <div class="rounded-card border border-[var(--bs-border)] bg-surface-muted p-6"><h3 class="font-bold">{{ t('onboarding.readyTitle') }}</h3><ul class="mt-3 grid gap-2 text-sm text-fg-muted sm:grid-cols-2"><li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('billing.featureAccounting') }}</li><li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('billing.featureAutomation') }}</li><li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('billing.featureTeam') }}</li><li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('onboarding.readyAccounts') }}</li></ul></div>
             <p class="text-sm text-fg-muted">{{ t('onboarding.paymentExplanation') }}</p>
           </div>
 
-          <p v-if="errorMessage" class="ls-error mt-5" role="alert">{{ errorMessage }}</p>
-          <button class="ls-btn ls-btn-primary mt-7 w-full" :disabled="pending">{{ pending ? t('onboarding.sendingOtp') : step < 3 ? t('common.continue') : t('onboarding.continueToPayment') }}</button>
+          <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
+          <button class="ls-btn ls-btn-primary mt-8 w-full" :disabled="pending">{{ pending ? t('onboarding.sendingOtp') : step < 3 ? t('common.continue') : t('onboarding.continueToPayment') }}</button>
           <p v-if="step === 3" class="mt-3 text-center text-xs text-fg-muted">{{ t('billing.paymentRequired') }}</p>
         </form>
 
-        <form v-else class="ls-card p-6 sm:p-9" :data-hydrated="hydrated" @submit.prevent="verifyOtpAndContinue">
+        <form v-else class="ls-card p-6 sm:p-8" :data-hydrated="hydrated" @submit.prevent="verifyOtpAndContinue">
           <div class="mx-auto max-w-lg text-center">
-            <div class="mx-auto grid size-14 place-items-center rounded-full bg-surface-muted text-2xl" aria-hidden="true">✉</div>
+            <div class="mx-auto grid size-14 place-items-center rounded-full bg-surface-muted text-primary"><AppIcon name="mail" :size="28" /></div>
             <p class="mt-6 text-xs font-bold uppercase tracking-[.18em] text-fg-muted">{{ t('onboarding.otpEyebrow') }}</p>
             <h2 class="mt-2 text-2xl font-black">{{ t('onboarding.otpTitle') }}</h2>
             <p class="mt-3 text-sm leading-6 text-fg-muted">{{ t('onboarding.otpDescription') }}</p>
@@ -278,20 +278,20 @@ watchEffect(() => {
               <span>{{ t('onboarding.otpAttemptsHint') }}</span>
             </div>
 
-            <p v-if="errorMessage" class="ls-error mt-5" role="alert">{{ errorMessage }}</p>
+            <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
 
             <button class="ls-btn ls-btn-primary mt-6 w-full" :disabled="pending || otp.length !== 6 || otpExpired">
               {{ pending ? t('onboarding.otpVerifying') : t('onboarding.otpVerify') }}
             </button>
 
-            <div class="mt-5 text-center text-sm text-fg-muted">
+            <div class="mt-6 text-center text-sm text-fg-muted">
               <span>{{ t('onboarding.otpMissing') }}</span>
               <button type="button" class="ms-1 font-bold text-fg underline underline-offset-4 disabled:no-underline disabled:opacity-50" :disabled="pending || resendIn > 0" @click="resendOtp">
                 {{ resendIn > 0 ? t('onboarding.otpResendIn', { time: formatCountdown(resendIn) }) : t('onboarding.otpResend') }}
               </button>
             </div>
 
-            <div class="mt-7 rounded-control border border-[var(--bs-border)] bg-surface-muted p-4 text-xs leading-5 text-fg-muted">
+            <div class="mt-8 rounded-control border border-[var(--bs-border)] bg-surface-muted p-4 text-xs leading-5 text-fg-muted">
               <p class="font-bold text-fg">{{ t('onboarding.otpSecurityTitle') }}</p>
               <p class="mt-1">{{ t('onboarding.otpSecurityBody') }}</p>
             </div>
