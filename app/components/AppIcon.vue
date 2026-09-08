@@ -21,6 +21,7 @@ import {
   RepeatIcon,
   Settings01Icon,
   TransactionIcon,
+  UserCircleIcon,
   UserGroupIcon,
   Wallet04Icon,
 } from '@hugeicons/core-free-icons'
@@ -46,6 +47,7 @@ const icons = {
   settings: Settings01Icon,
   team: UserGroupIcon,
   transactions: TransactionIcon,
+  user: UserCircleIcon,
   wallet: Wallet04Icon,
   chart: ChartBreakoutSquareIcon,
   repeat: RepeatIcon,

@@ -50,25 +50,32 @@ where organization_id = (select id from ids where key = 'org');
 set local role authenticated;
 
 -- ---------------------------------------------------------------------------
--- Onboarding produces a working chart of accounts
+-- Onboarding leaves the chart empty for the owner to build
 -- ---------------------------------------------------------------------------
 select is(
   (select count(*) from public.accounts where organization_id = (select id from ids where key = 'org')),
-  40::bigint,
-  'a new organization gets the full default chart of accounts'
+  0::bigint,
+  'a new organization starts with no accounts'
 );
+
+select is(
+  (select count(*) from public.categories where organization_id = (select id from ids where key = 'org')),
+  0::bigint,
+  'a new organization starts with no account-backed categories'
+);
+
+-- The integrity suite opts into the legacy fixture chart explicitly. Product
+-- onboarding never calls these fixture helpers.
+reset role;
+select app.seed_chart_of_accounts((select id from ids where key = 'org'));
+select app.seed_categories((select id from ids where key = 'org'));
+set local role authenticated;
 
 select is(
   (select count(*) from public.accounts
    where organization_id = (select id from ids where key = 'org') and system_key is not null),
   22::bigint,
-  'every system account the posting engine looks up exists'
-);
-
-select is(
-  (select count(*) from public.categories where organization_id = (select id from ids where key = 'org')),
-  12::bigint,
-  'starter categories are created and mapped to accounts'
+  'the explicit test fixture provides workflow accounts'
 );
 
 select is(
@@ -331,9 +338,15 @@ where organization_id = (select id from ids where key = 'org');
 
 -- The owner holds books.override_lock, so revoke it for this member: the point
 -- is to test the lock, not the role.
-update public.organization_members
-set revoked_capabilities = array['books.override_lock']
-where organization_id = (select id from ids where key = 'org');
+select public.manage_organization_member(
+  (select id from public.organization_members
+   where organization_id = (select id from ids where key = 'org')
+     and user_id = auth.uid()),
+  'owner',
+  'active',
+  '{}',
+  array['books.override_lock']
+);
 
 select throws_ok(
   format($fmt$select public.record_expense(
@@ -350,9 +363,15 @@ select throws_ok(
   'posting into a locked period is refused without books.override_lock'
 );
 
-update public.organization_members
-set revoked_capabilities = '{}'
-where organization_id = (select id from ids where key = 'org');
+select public.manage_organization_member(
+  (select id from public.organization_members
+   where organization_id = (select id from ids where key = 'org')
+     and user_id = auth.uid()),
+  'owner',
+  'active',
+  '{}',
+  '{}'
+);
 
 update public.organization_settings
 set books_locked_until = null

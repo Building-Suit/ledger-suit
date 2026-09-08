@@ -36,7 +36,7 @@ select ok((select onboarding_completed_at is not null from public.profiles where
 select is((select count(*) from public.organization_members where user_id = auth.uid() and role = 'owner'), 1::bigint, 'one owner membership is created');
 select is((select business_type::text from public.organizations where id = (select organization_id from onboarding_ids)), 'limited_liability', 'business type is stored');
 select is((select tax_identifier from public.organizations where id = (select organization_id from onboarding_ids)), 'TAX-ONBOARD-01', 'tax identifier is stored');
-select ok((select count(*) > 10 from public.accounts where organization_id = (select organization_id from onboarding_ids)), 'starter chart of accounts is ready');
+select is((select count(*) from public.accounts where organization_id = (select organization_id from onboarding_ids)), 0::bigint, 'chart of accounts starts empty');
 select is((select count(*) from public.subscriptions where organization_id = (select organization_id from onboarding_ids)), 1::bigint, 'one checkout-required subscription is provisioned');
 
 select throws_ok(

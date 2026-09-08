@@ -180,7 +180,7 @@ const payableHint = computed(() =>
               <button type="button" class="ls-btn ls-btn-sm" :class="{ 'ls-btn-primary': customRange }" @click="customRange = !customRange">{{ t('dashboard.custom') }}</button>
             </div>
           </div>
-          <div v-if="customRange" class="mb-4 flex flex-wrap gap-2"><input v-model="customFrom" type="date" class="ls-input w-auto"><input v-model="customTo" type="date" class="ls-input w-auto"></div>
+          <div v-if="customRange" class="mb-4 flex flex-wrap gap-2"><FloatingField class="w-auto" :label="t('reports.from')"><input v-model="customFrom" type="date" class="ls-input w-auto"></FloatingField><FloatingField class="w-auto" :label="t('reports.to')"><input v-model="customTo" type="date" class="ls-input w-auto"></FloatingField></div>
           <RevenueExpenseChart :series="series ?? []" />
         </section>
 

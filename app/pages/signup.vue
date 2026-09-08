@@ -229,22 +229,22 @@ watchEffect(() => {
           <div class="mb-8 flex items-center justify-between"><div><p class="text-xs font-bold text-fg-muted">{{ t('onboarding.stepCount', { step }) }}</p><h2 class="mt-1 text-2xl font-black">{{ t(`onboarding.steps.${step}.title`) }}</h2></div><button v-if="step > 1" type="button" class="ls-btn ls-btn-sm" @click="step--">{{ t('common.back') }}</button></div>
 
           <div v-if="step === 1" class="grid gap-4 sm:grid-cols-2">
-            <div class="sm:col-span-2"><label class="ls-label" for="owner-name">{{ t('onboarding.fullName') }}</label><input id="owner-name" v-model="form.fullName" class="ls-input" autocomplete="name" required></div>
-            <div><label class="ls-label" for="owner-phone">{{ t('onboarding.phone') }}</label><input id="owner-phone" v-model="form.phone" class="ls-input" autocomplete="tel" dir="ltr" required></div>
-            <div><label class="ls-label" for="owner-role">{{ t('onboarding.jobTitle') }}</label><input id="owner-role" v-model="form.jobTitle" class="ls-input" required></div>
-            <div><label class="ls-label" for="owner-email">{{ t('auth.email') }}</label><input id="owner-email" v-model="form.email" type="email" class="ls-input" autocomplete="email" dir="ltr" required></div>
-            <div><label class="ls-label" for="owner-password">{{ t('auth.password') }}</label><input id="owner-password" v-model="form.password" type="password" minlength="8" class="ls-input" autocomplete="new-password" dir="ltr" required><p class="ls-hint">{{ t('onboarding.passwordHint') }}</p></div>
+            <FloatingField class="sm:col-span-2" :label="t('onboarding.fullName')"><input id="owner-name" v-model="form.fullName" class="ls-input" autocomplete="name" required></FloatingField>
+            <FloatingField :label="t('onboarding.phone')"><input id="owner-phone" v-model="form.phone" class="ls-input" autocomplete="tel" dir="ltr" required></FloatingField>
+            <FloatingField :label="t('onboarding.jobTitle')"><input id="owner-role" v-model="form.jobTitle" class="ls-input" required></FloatingField>
+            <FloatingField :label="t('auth.email')"><input id="owner-email" v-model="form.email" type="email" class="ls-input" autocomplete="email" dir="ltr" required></FloatingField>
+            <div><FloatingField :label="t('auth.password')"><input id="owner-password" v-model="form.password" type="password" minlength="8" class="ls-input" autocomplete="new-password" dir="ltr" required></FloatingField><p class="ls-hint">{{ t('onboarding.passwordHint') }}</p></div>
           </div>
 
           <div v-else-if="step === 2" class="grid gap-4 sm:grid-cols-2">
-            <div><label class="ls-label" for="org-display-name">{{ t('org.name') }}</label><input id="org-display-name" v-model="form.organizationName" class="ls-input" required></div>
-            <div><label class="ls-label" for="org-legal-name">{{ t('onboarding.legalName') }}</label><input id="org-legal-name" v-model="form.legalName" class="ls-input" required></div>
-            <div><label class="ls-label" for="org-type">{{ t('onboarding.businessType') }}</label><select id="org-type" v-model="form.businessType" class="ls-input"><option v-for="type in businessTypes" :key="type" :value="type">{{ t(`onboarding.businessTypes.${type}`) }}</option></select></div>
-            <div><label class="ls-label" for="org-country">{{ t('onboarding.country') }}</label><select id="org-country" v-model="form.countryCode" class="ls-input"><option v-for="country in countries" :key="country.code" :value="country.code">{{ t(`onboarding.countries.${country.code}`) }}</option></select></div>
-            <div><label class="ls-label" for="org-currency">{{ t('accounts.currency') }}</label><select id="org-currency" v-model="form.currency" class="ls-input"><option v-for="currency in ['EGP','SAR','AED','USD','GBP','EUR']" :key="currency">{{ currency }}</option></select></div>
-            <div><label class="ls-label" for="org-timezone">{{ t('onboarding.timezone') }}</label><input id="org-timezone" v-model="form.timezone" class="ls-input" dir="ltr" required></div>
-            <div><label class="ls-label" for="org-fiscal">{{ t('onboarding.fiscalYear') }}</label><select id="org-fiscal" v-model.number="form.fiscalYearStartMonth" class="ls-input"><option v-for="month in 12" :key="month" :value="month">{{ t(`onboarding.months.${month}`) }}</option></select></div>
-            <div><label class="ls-label" for="org-tax">{{ t('onboarding.taxIdentifier') }}</label><input id="org-tax" v-model="form.taxIdentifier" class="ls-input"><p class="ls-hint">{{ t('onboarding.optional') }}</p></div>
+            <FloatingField :label="t('org.name')"><input id="org-display-name" v-model="form.organizationName" class="ls-input" required></FloatingField>
+            <FloatingField :label="t('onboarding.legalName')"><input id="org-legal-name" v-model="form.legalName" class="ls-input" required></FloatingField>
+            <FloatingField :label="t('onboarding.businessType')"><select id="org-type" v-model="form.businessType" class="ls-input"><option v-for="type in businessTypes" :key="type" :value="type">{{ t(`onboarding.businessTypes.${type}`) }}</option></select></FloatingField>
+            <FloatingField :label="t('onboarding.country')"><select id="org-country" v-model="form.countryCode" class="ls-input"><option v-for="country in countries" :key="country.code" :value="country.code">{{ t(`onboarding.countries.${country.code}`) }}</option></select></FloatingField>
+            <FloatingField :label="t('accounts.currency')"><select id="org-currency" v-model="form.currency" class="ls-input"><option v-for="currency in ['EGP','SAR','AED','USD','GBP','EUR']" :key="currency">{{ currency }}</option></select></FloatingField>
+            <FloatingField :label="t('onboarding.timezone')"><input id="org-timezone" v-model="form.timezone" class="ls-input" dir="ltr" required></FloatingField>
+            <FloatingField :label="t('onboarding.fiscalYear')"><select id="org-fiscal" v-model.number="form.fiscalYearStartMonth" class="ls-input"><option v-for="month in 12" :key="month" :value="month">{{ t(`onboarding.months.${month}`) }}</option></select></FloatingField>
+            <div><FloatingField :label="t('onboarding.taxIdentifier')"><input id="org-tax" v-model="form.taxIdentifier" class="ls-input"></FloatingField><p class="ls-hint">{{ t('onboarding.optional') }}</p></div>
           </div>
 
           <div v-else class="space-y-6">

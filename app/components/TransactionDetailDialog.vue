@@ -250,7 +250,7 @@ async function reverse() {
           <section aria-labelledby="tags-heading">
             <h3 id="tags-heading" class="mb-2 text-sm font-bold">{{ t('operations.tabs.tags') }}</h3>
             <div class="mb-2 flex flex-wrap gap-2"><span v-for="row in assignedTags" :key="row.tag_id" class="ls-badge bg-surface-muted"><span class="me-1 inline-block h-2 w-2 rounded-full" :style="{ backgroundColor: row.tags?.color ?? 'var(--bs-slate-gray)' }" />{{ row.tags?.name }}<button v-if="can('transactions.create')" class="ms-1" :aria-label="t('common.dismiss')" @click="removeTag(row.tag_id)"><AppIcon name="close" :size="14" /></button></span></div>
-            <div v-if="can('transactions.create')" class="flex gap-2"><select v-model="selectedTagId" class="ls-input"><option value="">{{ t('common.none') }}</option><option v-for="tag in tags" :key="tag.id" :value="tag.id">{{ tag.name }}</option></select><button class="ls-btn" @click="assignTag">{{ t('operations.assign') }}</button></div>
+            <div v-if="can('transactions.create')" class="flex gap-2"><FloatingField class="flex-1" :label="t('operations.tabs.tags')"><select v-model="selectedTagId" class="ls-input"><option value="">{{ t('common.none') }}</option><option v-for="tag in tags" :key="tag.id" :value="tag.id">{{ tag.name }}</option></select></FloatingField><button class="ls-btn" @click="assignTag">{{ t('operations.assign') }}</button></div>
           </section>
 
           <section aria-labelledby="attachments-heading">

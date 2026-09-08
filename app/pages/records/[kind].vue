@@ -30,6 +30,10 @@ if (!VALID_KINDS.includes(kind.value)) {
   throw createError({ statusCode: 404, statusMessage: 'Page not found' })
 }
 
+// Preserve old bookmarks while replacing the invitation-only screen with the
+// complete workspace access console.
+if (kind.value === 'invitations') await navigateTo('/team', { replace: true })
+
 const isTransaction = computed(() => (ADD_FLOWS as readonly string[]).includes(kind.value))
 const title = computed(() => {
   if (isTransaction.value) return t(`add.flows.${kind.value}`)
@@ -206,8 +210,8 @@ const date = (row: TransactionRow | GenericRow, key: string) => {
         <div v-if="commitmentAction.id" class="fixed inset-0 z-[60] grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" @click.self="commitmentAction.id = ''">
           <form class="ls-modal-panel ls-card w-full max-w-lg space-y-4 p-6 shadow-overlay" @submit.prevent="submitCommitmentAction">
             <div class="flex items-center justify-between"><h2 class="text-lg font-bold">{{ t(commitmentAction.mode === 'settle' ? 'operations.settle' : 'operations.postpone') }}</h2><button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="commitmentAction.id = ''"><AppIcon name="close" /></button></div>
-            <template v-if="commitmentAction.mode === 'settle'"><select v-model="commitmentAction.paymentAccountId" class="ls-input" required><option value="">{{ t('add.chooseAccount') }}</option><option v-for="account in paymentAccounts" :key="account.id" :value="account.id">{{ account.name }}</option></select><input v-model="commitmentAction.amount" class="ls-input" inputmode="decimal" :placeholder="t('operations.fullOrPartialAmount')"></template>
-            <input v-model="commitmentAction.date" type="date" class="ls-input" required>
+            <template v-if="commitmentAction.mode === 'settle'"><FloatingField :label="t('add.chooseAccount')"><select v-model="commitmentAction.paymentAccountId" class="ls-input" required><option value="">{{ t('add.chooseAccount') }}</option><option v-for="account in paymentAccounts" :key="account.id" :value="account.id">{{ account.name }}</option></select></FloatingField><FloatingField :label="t('operations.fullOrPartialAmount')"><input v-model="commitmentAction.amount" class="ls-input" inputmode="decimal" :placeholder="t('operations.fullOrPartialAmount')"></FloatingField></template>
+            <FloatingField :label="t('add.date')"><input v-model="commitmentAction.date" type="date" class="ls-input" required></FloatingField>
             <p v-if="actionError" class="ls-error" role="alert">{{ actionError }}</p>
             <div class="flex justify-end gap-2"><button type="button" class="ls-btn" @click="commitmentAction.id = ''">{{ t('common.cancel') }}</button><button class="ls-btn ls-btn-primary" :disabled="actionBusy">{{ t(commitmentAction.mode === 'settle' ? 'operations.convert' : 'operations.postpone') }}</button></div>
           </form>
@@ -215,6 +219,6 @@ const date = (row: TransactionRow | GenericRow, key: string) => {
       </Transition>
     </Teleport>
 
-    <TransactionDetailDialog v-if="selectedId" :transaction-id="selectedId" @close="selectedId = null" />
+    <TransactionDetailDialog v-if="selectedId" :transaction-id="selectedId" @changed="refresh" @close="selectedId = null" />
   </div>
 </template>

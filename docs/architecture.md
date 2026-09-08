@@ -291,9 +291,9 @@ errors. Pending form fields can survive a same-tab refresh in session storage;
 the password and OTP never do.
 
 `complete_account_onboarding(...)` then provisions the profile, organization,
-owner membership, default categories, starter chart of accounts, audit entry,
-and checkout-required subscription in one PostgreSQL transaction. If any seed
-or validation fails, none of the workspace survives. The function resolves the
+owner membership, an empty user-managed chart of accounts, an audit entry, and
+checkout-required subscription in one PostgreSQL transaction. If any write or
+validation fails, none of the workspace survives. The function resolves the
 caller through `auth.uid()`, refuses replay for an existing active member, fixes
 its `search_path`, and grants execution only to authenticated users.
 

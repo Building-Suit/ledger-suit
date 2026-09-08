@@ -43,6 +43,8 @@ set status = 'active', provider = 'stripe', provider_subscription_id = 'sub_test
     provider_status = 'active', billing_interval = 'monthly', checkout_completed_at = now(),
     current_period_start = now(), current_period_end = now() + interval '30 days'
 where organization_id = (select id from ids where key = 'org');
+select app.seed_chart_of_accounts((select id from ids where key = 'org'));
+select app.seed_categories((select id from ids where key = 'org'));
 set local role authenticated;
 
 insert into ids (key, id)

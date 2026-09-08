@@ -6,6 +6,12 @@ select plan(13);
 
 select set_config('request.jwt.claims',
   '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+
+-- Product seed data intentionally has no chart or operations. This regression
+-- suite opts into the accounting fixture before exercising controlled edits.
+select app.seed_chart_of_accounts((select id from public.organizations where name = 'Alpha Trading'));
+select app.seed_categories((select id from public.organizations where name = 'Alpha Trading'));
+
 set local role authenticated;
 
 create temp table hardening_ids (key text primary key, value text);
@@ -14,14 +20,45 @@ grant all on hardening_ids to authenticated;
 insert into hardening_ids values
   ('org', (select id::text from public.organizations where name = 'Alpha Trading'));
 insert into hardening_ids values
-  ('commitment', (select id::text from public.commitments
-                  where organization_id = (select value::uuid from hardening_ids where key = 'org')
-                    and settled_amount_minor = 0 limit 1)),
-  ('rule', (select id::text from public.recurring_rules
-            where organization_id = (select value::uuid from hardening_ids where key = 'org') limit 1)),
   ('bank', (select id::text from public.accounts
             where organization_id = (select value::uuid from hardening_ids where key = 'org')
               and system_key = 'bank'));
+
+insert into hardening_ids values (
+  'commitment',
+  public.create_commitment(
+    p_organization_id => (select value::uuid from hardening_ids where key = 'org'),
+    p_type => 'payable', p_title => 'Fixture commitment',
+    p_amount_minor => 100000, p_due_date => app.org_today((select value::uuid from hardening_ids where key = 'org')) + 7,
+    p_linked_category_id => (select id from public.categories
+                             where organization_id = (select value::uuid from hardening_ids where key = 'org')
+                               and name = 'Rent')
+  )::text
+);
+
+select public.settle_commitment(
+  p_commitment_id => (select value::uuid from hardening_ids where key = 'commitment'),
+  p_payment_account_id => (select value::uuid from hardening_ids where key = 'bank'),
+  p_amount_minor => 50000,
+  p_settled_on => app.org_today((select value::uuid from hardening_ids where key = 'org'))
+);
+
+insert into hardening_ids values (
+  'rule',
+  public.create_recurring_rule(
+    p_organization_id => (select value::uuid from hardening_ids where key = 'org'),
+    p_name => 'Fixture recurring rule', p_transaction_type => 'expense',
+    p_template => jsonb_build_object(
+      'amount_minor', 100000,
+      'source_account_id', (select value from hardening_ids where key = 'bank'),
+      'category_id', (select id from public.categories
+                      where organization_id = (select value::uuid from hardening_ids where key = 'org')
+                        and name = 'Rent'),
+      'description', 'Fixture rent'
+    ),
+    p_frequency => 'monthly', p_start_date => app.org_today((select value::uuid from hardening_ids where key = 'org')) + 1
+  )::text
+);
 
 select throws_ok(
   format('update public.commitments set settled_amount_minor = amount_minor, status = %L where id = %L',
