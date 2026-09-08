@@ -20,19 +20,8 @@ export function useTheme() {
     if (!import.meta.client) return
 
     const root = document.documentElement
-
-    // Force dark mode first for light theme users to avoid flash of light mode
-    const currentTheme = root.getAttribute('data-theme') as ThemePreference | null
-    const shouldForceDarkFirst = value === 'light' && currentTheme !== 'dark'
-
-    if (shouldForceDarkFirst) {
-      // Briefly apply dark first, then switch to light with CSS transition
-      root.setAttribute('data-theme', 'dark')
-
-      // Wait for transition to complete, then apply the actual theme
-      setTimeout(() => {
-        root.setAttribute('data-theme', value)
-      }, 50) // Match CSS transition duration
+    if (value === 'system') {
+      root.removeAttribute('data-theme')
     }
     else {
       root.setAttribute('data-theme', value)

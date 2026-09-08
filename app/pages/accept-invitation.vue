@@ -3,6 +3,7 @@ import type { Database } from '~~/types/database.types'
 
 definePageMeta({ layout: false })
 
+type InviteStep = 'loading' | 'ready' | 'otp' | 'password' | 'invalid'
 interface InvitationPreview {
   email: string
   organization_name: string
@@ -10,6 +11,7 @@ interface InvitationPreview {
   inviter_name: string
   inviter_job_title: string | null
   expires_at: string
+  user_exists: boolean
 }
 
 const supabase = useSupabaseClient<Database>()
@@ -20,12 +22,20 @@ const tenant = useTenant()
 
 const token = computed(() => typeof route.query.token === 'string' ? route.query.token.trim() : '')
 const preview = ref<InvitationPreview | null>(null)
-const step = ref<'loading' | 'ready' | 'invalid'>('loading')
+const step = ref<InviteStep>('loading')
+const user = useSupabaseUser()
+const fullName = ref('')
+const phone = ref('')
+const jobTitle = ref('')
+const otp = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const pending = ref(false)
 const errorMessage = ref('')
 const hydrated = ref(false)
+const resendAvailableAt = ref(0)
+const now = ref(Date.now())
+const resendIn = computed(() => Math.max(0, Math.ceil((resendAvailableAt.value - now.value) / 1000)))
 
 useHead({ title: () => `${preview.value?.organization_name ?? t('access.invitations')} · ${t('app.name')}` })
 
@@ -41,7 +51,56 @@ async function loadPreview() {
     return
   }
   preview.value = invitation
+  if (invitation.user_exists) {
+    if (user.value?.email?.toLowerCase() === invitation.email.toLowerCase()) {
+      try {
+        const { error: acceptError } = await supabase.rpc('accept_organization_invitation', { p_token: token.value })
+        if (acceptError) throw acceptError
+        await tenant.loadOrganizations(user.value.id, { force: true })
+        await navigateTo('/dashboard')
+        return
+      }
+      catch {
+        step.value = 'invalid'
+        return
+      }
+    }
+    if (user.value) await supabase.auth.signOut()
+    await navigateTo(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    return
+  }
   step.value = 'ready'
+}
+
+async function sendOtp() {
+  if (!preview.value || (resendIn.value > 0 && step.value === 'otp')) return
+  pending.value = true
+  errorMessage.value = ''
+  try {
+    const { error } = await supabase.auth.signInWithOtp({ email: preview.value.email, options: { shouldCreateUser: true } })
+    if (error) throw error
+    otp.value = ''
+    step.value = 'otp'
+    resendAvailableAt.value = Date.now() + 60 * 1000
+  }
+  catch { errorMessage.value = t('auth.failed') }
+  finally { pending.value = false }
+}
+
+async function verifyOtp() {
+  if (!preview.value || otp.value.length !== 6) return
+  pending.value = true
+  errorMessage.value = ''
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({ email: preview.value.email, token: otp.value, type: 'email' })
+    if (error || !data.session) throw error ?? new Error('Session missing')
+    step.value = 'password'
+  }
+  catch {
+    otp.value = ''
+    errorMessage.value = t('access.inviteFlow.otpFailed')
+  }
+  finally { pending.value = false }
 }
 
 async function finish() {
@@ -50,52 +109,36 @@ async function finish() {
     errorMessage.value = t('access.inviteFlow.passwordMismatch')
     return
   }
+  if (!fullName.value || !phone.value || !jobTitle.value) {
+    errorMessage.value = t('validation.required')
+    return
+  }
   pending.value = true
   errorMessage.value = ''
   try {
-    const { data: currentSession } = await supabase.auth.getSession()
-    if (currentSession.session && currentSession.session.user.email !== preview.value.email) {
-      await supabase.auth.signOut()
-    }
-
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: preview.value.email,
-      password: password.value,
-    })
-    if (signUpError && !signUpError.message.toLowerCase().includes('already registered')) {
-      throw signUpError
-    }
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: preview.value.email,
-      password: password.value,
-    })
-    
-    if (signInError) {
-      const { data: newSession } = await supabase.auth.getSession()
-      if (!newSession.session || newSession.session.user.email !== preview.value.email) {
-        throw signInError
-      }
-    }
-
+    const { error: passwordError } = await supabase.auth.updateUser({ password: password.value })
+    if (passwordError) throw passwordError
+    const { data: authData } = await supabase.auth.getUser()
+    if (!authData.user || authData.user.email?.toLowerCase() !== preview.value.email.toLowerCase()) throw new Error('Invitation identity mismatch')
+    const { error: profileError } = await supabase.from('profiles').update({ full_name: fullName.value.trim(), phone: phone.value.trim(), job_title: jobTitle.value.trim() }).eq('id', authData.user.id)
+    if (profileError) throw profileError
     const { error: invitationError } = await supabase.rpc('accept_organization_invitation', { p_token: token.value })
     if (invitationError) throw invitationError
-    
-    const { data } = await supabase.auth.getUser()
-    if (data.user) await tenant.loadOrganizations(data.user.id, { force: true })
+    await tenant.loadOrganizations(authData.user.id, { force: true })
     await navigateTo('/dashboard')
   }
-  catch (err: unknown) { 
-    errorMessage.value = (err as Error)?.message || t('auth.failed') 
-  }
+  catch { errorMessage.value = t('auth.failed') }
   finally { pending.value = false }
 }
 
+let timer: ReturnType<typeof setInterval> | undefined
 onMounted(() => {
   restore()
   hydrated.value = true
   void loadPreview()
+  timer = setInterval(() => (now.value = Date.now()), 1000)
 })
+onBeforeUnmount(() => clearInterval(timer))
 </script>
 
 <template>
@@ -118,17 +161,39 @@ onMounted(() => {
           <NuxtLink to="/login" class="ls-btn ls-btn-primary mt-7 w-full">{{ t('access.inviteFlow.backToLogin') }}</NuxtLink>
         </section>
 
-        <form v-else-if="preview" class="ls-auth-card w-full space-y-5 p-6 text-start sm:p-8" :data-hydrated="hydrated" @submit.prevent="finish">
+        <form v-else-if="preview" class="ls-auth-card w-full space-y-5 p-6 text-start sm:p-8" :data-hydrated="hydrated" @submit.prevent="step === 'ready' ? sendOtp() : step === 'otp' ? verifyOtp() : finish()">
           <div class="text-center">
             <p class="ls-auth-eyebrow">{{ t('access.inviteFlow.eyebrow') }}</p>
-            <h1 class="mt-2 text-xl font-extrabold tracking-[-.03em]" dir="ltr">{{ t('access.inviteFlow.title', { organization: preview.organization_name }) }}</h1>
-            <p class="mt-2 text-sm text-fg-muted">{{ t('access.inviteFlow.subtitle', { name: preview.inviter_name, jobTitle: preview.inviter_job_title || t('org.roles.admin'), role: t(`org.roles.${preview.role}`) }) }}</p>
+            <h1 v-if="step === 'ready'" class="mt-2 text-xl font-extrabold tracking-[-.03em]" dir="ltr">{{ t('access.inviteFlow.title', { organization: preview.organization_name }) }}</h1>
+            <h1 v-else-if="step === 'otp'" class="mt-2 text-xl font-extrabold tracking-[-.03em]">{{ t('access.inviteFlow.otpTitle') }}</h1>
+            <h1 v-else class="mt-2 text-xl font-extrabold tracking-[-.03em]">{{ t('access.inviteFlow.passwordTitle') }}</h1>
+            <p v-if="step === 'ready'" class="mt-2 text-sm text-fg-muted">{{ t('access.inviteFlow.subtitle', { name: preview.inviter_name, jobTitle: preview.inviter_job_title || t('org.roles.admin'), role: t(`org.roles.${preview.role}`) }) }}</p>
+            <p v-else-if="step === 'otp'" class="mt-2 text-sm text-fg-muted">{{ t('access.inviteFlow.otpBody', { email: preview.email }) }}</p>
+            <p v-else class="mt-2 text-sm text-fg-muted">{{ t('access.inviteFlow.passwordBody') }}</p>
           </div>
           
           <FloatingField :label="t('access.inviteFlow.emailLabel')">
             <input :value="preview.email" type="email" class="ls-input" readonly dir="ltr" aria-readonly="true">
           </FloatingField>
           
+          <template v-if="step === 'ready'">
+            <button class="ls-btn ls-btn-primary w-full" :disabled="pending">{{ pending ? t('access.inviteFlow.sendingOtp') : t('access.inviteFlow.sendOtp') }}</button>
+          </template>
+          <template v-else-if="step === 'otp'">
+            <OtpInput v-model="otp" :label="t('onboarding.otpLabel')" :disabled="pending" />
+            <button class="ls-btn ls-btn-primary w-full" :disabled="pending || otp.length !== 6">{{ pending ? t('access.inviteFlow.verifyingOtp') : t('access.inviteFlow.verifyOtp') }}</button>
+            <button type="button" class="w-full text-center text-sm font-bold text-link disabled:text-fg-muted" :disabled="pending || resendIn > 0" @click="sendOtp">{{ resendIn ? t('onboarding.otpResendIn', { time: `00:${String(resendIn).padStart(2, '0')}` }) : t('access.inviteFlow.resend') }}</button>
+          </template>
+          <template v-else>
+          <FloatingField :label="t('onboarding.fullName')">
+            <input v-model="fullName" type="text" autocomplete="name" class="ls-input" required>
+          </FloatingField>
+          <FloatingField :label="t('onboarding.phone')">
+            <input v-model="phone" type="tel" autocomplete="tel" class="ls-input" required dir="ltr">
+          </FloatingField>
+          <FloatingField :label="t('onboarding.jobTitle')">
+            <input v-model="jobTitle" type="text" autocomplete="organization-title" class="ls-input" required>
+          </FloatingField>
           <FloatingField :label="t('access.inviteFlow.password')">
             <input v-model="password" type="password" minlength="8" autocomplete="new-password" class="ls-input" required dir="ltr">
           </FloatingField>
@@ -142,6 +207,7 @@ onMounted(() => {
           <button type="submit" :disabled="pending || password.length < 8 || confirmPassword.length < 8" class="ls-btn ls-btn-primary w-full">
             {{ pending ? t('access.inviteFlow.finishing') : t('access.inviteFlow.finish') }}
           </button>
+          </template>
           
           <div class="mt-7 flex items-start gap-3 rounded-card border border-[var(--bs-border)] bg-surface-muted p-4 text-xs leading-5 text-fg-muted">
             <AppIcon name="checkBadge" :size="19" class="mt-0.5 shrink-0 text-success" />
