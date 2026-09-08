@@ -50,6 +50,16 @@ test('an invited user verifies email, creates a password, joins, and can sign in
   await expect(page.getByLabel('Your Ledger Suit login email')).toHaveValue(email)
   await expect(page.getByLabel('Your Ledger Suit login email')).toHaveAttribute('readonly', '')
 
+  await page.getByRole('button', { name: 'Send OTP to create password' }).click()
+  const otp = await readOtp(email)
+  for (let index = 0; index < 6; index++) {
+    await page.getByLabel(`Verification code digit ${index + 1}`).fill(otp[index]!)
+  }
+  await page.getByRole('button', { name: 'Verify code' }).click()
+  await expect(page.getByRole('heading', { name: 'Create your password' })).toBeVisible()
+  await page.getByLabel('Full name').fill('Invited User')
+  await page.getByLabel('Phone number').fill(`+2010${String(Date.now()).slice(-8)}`)
+  await page.getByLabel('Job title').fill('Accountant')
   await page.getByLabel('New password').fill(password)
   await page.getByLabel('Confirm password').fill(password)
   await page.getByRole('button', { name: 'Create password & join workspace' }).click()
