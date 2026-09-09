@@ -127,7 +127,6 @@ test('signup continues to its saved organization after the OTP tab is closed', a
   const uniqueSuffix = String(Date.now())
   const email = `otp-recovery-${uniqueSuffix}@ledgersuit.test`
   const password = 'otp-recovery-password'
-  const appOrigin = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? '3210'}`
 
   await page.goto('/signup')
   await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
@@ -139,16 +138,10 @@ test('signup continues to its saved organization after the OTP tab is closed', a
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.locator('#org-display-name').fill('Recovered Books')
   await page.locator('#org-legal-name').fill(`Recovered Books ${uniqueSuffix} LLC`)
-  await page.getByRole('button', { name: 'Continue' }).click()
-  await page.getByRole('button', { name: 'Create account and continue to Stripe' }).click()
+  await page.getByRole('button', { name: 'Create account and start free trial' }).click()
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
 
   const recoveryPage = await page.context().newPage()
-  await recoveryPage.route('**/functions/v1/stripe-checkout', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ url: `${appOrigin}/billing/ready?session_id=otp-recovery-test` }),
-  }))
   await page.close()
 
   await recoveryPage.goto('/login')
@@ -168,9 +161,10 @@ test('signup continues to its saved organization after the OTP tab is closed', a
       signupNavigations.push(frame.url())
     }
   })
-  await recoveryPage.getByRole('button', { name: 'Verify and continue to Stripe' }).click()
+  await recoveryPage.getByRole('button', { name: 'Verify and start free trial' }).click()
 
-  await expect(recoveryPage).toHaveURL(/\/billing\/ready\?session_id=otp-recovery-test/)
+  await expect(recoveryPage).toHaveURL('/dashboard')
+  await expect(recoveryPage.getByText(/Trial: (13d 23h|14d 0h)/)).toBeVisible()
   expect(signupNavigations).toEqual([])
 })
 
