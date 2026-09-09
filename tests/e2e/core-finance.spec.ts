@@ -59,15 +59,20 @@ test('owner can review members, role permissions and invitations', async ({ page
   await expect(page.getByRole('tab', { name: /Members/ })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('table').getByText('Amina Owner', { exact: true })).toBeVisible()
 
+  await expect(page.getByRole('button', { name: 'Permission matrix' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New role' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Invite', exact: true })).toBeVisible()
+
   await page.getByRole('tab', { name: 'Roles & permissions' }).click()
   await expect(page.getByRole('heading', { name: 'Role access at a glance' })).toBeVisible()
   await page.getByRole('button', { name: 'Permission matrix' }).click()
   const matrix = page.getByRole('dialog')
   await expect(matrix.getByRole('heading', { name: 'Permission matrix' })).toBeVisible()
+  await expect(matrix.getByRole('checkbox')).toHaveCount(0)
   await matrix.getByRole('button', { name: 'Close' }).click()
 
   await page.getByRole('tab', { name: /Invitations/ }).click()
-  await expect(page.getByRole('button', { name: 'Invite team member' }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Invite', exact: true })).toHaveCount(1)
 })
 
 test('financial system map explains the path from setup to reports', async ({ page }) => {
