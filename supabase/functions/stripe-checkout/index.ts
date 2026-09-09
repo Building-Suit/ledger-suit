@@ -17,13 +17,6 @@ async function integrationIdentifier(seed: string): Promise<string> {
   return `ledger_suit_org_${suffix}`
 }
 
-async function integrationIdentifier(seed: string): Promise<string> {
-  const alphabet = 'abcdefghijklmnopqrstuvwxyz'
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed)))
-  const suffix = [...digest.slice(0, 8)].map(byte => alphabet[byte % alphabet.length]).join('')
-  return `ledger_suit_org_${suffix}`
-}
-
 Deno.serve(async (request) => {
   const preflight = handleOptions(request)
   if (preflight) return preflight
