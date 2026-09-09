@@ -336,17 +336,34 @@ update public.organization_settings
 set books_locked_until = date '2026-03-31'
 where organization_id = (select id from ids where key = 'org');
 
--- The owner holds books.override_lock, so revoke it for this member: the point
--- is to test the lock, not the role.
-select public.manage_organization_member(
-  (select id from public.organization_members
-   where organization_id = (select id from ids where key = 'org')
-     and user_id = auth.uid()),
-  'owner',
-  'active',
-  '{}',
-  array['books.override_lock']
+-- Owner is deliberately immutable and always holds every permission. Exercise
+-- the lock with a data-entry member, which can post ordinary transactions but
+-- does not hold books.override_lock.
+reset role;
+insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
+                        email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+                        created_at, updated_at)
+values (
+  '22222222-2222-4222-8222-222222222222',
+  '00000000-0000-0000-0000-000000000000',
+  'authenticated', 'authenticated', 'data-entry-t1@ledgersuit.test',
+  extensions.crypt('password', extensions.gen_salt('bf')),
+  now(), '{"provider":"email"}'::jsonb, '{"full_name":"Data Entry"}'::jsonb, now(), now()
 );
+
+insert into public.organization_members (organization_id, user_id, role)
+values (
+  (select id from ids where key = 'org'),
+  '22222222-2222-4222-8222-222222222222',
+  'data_entry'
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"22222222-2222-4222-8222-222222222222","role":"authenticated"}',
+  true
+);
+set local role authenticated;
 
 select throws_ok(
   format($fmt$select public.record_expense(
@@ -363,15 +380,13 @@ select throws_ok(
   'posting into a locked period is refused without books.override_lock'
 );
 
-select public.manage_organization_member(
-  (select id from public.organization_members
-   where organization_id = (select id from ids where key = 'org')
-     and user_id = auth.uid()),
-  'owner',
-  'active',
-  '{}',
-  '{}'
+reset role;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated"}',
+  true
 );
+set local role authenticated;
 
 update public.organization_settings
 set books_locked_until = null
