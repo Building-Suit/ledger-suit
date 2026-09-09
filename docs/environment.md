@@ -60,7 +60,7 @@ and must never be prefixed with `NUXT_PUBLIC_` or exposed to browser code.
 
 | Variable | Purpose |
 |---|---|
-| `STRIPE_SECRET_KEY` | Stripe server API authentication |
+| `STRIPE_SECRET_KEY` | Restricted Stripe server API key (`rk_`) with only the required Checkout, Customer Portal, and subscription read permissions |
 | `STRIPE_WEBHOOK_SECRET` | Verifies the raw Stripe webhook body |
 | `STRIPE_MONTHLY_PRICE_ID` | Monthly price for the one Ledger Suit product |
 | `STRIPE_YEARLY_PRICE_ID` | Yearly price for the same product |
@@ -76,6 +76,11 @@ The sandbox Stripe catalog uses one Ledger Suit product with EGP 600 monthly
 and EGP 4,800 yearly recurring prices. Their Stripe Price objects remain the
 authoritative checkout values; the UI displays the configured amounts and
 Checkout confirms them before the customer starts the trial.
+
+The catalog is shared, but billing ownership is not: every organization creates
+its own Stripe Customer and Subscription. The organization UUID is copied into
+both Checkout Session and Subscription metadata so the signed webhook can
+activate exactly one workspace.
 
 ## Supabase Vault scheduler secrets
 

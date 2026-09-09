@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { isDark } = useTheme();
+
 const PRIMARY_NAV = [
   { to: '/dashboard', key: 'dashboard', icon: 'dashboard' },
   { to: '/transactions', key: 'transactions', icon: 'transactions' },
@@ -103,7 +105,9 @@ function isActive(to: string) {
           </button>
         </div>
 
-        <OrganizationSwitcher />
+        <!-- <OrganizationSwitcher /> -->
+
+        <hr :class="isDark ? 'border-[#2f3d4e]' : 'border-gray-200'" class="my-2" />
 
         <nav :aria-label="t('nav.primary')" class="min-h-0 flex-1 space-y-5 overflow-y-auto pe-1">
           <NuxtLink
@@ -161,6 +165,7 @@ function isActive(to: string) {
 
         <NotificationMenu />
         <AccountMenu />
+        <OrganizationSwitcher class="w-64" />
       </header>
 
       <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 pb-24 lg:px-8 lg:pb-6">

@@ -9,6 +9,13 @@ interface CheckoutContext {
   provider_customer_id: string | null
 }
 
+async function integrationIdentifier(seed: string): Promise<string> {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz'
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed)))
+  const suffix = [...digest.slice(0, 8)].map(byte => alphabet[byte % alphabet.length]).join('')
+  return `ledger_suit_org_${suffix}`
+}
+
 Deno.serve(async (request) => {
   const preflight = handleOptions(request)
   if (preflight) return preflight
@@ -26,8 +33,14 @@ Deno.serve(async (request) => {
 
     const priceId = requiredEnv(interval === 'monthly' ? 'STRIPE_MONTHLY_PRICE_ID' : 'STRIPE_YEARLY_PRICE_ID')
     const appUrl = requiredEnv('APP_BASE_URL').replace(/\/$/, '')
+    // Repeated clicks inside the same half-hour return the same Stripe session,
+    // preventing accidental duplicate subscriptions without storing checkout
+    // session secrets in the browser. Every request parameter, including the
+    // tracking label, must stay stable while this idempotency key is reused.
+    const bucket = Math.floor(Date.now() / (30 * 60 * 1000))
     const body = new URLSearchParams({
       mode: 'subscription',
+      integration_identifier: await integrationIdentifier(`${organizationId}/${interval}/${bucket}`),
       'line_items[0][price]': priceId,
       'line_items[0][quantity]': '1',
       payment_method_collection: 'always',
@@ -46,10 +59,6 @@ Deno.serve(async (request) => {
       body.delete('customer_email')
       body.set('customer', context.provider_customer_id)
     }
-    // Repeated clicks inside the same half-hour return the same Stripe session,
-    // preventing accidental duplicate subscriptions without storing checkout
-    // session secrets in the browser.
-    const bucket = Math.floor(Date.now() / (30 * 60 * 1000))
     const session = await stripeRequest<{ id: string, url: string }>('/checkout/sessions', {
       method: 'POST',
       body,

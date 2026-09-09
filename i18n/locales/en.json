@@ -59,6 +59,7 @@
       "title": "Manual transaction",
       "body": "Choose what happened; Ledger Suit derives the debit and credit accounts for you.",
       "link": "View transactions",
+      "flowsTitle": "Choose the kind of manual entry",
       "flows": {
         "income": "Income → asset + revenue",
         "expense": "Expense → expense + payment account",
@@ -86,6 +87,7 @@
     "engine": {
       "title": "Protected posting engine",
       "body": "One controlled database transaction either posts the complete journal or posts nothing.",
+      "result": "Checks passed — the complete journal can now be posted",
       "checks": {
         "access": "Membership, capability, and subscription allow the action",
         "period": "The accounting date is not in a locked period",
@@ -180,6 +182,13 @@
     "notMemberHint": "Ask an owner to invite you, or create one to start tracking your finances.",
     "create": "Create organization",
     "createHint": "Set up a separate, secure financial workspace.",
+    "createAnother": "Create another organization",
+    "additionalEyebrow": "New independent workspace",
+    "additionalBillingHint": "Each organization has separate books, members, and billing.",
+    "separateSubscriptionTitle": "A separate subscription is required",
+    "separateSubscriptionBody": "This organization will have its own 14-day trial and recurring Stripe subscription. Your existing organization and subscription will not change.",
+    "createAndPay": "Create and continue to Stripe",
+    "retryPayment": "Retry secure checkout",
     "name": "Organization name",
     "acceptInvite": "Accept invitation",
     "acceptInviteHint": "Paste the private invitation token shared by your organization owner.",
