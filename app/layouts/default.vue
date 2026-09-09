@@ -103,7 +103,7 @@ function isActive(to: string) {
           </button>
         </div>
 
-        <OrganizationSwitcher />
+        <hr class="my-2 border-[var(--bs-border)]">
 
         <nav :aria-label="t('nav.primary')" class="min-h-0 flex-1 space-y-5 overflow-y-auto pe-1">
           <NuxtLink
@@ -155,12 +155,11 @@ function isActive(to: string) {
           <AppIcon name="menu" />
         </button>
 
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-semibold">{{ current?.name }}</p>
-        </div>
+        <div class="min-w-0 flex-1" />
 
         <NotificationMenu />
         <AccountMenu />
+        <OrganizationSwitcher class="w-64" />
       </header>
 
       <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 pb-24 lg:px-8 lg:pb-6">

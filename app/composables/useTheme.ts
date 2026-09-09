@@ -44,5 +44,6 @@ export function useTheme() {
     apply(preference.value)
   }
 
+
   return { preference, set, restore }
 }

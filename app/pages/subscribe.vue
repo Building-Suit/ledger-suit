@@ -54,7 +54,7 @@ async function signOut() {
 
 <template>
   <main class="min-h-dvh bg-background px-4 py-6">
-    <div class="mx-auto max-w-xl"><header class="flex items-center justify-between gap-4"><NuxtLink to="/" class="inline-flex" aria-label="Ledger Suit home"><AppLogo class="h-14 w-auto max-w-52" /></NuxtLink><div class="flex items-center gap-2"><SettingsMenu /><button type="button" class="ls-btn ls-btn-sm" @click="signOut">{{ t('common.signOut') }}</button></div></header>
+    <div class="mx-auto max-w-xl"><header class="flex flex-wrap items-center justify-between gap-4"><NuxtLink to="/" class="inline-flex" aria-label="Ledger Suit home"><AppLogo class="h-14 w-auto max-w-52" /></NuxtLink><div class="flex items-center gap-2"><SettingsMenu /><button type="button" class="ls-btn ls-btn-sm" @click="signOut">{{ t('common.signOut') }}</button></div><div v-if="current" class="w-full"><OrganizationSwitcher /></div></header>
       <div v-if="loading" class="py-16 text-center text-sm text-fg-muted">{{ t('app.loading') }}</div>
       <SubscriptionGate v-else-if="current && checkoutRequired" />
     </div>

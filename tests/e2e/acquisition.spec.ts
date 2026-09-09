@@ -89,7 +89,8 @@ test('landing page explains the product and leads to paid onboarding', async ({ 
 })
 
 test('signup verifies email by OTP before provisioning and checkout', async ({ page }) => {
-  const email = `otp-${Date.now()}@ledgersuit.test`
+  const uniqueSuffix = String(Date.now())
+  const email = `otp-${uniqueSuffix}@ledgersuit.test`
   const appOrigin = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? '3210'}`
   await page.route('**/functions/v1/stripe-checkout', route => route.fulfill({
     status: 200,
@@ -100,7 +101,7 @@ test('signup verifies email by OTP before provisioning and checkout', async ({ p
   await page.goto('/signup')
   await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
   await page.getByLabel('Full name').fill('OTP Test Owner')
-  await page.getByLabel('Phone number').fill('+201000000000')
+  await page.getByLabel('Phone number').fill(`+2010${uniqueSuffix.slice(-8)}`)
   await page.getByLabel('Job title').fill('Founder')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill('otp-test-password')
@@ -108,7 +109,7 @@ test('signup verifies email by OTP before provisioning and checkout', async ({ p
 
   await expect(page.getByRole('heading', { name: 'Business setup' })).toBeVisible()
   await page.locator('#org-display-name').fill('OTP Test Books')
-  await page.locator('#org-legal-name').fill('OTP Test Books LLC')
+  await page.locator('#org-legal-name').fill(`OTP Test Books ${uniqueSuffix} LLC`)
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByRole('button', { name: 'Create account and continue to Stripe' }).click()
 
@@ -126,11 +127,75 @@ test('signup verifies email by OTP before provisioning and checkout', async ({ p
   await expect(page).toHaveURL(/\/billing\/ready\?session_id=otp-test/)
 })
 
+test('signup continues to its saved organization after the OTP tab is closed', async ({ page }) => {
+  const uniqueSuffix = String(Date.now())
+  const email = `otp-recovery-${uniqueSuffix}@ledgersuit.test`
+  const password = 'otp-recovery-password'
+  const appOrigin = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? '3210'}`
+
+  await page.goto('/signup')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await page.getByLabel('Full name').fill('Recovery Test Owner')
+  await page.getByLabel('Phone number').fill(`+2011${uniqueSuffix.slice(-8)}`)
+  await page.getByLabel('Job title').fill('Founder')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(password)
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.locator('#org-display-name').fill('Recovered Books')
+  await page.locator('#org-legal-name').fill(`Recovered Books ${uniqueSuffix} LLC`)
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Create account and continue to Stripe' }).click()
+  await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
+
+  const recoveryPage = await page.context().newPage()
+  await recoveryPage.route('**/functions/v1/stripe-checkout', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ url: `${appOrigin}/billing/ready?session_id=otp-recovery-test` }),
+  }))
+  await page.close()
+
+  await recoveryPage.goto('/login')
+  await expect(recoveryPage.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await recoveryPage.getByLabel('Email').fill(email)
+  await recoveryPage.getByLabel('Password').fill(password)
+  await recoveryPage.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(recoveryPage).toHaveURL(/\/verify-email\?email=/)
+
+  const otp = await readOtp(email)
+  for (let index = 0; index < 6; index++) {
+    await recoveryPage.getByLabel(`Verification code digit ${index + 1}`).fill(otp[index]!)
+  }
+  const signupNavigations: string[] = []
+  recoveryPage.on('framenavigated', (frame) => {
+    if (frame === recoveryPage.mainFrame() && new URL(frame.url()).pathname === '/signup') {
+      signupNavigations.push(frame.url())
+    }
+  })
+  await recoveryPage.getByRole('button', { name: 'Verify and continue to Stripe' }).click()
+
+  await expect(recoveryPage).toHaveURL(/\/billing\/ready\?session_id=otp-recovery-test/)
+  expect(signupNavigations).toEqual([])
+})
+
 test('the dedicated OTP route presents verification without the product shell', async ({ page }) => {
   await page.goto('/verify-email?email=unconfirmed%40ledgersuit.test')
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
   await expect(page.getByText('unconfirmed@ledgersuit.test')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
+})
+
+test('a signed-in user can open login to switch accounts', async ({ page }) => {
+  await page.goto('/login')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await page.getByLabel('Email').fill('owner@alpha.test')
+  await page.getByLabel('Password').fill('ledgersuit')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page).toHaveURL('/dashboard')
+
+  await page.goto('/login')
+  await expect(page).toHaveURL('/login')
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
 })
 
 test('an unpaid workspace is sent to payment before the product shell', async ({ page }) => {

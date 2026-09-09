@@ -1,6 +1,7 @@
 import { requiredEnv } from './http.ts'
 
 const STRIPE_URL = 'https://api.stripe.com/v1'
+const STRIPE_API_VERSION = '2026-07-29.dahlia'
 
 export async function stripeRequest<T>(
   path: string,
@@ -10,6 +11,7 @@ export async function stripeRequest<T>(
     method: options.method ?? 'GET',
     headers: {
       Authorization: `Bearer ${requiredEnv('STRIPE_SECRET_KEY')}`,
+      'Stripe-Version': STRIPE_API_VERSION,
       ...(options.body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
       ...(options.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
     },

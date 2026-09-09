@@ -6,7 +6,6 @@ const { t } = useI18n()
 useHead({ title: () => `${t('auth.signIn')} · ${t('app.name')}` })
 
 const supabase = useSupabaseClient()
-const user = useSupabaseUser()
 const { restore } = useTheme()
 
 const email = ref('')
@@ -25,10 +24,6 @@ function isUnconfirmedEmail(error: unknown): boolean {
 onMounted(() => {
   restore()
   hydrated.value = true
-})
-
-watchEffect(() => {
-  if (user.value) navigateTo('/dashboard')
 })
 
 async function signIn() {

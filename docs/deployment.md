@@ -100,6 +100,11 @@ External provider configuration is necessarily separate from database schema:
 5. Store the two scheduler values in Supabase Vault using the exact names in
    the environment guide. The versioned Cron job detects them automatically.
 
+The same Prices are reused for every organization. Do not increase the quantity
+on an account-level subscription: each organization must complete a distinct
+Checkout Session and receives a distinct Stripe Subscription, so cancellation
+or payment failure affects only that organization's access.
+
 The current sandbox provider configuration is:
 
 - Stripe product: `prod_VBCRr1dyVPbpBx`
