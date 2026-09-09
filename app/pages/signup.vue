@@ -277,21 +277,36 @@ async function finishOnboarding() {
 }
 
 async function verifyOtpAndContinue() {
-  if (otp.value.length !== 6 || otpExpired.value) return
+  if (pending.value) return
   pending.value = true
   errorMessage.value = ''
+  let emailVerified = false
   try {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: form.email.trim().toLowerCase(),
-      token: otp.value,
-      type: 'email',
-    })
-    if (error || !data.session) throw new Error(t('onboarding.otpInvalid'))
-    await provisionAndStartTrial(data.user?.id)
+    const normalizedEmail = form.email.trim().toLowerCase()
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+
+    let userId = sessionData.session?.user.email?.toLowerCase() === normalizedEmail
+      ? sessionData.session.user.id
+      : undefined
+
+    if (!userId) {
+      if (otp.value.length !== 6 || otpExpired.value) return
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: normalizedEmail,
+        token: otp.value,
+        type: 'email',
+      })
+      if (error || !data.session) throw new Error(t('onboarding.otpInvalid'))
+      userId = data.user?.id
+    }
+
+    emailVerified = true
+    await provisionAndStartTrial(userId)
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : t('errors.generic')
-    otp.value = ''
+    if (!emailVerified) otp.value = ''
   }
   finally { pending.value = false }
 }
