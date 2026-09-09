@@ -32,5 +32,9 @@ jobs:
       - run: pnpm db:reset
       - run: pnpm db:test
       - run: pnpm db:lint
-      - run: pnpm exec playwright install --with-deps chromium
+      # ubuntu-latest already includes Chrome's Linux runtime libraries. Using
+      # --with-deps runs apt-get against every configured third-party source;
+      # an unrelated Google Chrome mirror race can then fail this job before
+      # Playwright downloads or executes Chromium.
+      - run: pnpm exec playwright install chromium
       - run: pnpm test:e2e
