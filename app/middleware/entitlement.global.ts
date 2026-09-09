@@ -24,10 +24,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const tenant = useTenant()
   await tenant.loadOrganizations(user.id)
 
-  // A confirmed user who has not completed organization setup is sent to the
-  // setup flow by the normal product route. There is no subscription yet to
-  // pay for, so do not manufacture a billing decision here.
-  if (!tenant.currentId.value) return
+  // The product layout waits for billing state and therefore cannot render
+  // without a tenant. Resume the paid owner-onboarding journey instead of
+  // leaving the authenticated user on an empty product shell.
+  if (!tenant.currentId.value) {
+    return navigateTo('/signup', { replace: true })
+  }
 
   const billing = useBilling()
   const isCheckoutReturn = to.query.checkout === 'success'
