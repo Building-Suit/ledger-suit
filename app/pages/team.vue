@@ -523,17 +523,26 @@ async function resendInvitation(invitation: InvitationRow) {
               <FloatingField :label="t('access.roleNameEn')"><input v-model="roleForm.name_en" type="text" class="ls-input" dir="ltr" required maxlength="80"></FloatingField>
               <FloatingField :label="t('access.roleNameAr')"><input v-model="roleForm.name_ar" type="text" class="ls-input" dir="rtl" required maxlength="80"></FloatingField>
             </div>
-            <h3 class="mt-7 font-bold">{{ t('access.permission') }}</h3>
-            <div class="mt-4 space-y-5">
-              <section v-for="group in permissionMenuGroups" :key="group.key">
-                <h4 class="rounded-control bg-fg px-4 py-2 text-sm font-bold text-background">{{ t(`nav.groups.${group.key}`) }}</h4>
-                <div class="mt-3 grid gap-4 sm:grid-cols-2">
-                  <fieldset v-for="domain in group.domains" :key="domain.key" class="rounded-card border border-[var(--bs-border)] p-4">
-                    <legend class="px-1 text-sm font-bold">{{ t(`access.permissionAreas.${domain.key}`) }}</legend>
-                    <label v-for="capability in domain.items" :key="capability.key" class="mt-3 flex cursor-pointer items-start gap-3 text-sm"><input type="checkbox" class="mt-1 size-4 accent-[var(--bs-accent)]" :checked="roleForm.caps.has(capability.key)" @change="toggleRoleCap(capability.key, ($event.target as HTMLInputElement).checked)"><span class="font-semibold">{{ capabilityTitle(capability) }}</span></label>
-                  </fieldset>
-                </div>
-              </section>
+            <div class="mt-7 overflow-x-auto">
+              <table class="ls-table">
+                <thead><tr><th>{{ t('access.permission') }}</th></tr></thead>
+                <template v-for="group in permissionMenuGroups" :key="group.key">
+                  <tbody>
+                    <tr class="bg-fg text-background"><td class="font-bold">{{ t(`nav.groups.${group.key}`) }}</td></tr>
+                  </tbody>
+                  <tbody v-for="domain in group.domains" :key="domain.key">
+                    <tr class="bg-surface-muted"><td class="font-bold">{{ t(`access.permissionAreas.${domain.key}`) }}</td></tr>
+                    <tr v-for="capability in domain.items" :key="capability.key">
+                      <td>
+                        <label class="flex cursor-pointer items-center gap-3">
+                          <input type="checkbox" class="size-4 shrink-0 accent-[var(--bs-accent)]" :checked="roleForm.caps.has(capability.key)" @change="toggleRoleCap(capability.key, ($event.target as HTMLInputElement).checked)">
+                          <span class="font-semibold">{{ capabilityTitle(capability) }}</span>
+                        </label>
+                      </td>
+                    </tr>
+                  </tbody>
+                </template>
+              </table>
             </div>
             <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
             <div class="mt-6 flex justify-end gap-2"><button type="button" class="ls-btn" @click="roleModalOpen = false">{{ t('common.cancel') }}</button><button class="ls-btn ls-btn-primary" :disabled="roleSaving">{{ roleSaving ? t('common.saving') : t('access.createRole') }}</button></div>

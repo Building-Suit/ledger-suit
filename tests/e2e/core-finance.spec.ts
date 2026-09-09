@@ -71,6 +71,16 @@ test('owner can review members, role permissions and invitations', async ({ page
   await expect(matrix.getByRole('checkbox')).toHaveCount(0)
   await matrix.getByRole('button', { name: 'Close' }).click()
 
+  await page.getByRole('button', { name: 'New role' }).click()
+  const newRole = page.getByRole('dialog')
+  await expect(newRole.getByRole('heading', { name: 'New role' })).toBeVisible()
+  await expect(newRole.getByRole('table')).toBeVisible()
+  await expect(newRole.locator('fieldset')).toHaveCount(0)
+  const permissionRows = await newRole.getByRole('row').allTextContents()
+  expect(permissionRows.indexOf('Transactions')).toBeLessThan(permissionRows.indexOf('Ledger'))
+  expect(permissionRows.indexOf('Ledger')).toBeLessThan(permissionRows.indexOf('Operations'))
+  await newRole.getByRole('button', { name: 'Close' }).click()
+
   await page.getByRole('tab', { name: /Invitations/ }).click()
   await expect(page.getByRole('button', { name: 'Invite', exact: true })).toHaveCount(1)
 })
