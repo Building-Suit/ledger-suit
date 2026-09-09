@@ -28,11 +28,16 @@ function formatCountdown(seconds: number) {
 }
 
 async function verify() {
-  if (!email.value || (!verified.value && (otp.value.length !== 6 || expired.value))) return
+  if (!email.value || pending.value) return
   pending.value = true
   errorMessage.value = ''
   try {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+    if (sessionData.session?.user.email?.toLowerCase() === email.value) verified.value = true
+
     if (!verified.value) {
+      if (otp.value.length !== 6 || expired.value) return
       const { data, error } = await supabase.auth.verifyOtp({
         email: email.value,
         token: otp.value,
