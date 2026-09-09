@@ -50,7 +50,7 @@ begin
   );
 
   update public.subscriptions
-  set status = 'active', provider = 'stripe',
+  set status = 'active', provider = 'paymob',
       provider_subscription_id = 'sub_local_alpha', provider_status = 'active',
       billing_interval = 'monthly', checkout_completed_at = now(),
       current_period_start = now(), current_period_end = now() + interval '30 days'
@@ -76,7 +76,7 @@ begin
   v_org := public.create_organization('Beta Supplies', 'EGP', 'EG', 'Africa/Cairo');
 
   update public.subscriptions
-  set status = 'active', provider = 'stripe',
+  set status = 'active', provider = 'paymob',
       provider_subscription_id = 'sub_local_beta', provider_status = 'active',
       billing_interval = 'monthly', checkout_completed_at = now(),
       current_period_start = now(), current_period_end = now() + interval '30 days'

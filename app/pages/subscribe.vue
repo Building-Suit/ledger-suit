@@ -25,7 +25,7 @@ onMounted(() => {
 onBeforeUnmount(() => (checkoutConfirmationActive.value = false))
 
 async function confirmCheckout() {
-  // Stripe redirects before its webhook is guaranteed to have updated our
+  // Paymob redirects before its webhook is guaranteed to have updated our
   // subscription row. Poll briefly, then leave an explicit retry button rather
   // than issuing unbounded background requests.
   for (let attempt = 0; attempt < 10 && paymentRequired.value && checkoutConfirmationActive.value; attempt++) {

@@ -17,7 +17,7 @@ select is(
 );
 
 select set_config('request.jwt.claims',
-  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 set local role authenticated;
 
 create temp table billing_ids (key text primary key, value text);
@@ -84,7 +84,7 @@ where organization_id = (select value::uuid from billing_ids where key = 'org');
 
 reset role;
 select set_config('request.jwt.claims',
-  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 set local role authenticated;
 
 select is(
@@ -125,32 +125,32 @@ select set_config('request.jwt.claims',
 set local role service_role;
 
 select is(
-  public.apply_stripe_subscription_event(
-    'evt_phase4_test', 'checkout.session.completed', '{"test":true}',
+  public.apply_paymob_subscription_event(
+    'txn_phase4_test', 'transaction.succeeded', '{"test":true}',
     (select value::uuid from billing_ids where key = 'org'),
-    'cus_phase4_test', 'sub_phase4_test', 'active', 'monthly',
-    null, null, now(), now() + interval '1 month', false,
+    'subscription_phase4_test', 'active', 'monthly',
+    now(), now() + interval '1 month',
     null, null
   ),
   true,
-  'a verified Stripe event activates the paid plan'
+  'a verified Paymob event activates the paid plan'
 );
 
 select is(
-  public.apply_stripe_subscription_event(
-    'evt_phase4_test', 'checkout.session.completed', '{"test":true}',
+  public.apply_paymob_subscription_event(
+    'txn_phase4_test', 'transaction.succeeded', '{"test":true}',
     (select value::uuid from billing_ids where key = 'org'),
-    'cus_phase4_test', 'sub_phase4_test', 'active', 'monthly',
-    null, null, now(), now() + interval '1 month', false,
+    'subscription_phase4_test', 'active', 'monthly',
+    now(), now() + interval '1 month',
     null, null
   ),
   false,
-  'replayed Stripe events are idempotent'
+  'replayed Paymob events are idempotent'
 );
 
 reset role;
 select set_config('request.jwt.claims',
-  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 set local role authenticated;
 
 select is(
@@ -174,7 +174,7 @@ select lives_ok(
     (select value from billing_ids where key = 'org'),
     'Allowed account', 'asset', 'bank'
   ),
-  'writes succeed atomically after paid Stripe activation'
+  'writes succeed atomically after paid Paymob activation'
 );
 
 select set_config('request.jwt.claims',

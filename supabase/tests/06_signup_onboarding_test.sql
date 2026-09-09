@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(13);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
                         email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
@@ -52,6 +52,12 @@ select throws_ok(
   $$select public.create_organization('Duplicate Books', 'EGP'::char(3), 'EG'::char(2), 'Africa/Cairo', '  ready books llc  ', 1::smallint)$$,
   '23505', 'LEGAL_NAME_ALREADY_EXISTS: legal business name must be unique',
   'legal business names are unique regardless of case and surrounding whitespace'
+);
+
+select throws_ok(
+  $$select public.create_organization('Second Books', 'EGP'::char(3), 'EG'::char(2), 'Africa/Cairo', 'Second Books LLC', 1::smallint)$$,
+  '23514', 'ORGANIZATION_OWNER_LIMIT_REACHED: current plan allows 1 owned organization(s)',
+  'the current plan permits a user to own only one active organization'
 );
 
 select throws_ok(

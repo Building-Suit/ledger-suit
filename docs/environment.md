@@ -18,7 +18,7 @@ Copy `.env.example` to `.env` and fill it in. `.env` is gitignored; only
 
 The guided signup requires email confirmation. Supabase sends a six-digit code,
 the in-app verification screen exchanges it for an authenticated session, and
-only then can the workspace RPC and Stripe Checkout run. The committed local
+only then can the workspace RPC run. The committed local
 configuration uses:
 
 - `enable_confirmations = true`
@@ -60,27 +60,32 @@ and must never be prefixed with `NUXT_PUBLIC_` or exposed to browser code.
 
 | Variable | Purpose |
 |---|---|
-| `STRIPE_SECRET_KEY` | Restricted Stripe server API key (`rk_`) with only the required Checkout, Customer Portal, and subscription read permissions |
-| `STRIPE_WEBHOOK_SECRET` | Verifies the raw Stripe webhook body |
-| `STRIPE_MONTHLY_PRICE_ID` | Monthly price for the one Ledger Suit product |
-| `STRIPE_YEARLY_PRICE_ID` | Yearly price for the same product |
+| `PAYMOB_BASE_URL` | Regional Paymob API origin; Egypt defaults to `https://accept.paymob.com` |
+| `PAYMOB_SECRET_KEY` | Server-side secret key used to create payment Intentions |
+| `PAYMOB_PUBLIC_KEY` | Public key included in the Unified Checkout URL |
+| `PAYMOB_HMAC_SECRET` | Verifies Paymob transaction callbacks with HMAC-SHA512 |
+| `PAYMOB_CARD_INTEGRATION_ID` | Online 3DS card integration used for the first subscription transaction |
+| `PAYMOB_MONTHLY_PLAN_ID` | Paymob subscription plan configured for 30-day deductions |
+| `PAYMOB_YEARLY_PLAN_ID` | Paymob subscription plan configured for 360-day deductions |
+| `PAYMOB_MONTHLY_AMOUNT_CENTS` | Monthly charge in the currency's smallest unit (`60000` for EGP 600) |
+| `PAYMOB_YEARLY_AMOUNT_CENTS` | Yearly charge in the currency's smallest unit (`480000` for EGP 4,800) |
 | `RESEND_API_KEY` | Sends invitation and operational notification emails |
 | `RESEND_FROM_EMAIL` | Verified sender: `notification@building-suit.com` |
-| `APP_BASE_URL` | Checkout/portal return URL and email-link origin |
+| `APP_BASE_URL` | Checkout return URL and email-link origin |
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are supplied
 to deployed Supabase Edge Functions by the platform. The service role key is
-used only by the verified Stripe webhook and scheduled email worker.
+used only by the verified Paymob webhook and scheduled email worker.
 
-The sandbox Stripe catalog uses one Ledger Suit product with EGP 600 monthly
-and EGP 4,800 yearly recurring prices. Their Stripe Price objects remain the
-authoritative checkout values; the UI displays the configured amounts and
-Checkout confirms them before the customer starts the trial.
+The Paymob account needs two subscription plans with `use_transaction_amount`
+enabled: EGP 600 every 30 days and EGP 4,800 every 360 days. The amount secrets
+must match those plans. The UI displays
+the configured product amounts and Unified Checkout confirms them before pay.
 
-The catalog is shared, but billing ownership is not: every organization creates
-its own Stripe Customer and Subscription. The organization UUID is copied into
-both Checkout Session and Subscription metadata so the signed webhook can
-activate exactly one workspace.
+The plans are shared, but each organization creates a distinct Paymob
+subscription. The organization UUID and billing interval are copied into the
+Intention extras and unique reference so the signed callback activates exactly
+one workspace.
 
 ## Supabase Vault scheduler secrets
 

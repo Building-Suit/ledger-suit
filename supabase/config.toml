@@ -381,13 +381,10 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-[functions.stripe-checkout]
+[functions.paymob-checkout]
 verify_jwt = true
 
-[functions.stripe-portal]
-verify_jwt = true
-
-[functions.stripe-webhook]
+[functions.paymob-webhook]
 verify_jwt = false
 
 [functions.scheduled-notifications]
