@@ -64,7 +64,16 @@ test('owner can review members, role permissions and invitations', async ({ page
   await expect(page.getByRole('button', { name: 'Invite', exact: true })).toBeVisible()
 
   await page.getByRole('tab', { name: 'Roles & permissions' }).click()
-  await expect(page.getByRole('heading', { name: 'Role access at a glance' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Roles', exact: true })).toBeVisible()
+  const ownerRole = page.locator('article').filter({ has: page.getByRole('heading', { name: 'Owner', exact: true }) })
+  const adminRole = page.locator('article').filter({ has: page.getByRole('heading', { name: 'Admin', exact: true }) })
+  await expect(ownerRole.getByRole('button', { name: 'Edit role' })).toHaveCount(0)
+  await adminRole.getByRole('button', { name: 'Edit role' }).click()
+  const editAdmin = page.getByRole('dialog')
+  await expect(editAdmin.getByRole('heading', { name: 'Edit Admin' })).toBeVisible()
+  await expect(editAdmin.getByRole('table')).toBeVisible()
+  await editAdmin.getByRole('button', { name: 'Close' }).click()
+
   await page.getByRole('button', { name: 'Permission matrix' }).click()
   const matrix = page.getByRole('dialog')
   await expect(matrix.getByRole('heading', { name: 'Permission matrix' })).toBeVisible()

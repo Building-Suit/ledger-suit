@@ -68,6 +68,7 @@ const members = ref<MemberRow[]>([])
 const invitations = ref<InvitationRow[]>([])
 const capabilities = ref<CapabilityRow[]>([])
 const roleCapabilities = ref<Array<{ role: Role | null, role_id: string | null, capability_key: string }>>([])
+const organizationSystemRoleCapabilities = ref<Array<{ role: Role, capability_key: string }>>([])
 const customRoles = ref<CustomRoleRow[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
@@ -110,6 +111,11 @@ function capabilityTitle(capability: CapabilityRow) {
 }
 
 function systemDefaultsFor(role: Role) {
+  if (role === 'owner') return new Set(capabilities.value.map(capability => capability.key))
+  const workspaceCapabilities = organizationSystemRoleCapabilities.value
+    .filter(item => item.role === role)
+    .map(item => item.capability_key)
+  if (workspaceCapabilities.length) return new Set(workspaceCapabilities)
   return new Set(roleCapabilities.value.filter(item => item.role === role).map(item => item.capability_key))
 }
 
@@ -141,7 +147,7 @@ async function loadAccess() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [memberResult, invitationResult, capabilityResult, roleResult, customRoleResult] = await Promise.all([
+    const [memberResult, invitationResult, capabilityResult, roleResult, systemRoleResult, customRoleResult] = await Promise.all([
       supabase
         .from('organization_members')
         .select('id, user_id, role, role_id, status, granted_capabilities, revoked_capabilities, joined_at, profile:profiles!organization_members_user_id_fkey(email, full_name, job_title)')
@@ -154,17 +160,20 @@ async function loadAccess() {
         .order('created_at', { ascending: false }),
       supabase.from('capabilities').select('key, domain, description, description_ar').order('domain').order('key'),
       supabase.from('role_capabilities').select('role, role_id, capability_key'),
+      supabase.from('organization_system_role_capabilities').select('role, capability_key').eq('organization_id', currentId.value),
       supabase.from('organization_roles').select('id, key, name_en, name_ar').eq('organization_id', currentId.value).order('created_at'),
     ])
     if (memberResult.error) throw memberResult.error
     if (invitationResult.error) throw invitationResult.error
     if (capabilityResult.error) throw capabilityResult.error
     if (roleResult.error) throw roleResult.error
+    if (systemRoleResult.error) throw systemRoleResult.error
     if (customRoleResult.error) throw customRoleResult.error
     members.value = (memberResult.data ?? []) as unknown as MemberRow[]
     invitations.value = (invitationResult.data ?? []) as unknown as InvitationRow[]
     capabilities.value = capabilityResult.data ?? []
     roleCapabilities.value = roleResult.data ?? []
+    organizationSystemRoleCapabilities.value = systemRoleResult.data ?? []
     customRoles.value = customRoleResult.data ?? []
   }
   catch (error) { errorMessage.value = describeError(error) }
@@ -258,17 +267,24 @@ function openMatrix() {
 // Custom role create/edit: bilingual names plus the permission list.
 // ---------------------------------------------------------------------------
 const roleModalOpen = ref(false)
-const roleForm = ref<{ id: string | null, name_en: string, name_ar: string, caps: Set<string> }>({ id: null, name_en: '', name_ar: '', caps: new Set() })
+const roleForm = ref<{ id: string | null, systemRole: Role | null, name_en: string, name_ar: string, caps: Set<string> }>({ id: null, systemRole: null, name_en: '', name_ar: '', caps: new Set() })
 const roleSaving = ref(false)
 
 function openCreateRole() {
-  roleForm.value = { id: null, name_en: '', name_ar: '', caps: new Set(['organization.read']) }
+  roleForm.value = { id: null, systemRole: null, name_en: '', name_ar: '', caps: new Set(['organization.read']) }
   errorMessage.value = ''
   roleModalOpen.value = true
 }
 
 function openEditRole(role: CustomRoleRow) {
-  roleForm.value = { id: role.id, name_en: role.name_en, name_ar: role.name_ar, caps: customCapabilitiesFor(role.id) }
+  roleForm.value = { id: role.id, systemRole: null, name_en: role.name_en, name_ar: role.name_ar, caps: customCapabilitiesFor(role.id) }
+  errorMessage.value = ''
+  roleModalOpen.value = true
+}
+
+function openEditSystemRole(role: Role) {
+  if (role === 'owner') return
+  roleForm.value = { id: null, systemRole: role, name_en: '', name_ar: '', caps: systemDefaultsFor(role) }
   errorMessage.value = ''
   roleModalOpen.value = true
 }
@@ -289,7 +305,15 @@ async function saveRole() {
   roleSaving.value = true
   errorMessage.value = ''
   try {
-    if (roleForm.value.id) {
+    if (roleForm.value.systemRole) {
+      const { error } = await supabase.rpc('update_organization_system_role', {
+        p_organization_id: currentId.value!,
+        p_role: roleForm.value.systemRole,
+        p_capabilities: [...roleForm.value.caps],
+      })
+      if (error) throw error
+    }
+    else if (roleForm.value.id) {
       const { error } = await supabase.rpc('update_organization_role', {
         p_role_id: roleForm.value.id,
         p_name_en: roleForm.value.name_en,
@@ -418,41 +442,34 @@ async function resendInvitation(invitation: InvitationRow) {
     </template>
 
     <template v-else-if="activeTab === 'roles'">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-bold">{{ t('access.roleSummary') }}</h2>
-          <p class="mt-1 text-sm text-fg-muted">{{ t('access.roleSummaryHint') }}</p>
-        </div>
+      <div>
+        <h2 class="text-lg font-bold">{{ t('access.roleSummary') }}</h2>
+        <p class="mt-1 text-sm text-fg-muted">{{ t('access.roleSummaryHint') }}</p>
       </div>
 
-      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <article v-for="role in roles" :key="role" class="ls-card p-5">
-          <span class="grid size-10 place-items-center rounded-control bg-brand-navy text-brand-gold"><AppIcon :name="role === 'viewer' ? 'user' : 'team'" /></span>
+          <div class="flex items-start justify-between gap-2">
+            <span class="grid size-10 place-items-center rounded-control bg-brand-navy text-brand-gold"><AppIcon :name="role === 'viewer' ? 'user' : 'team'" /></span>
+            <button v-if="can('members.update') && role !== 'owner'" type="button" class="ls-btn ls-btn-sm" @click="openEditSystemRole(role)">{{ t('access.editRole') }}</button>
+          </div>
           <h3 class="mt-4 font-bold">{{ t(`org.roles.${role}`) }}</h3>
           <p class="mt-2 min-h-16 text-sm leading-5 text-fg-muted">{{ t(`access.roles.${role}`) }}</p>
           <p class="mt-4 text-xs font-bold text-fg-muted">{{ rolePermissionCount(role) }} / {{ capabilities.length }} {{ t('access.permissionsMatrix').toLocaleLowerCase() }}</p>
         </article>
-      </div>
-
-      <section>
-        <h2 class="text-lg font-bold">{{ t('access.customRoles') }}</h2>
-        <p class="mt-1 text-sm text-fg-muted">{{ t('access.customRolesHint') }}</p>
-        <div v-if="customRoles.length" class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <article v-for="role in customRoles" :key="role.id" class="ls-card p-5">
-            <div class="flex items-start justify-between gap-2">
-              <span class="grid size-10 place-items-center rounded-control bg-brand-navy text-brand-gold"><AppIcon name="team" /></span>
-              <div v-if="can('members.update')" class="flex gap-1">
-                <button type="button" class="ls-btn ls-btn-sm" @click="openEditRole(role)">{{ t('access.editAccess') }}</button>
-                <button type="button" class="ls-btn ls-btn-sm text-danger" @click="deleteRole(role)">{{ t('access.remove') }}</button>
-              </div>
+        <article v-for="role in customRoles" :key="role.id" class="ls-card p-5">
+          <div class="flex items-start justify-between gap-2">
+            <span class="grid size-10 place-items-center rounded-control bg-brand-navy text-brand-gold"><AppIcon name="team" /></span>
+            <div v-if="can('members.update')" class="flex gap-1">
+              <button type="button" class="ls-btn ls-btn-sm" @click="openEditRole(role)">{{ t('access.editRole') }}</button>
+              <button type="button" class="ls-btn ls-btn-sm text-danger" @click="deleteRole(role)">{{ t('access.remove') }}</button>
             </div>
-            <h3 class="mt-4 font-bold">{{ roleLabel(null, role.id) }}</h3>
-            <p class="text-xs text-fg-muted" dir="ltr">{{ role.name_en }} · {{ role.name_ar }}</p>
-            <p class="mt-4 text-xs font-bold text-fg-muted">{{ customPermissionCount(role.id) }} / {{ capabilities.length }} {{ t('access.permissionsMatrix').toLocaleLowerCase() }}</p>
-          </article>
-        </div>
-        <EmptyState v-else class="mt-4" :title="t('access.noCustomRoles')" />
-      </section>
+          </div>
+          <h3 class="mt-4 font-bold">{{ roleLabel(null, role.id) }}</h3>
+          <p class="text-xs text-fg-muted" dir="ltr">{{ role.name_en }} · {{ role.name_ar }}</p>
+          <p class="mt-4 text-xs font-bold text-fg-muted">{{ customPermissionCount(role.id) }} / {{ capabilities.length }} {{ t('access.permissionsMatrix').toLocaleLowerCase() }}</p>
+        </article>
+      </div>
     </template>
 
     <template v-else>
@@ -518,8 +535,8 @@ async function resendInvitation(invitation: InvitationRow) {
       <Transition name="ls-modal">
         <div v-if="roleModalOpen" class="fixed inset-0 z-[70] grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" @click.self="roleModalOpen = false">
           <form class="ls-modal-panel ls-card max-h-[90dvh] w-full max-w-3xl overflow-y-auto p-6 shadow-overlay" @submit.prevent="saveRole">
-            <div class="flex items-start justify-between gap-4"><div><h2 class="text-lg font-bold">{{ roleForm.id ? t('access.editRole') : t('access.newRole') }}</h2></div><button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="roleModalOpen = false"><AppIcon name="close" /></button></div>
-            <div class="mt-6 grid gap-4 sm:grid-cols-2">
+            <div class="flex items-start justify-between gap-4"><div><h2 class="text-lg font-bold">{{ roleForm.systemRole ? t('access.editRoleFor', { role: t(`org.roles.${roleForm.systemRole}`) }) : roleForm.id ? t('access.editRole') : t('access.newRole') }}</h2></div><button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="roleModalOpen = false"><AppIcon name="close" /></button></div>
+            <div v-if="!roleForm.systemRole" class="mt-6 grid gap-4 sm:grid-cols-2">
               <FloatingField :label="t('access.roleNameEn')"><input v-model="roleForm.name_en" type="text" class="ls-input" dir="ltr" required maxlength="80"></FloatingField>
               <FloatingField :label="t('access.roleNameAr')"><input v-model="roleForm.name_ar" type="text" class="ls-input" dir="rtl" required maxlength="80"></FloatingField>
             </div>
