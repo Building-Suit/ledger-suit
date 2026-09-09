@@ -46,19 +46,6 @@ export function useBilling() {
     return data.url as string
   }
 
-  async function createCheckoutSession(
-    organizationId: string,
-    interval: BillingInterval,
-    fallbackMessage = 'Secure checkout could not be opened.',
-  ): Promise<string> {
-    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-      body: { organizationId, interval },
-    })
-    if (error) throw new Error(await edgeFunctionErrorMessage(error, fallbackMessage))
-    if (!data?.url) throw new Error(data?.error ?? fallbackMessage)
-    return data.url as string
-  }
-
   async function load(options: { force?: boolean } = {}) {
     if (!currentId.value) {
       accessState.value = 'loading'
