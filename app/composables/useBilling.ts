@@ -31,6 +31,7 @@ export function useBilling() {
   const writesAllowed = computed(() => ['trialing', 'active', 'grace_period'].includes(accessState.value))
   const checkoutRequired = computed(() => accessState.value === 'checkout_required')
   const readOnly = computed(() => accessState.value === 'read_only')
+  const paymentRequired = computed(() => checkoutRequired.value || readOnly.value)
 
   async function createCheckoutSession(
     organizationId: string,
@@ -103,6 +104,7 @@ export function useBilling() {
     writesAllowed,
     checkoutRequired,
     readOnly,
+    paymentRequired,
     createCheckoutSession,
     load,
   }
