@@ -4,10 +4,10 @@ import type { Database } from '~~/types/database.types'
 definePageMeta({ layout: false })
 
 const supabase = useSupabaseClient<Database>()
-const user = useSupabaseUser()
 const { t } = useI18n()
 const { restore } = useTheme()
 const describeError = useErrorMessage()
+const { currentId, loadOrganizations } = useTenant()
 
 useHead({ title: () => `${t('onboarding.title')} · ${t('app.name')}` })
 
@@ -21,7 +21,9 @@ const resendAvailableAt = ref(0)
 const now = ref(Date.now())
 const hydrated = ref(false)
 const provisionedOrganizationId = ref<string | null>(null)
+const existingAccountOnboarding = ref(false)
 const ONBOARDING_STORAGE_KEY = 'ledger-suit.pending-onboarding'
+const CHECKOUT_AFTER_VERIFICATION_KEY = 'ledger-suit.checkout-after-verification'
 const OTP_EXPIRY_SECONDS = 60 * 60
 const RESEND_SECONDS = 60
 type BusinessType = Database['public']['Enums']['organization_business_type']
@@ -39,6 +41,7 @@ const countries = [
   { code: 'GB', timezone: 'Europe/London', currency: 'GBP' },
   { code: 'US', timezone: 'America/New_York', currency: 'USD' },
 ]
+const supportedCurrencies = ['EGP', 'SAR', 'AED', 'USD', 'GBP', 'EUR'] as const
 const businessTypes: BusinessType[] = ['sole_proprietorship', 'partnership', 'limited_liability', 'corporation', 'nonprofit', 'other']
 const otpExpiresIn = computed(() => Math.max(0, Math.ceil((otpExpiresAt.value - now.value) / 1000)))
 const resendIn = computed(() => Math.max(0, Math.ceil((resendAvailableAt.value - now.value) / 1000)))
@@ -51,6 +54,43 @@ const submitButtonText = computed(() => {
   }
   return step.value === 1 ? t('common.continue') : t('onboarding.startFreeTrial')
 })
+
+function hasPersonalDetails() {
+  return Boolean(form.fullName.trim() && form.phone.trim() && form.jobTitle.trim() && form.email.trim())
+}
+
+function hasBusinessDetails() {
+  return Boolean(form.organizationName.trim() && form.legalName.trim())
+}
+
+function restoreFromUserMetadata(authenticatedUser: { email?: string; user_metadata?: Record<string, unknown> }) {
+  const metadata = authenticatedUser.user_metadata ?? {}
+  const onboarding = metadata.pending_onboarding
+  const pendingOnboarding = onboarding && typeof onboarding === 'object'
+    ? onboarding as Record<string, unknown>
+    : {}
+
+  form.email = authenticatedUser.email?.trim().toLowerCase() ?? form.email
+  if (typeof metadata.full_name === 'string') form.fullName = metadata.full_name
+  if (typeof metadata.phone === 'string') form.phone = metadata.phone
+  if (typeof metadata.job_title === 'string') form.jobTitle = metadata.job_title
+  if (typeof pendingOnboarding.organization_name === 'string') form.organizationName = pendingOnboarding.organization_name
+  if (typeof pendingOnboarding.legal_name === 'string') form.legalName = pendingOnboarding.legal_name
+  if (businessTypes.includes(pendingOnboarding.business_type as BusinessType)) form.businessType = pendingOnboarding.business_type as BusinessType
+  if (countries.some(country => country.code === pendingOnboarding.country_code)) form.countryCode = String(pendingOnboarding.country_code)
+  if (typeof pendingOnboarding.timezone === 'string') form.timezone = pendingOnboarding.timezone
+  if (typeof pendingOnboarding.base_currency === 'string') {
+    const currency = pendingOnboarding.base_currency.trim().toUpperCase()
+    if (supportedCurrencies.includes(currency as typeof supportedCurrencies[number])) form.currency = currency
+  }
+  if (Number.isInteger(pendingOnboarding.fiscal_year_start_month) && Number(pendingOnboarding.fiscal_year_start_month) >= 1 && Number(pendingOnboarding.fiscal_year_start_month) <= 12) {
+    form.fiscalYearStartMonth = Number(pendingOnboarding.fiscal_year_start_month)
+  }
+  if (typeof pendingOnboarding.tax_identifier === 'string') form.taxIdentifier = pendingOnboarding.tax_identifier
+  if (pendingOnboarding.billing_interval === 'monthly' || pendingOnboarding.billing_interval === 'yearly') {
+    form.interval = pendingOnboarding.billing_interval
+  }
+}
 
 function formatCountdown(seconds: number) {
   const minutes = Math.floor(seconds / 60).toString().padStart(2, '0')
@@ -89,13 +129,13 @@ watch(() => form.countryCode, (code) => {
 
 async function next() {
   errorMessage.value = ''
-  if (step.value === 1 && (!form.fullName.trim() || !form.phone.trim() || !form.jobTitle.trim() || !form.email.trim() || form.password.length < 8)) {
+  if (step.value === 1 && (!hasPersonalDetails() || (!existingAccountOnboarding.value && form.password.length < 8))) {
     errorMessage.value = t('onboarding.completeRequired')
     return
   }
   pending.value = true
   try {
-    if (step.value === 1) {
+    if (step.value === 1 && !existingAccountOnboarding.value) {
       const { data, error } = await supabase.rpc('check_owner_availability', {
         p_email: form.email.trim(),
         p_phone: form.phone.trim()
@@ -133,7 +173,43 @@ async function provisionAndStartTrial() {
     return
   }
 
-  const { data: organizationId, error: onboardingError } = await supabase.rpc('complete_account_onboarding', {
+  // New owner signups are provisioned by the auth-user database trigger
+  // before the OTP is sent. Reload the membership after confirmation and use
+  // the already-stored organization and billing interval.
+  await loadOrganizations(authenticatedUserId, { force: true })
+  if (currentId.value) {
+    provisionedOrganizationId.value = currentId.value
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .select('billing_interval')
+      .eq('organization_id', currentId.value)
+      .maybeSingle()
+    if (subscriptionError) throw subscriptionError
+    if (subscription?.billing_interval) form.interval = subscription.billing_interval
+    await openCheckout(currentId.value)
+    return
+  }
+
+  // Accounts created just before the durable trigger was deployed can still
+  // rebuild from the same server-side metadata that survived the closed tab.
+  const { data: resumedOrganizationId, error: resumeError } = await supabase.rpc('resume_saved_signup')
+  if (resumeError) throw new Error(describeError(resumeError))
+  if (resumedOrganizationId) {
+    provisionedOrganizationId.value = resumedOrganizationId
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('subscriptions')
+      .select('billing_interval')
+      .eq('organization_id', resumedOrganizationId)
+      .maybeSingle()
+    if (subscriptionError) throw subscriptionError
+    if (subscription?.billing_interval) form.interval = subscription.billing_interval
+    savePendingOnboarding()
+    await openCheckout(resumedOrganizationId)
+    return
+  }
+
+  // Compatibility for older incomplete accounts that have no saved metadata.
+  const { data: organizationId, error: onboardingError } = await supabase.rpc('complete_account_onboarding_with_plan', {
     p_full_name: form.fullName.trim(),
     p_phone: form.phone.trim(),
     p_job_title: form.jobTitle.trim(),
@@ -144,7 +220,8 @@ async function provisionAndStartTrial() {
     p_timezone: form.timezone,
     p_base_currency: form.currency,
     p_fiscal_year_start_month: form.fiscalYearStartMonth,
-    p_tax_identifier: form.taxIdentifier.trim() || undefined,
+    p_tax_identifier: form.taxIdentifier.trim() || null,
+    p_billing_interval: form.interval,
   })
   if (onboardingError) throw new Error(describeError(onboardingError))
   if (!organizationId) throw new Error(t('errors.generic'))
@@ -173,7 +250,27 @@ async function createAccount() {
     const { data: auth, error: authError } = await supabase.auth.signUp({
       email: form.email.trim().toLowerCase(),
       password: form.password,
-      options: { data: { full_name: form.fullName.trim(), phone: form.phone.trim(), job_title: form.jobTitle.trim() } },
+      options: {
+        data: {
+          full_name: form.fullName.trim(),
+          phone: form.phone.trim(),
+          job_title: form.jobTitle.trim(),
+          // This is recovery state, not authorization data. Keeping it with
+          // the unconfirmed auth user lets a later tab finish onboarding after
+          // sessionStorage from the original signup tab has disappeared.
+          pending_onboarding: {
+            organization_name: form.organizationName.trim(),
+            legal_name: form.legalName.trim(),
+            business_type: form.businessType,
+            country_code: form.countryCode,
+            timezone: form.timezone,
+            base_currency: form.currency,
+            fiscal_year_start_month: form.fiscalYearStartMonth,
+            tax_identifier: form.taxIdentifier.trim(),
+            billing_interval: form.interval,
+          },
+        },
+      },
     })
     if (authError || !auth.user) throw new Error(t('auth.failed'))
     if (!auth.session) showOtpVerification()
@@ -183,6 +280,19 @@ async function createAccount() {
     errorMessage.value = error instanceof Error ? error.message : t('errors.generic')
   }
   finally { pending.value = false }
+}
+
+async function finishOnboarding() {
+  if (existingAccountOnboarding.value) {
+    pending.value = true
+    errorMessage.value = ''
+    try { await provisionAndCheckout() }
+    catch (error) { errorMessage.value = error instanceof Error ? error.message : t('errors.generic') }
+    finally { pending.value = false }
+    return
+  }
+
+  await createAccount()
 }
 
 async function verifyOtpAndContinue() {
@@ -227,22 +337,64 @@ onMounted(() => {
   hydrated.value = true
   timer = setInterval(() => (now.value = Date.now()), 1000)
   const stored = sessionStorage.getItem(ONBOARDING_STORAGE_KEY)
-  if (!stored) return
-  try {
-    const pendingOnboarding = JSON.parse(stored)
-    Object.assign(form, pendingOnboarding.form, { password: '' })
-    otpExpiresAt.value = Number(pendingOnboarding.otpExpiresAt) || 0
-    resendAvailableAt.value = Number(pendingOnboarding.resendAvailableAt) || 0
-    provisionedOrganizationId.value = pendingOnboarding.provisionedOrganizationId ?? null
-    awaitingOtp.value = Boolean(form.email && (otpExpiresAt.value > Date.now() || provisionedOrganizationId.value))
+  if (stored) {
+    try {
+      const pendingOnboarding = JSON.parse(stored)
+      Object.assign(form, pendingOnboarding.form, { password: '' })
+      const restoredCurrency = String(form.currency ?? '').trim().toUpperCase()
+      const countryDefault = countries.find(country => country.code === form.countryCode)?.currency ?? 'EGP'
+      form.currency = supportedCurrencies.includes(restoredCurrency as typeof supportedCurrencies[number])
+        ? restoredCurrency
+        : countryDefault
+      otpExpiresAt.value = Number(pendingOnboarding.otpExpiresAt) || 0
+      resendAvailableAt.value = Number(pendingOnboarding.resendAvailableAt) || 0
+      provisionedOrganizationId.value = pendingOnboarding.provisionedOrganizationId ?? null
+      awaitingOtp.value = Boolean(form.email && (otpExpiresAt.value > Date.now() || provisionedOrganizationId.value))
+    }
+    catch { clearPendingOnboarding() }
   }
-  catch { clearPendingOnboarding() }
+
+  void restoreAuthenticatedOnboarding()
 })
 onBeforeUnmount(() => clearInterval(timer))
 
-watchEffect(() => {
-  if (user.value && step.value === 1 && !awaitingOtp.value) navigateTo('/dashboard')
-})
+async function restoreAuthenticatedOnboarding() {
+  const { data } = await supabase.auth.getUser()
+  if (!data.user) return
+
+  existingAccountOnboarding.value = true
+  awaitingOtp.value = false
+  restoreFromUserMetadata(data.user)
+
+  await loadOrganizations(data.user.id, { force: true })
+  if (currentId.value) {
+    const checkoutAfterVerification = sessionStorage.getItem(CHECKOUT_AFTER_VERIFICATION_KEY) === '1'
+    sessionStorage.removeItem(CHECKOUT_AFTER_VERIFICATION_KEY)
+    if (checkoutAfterVerification) {
+      pending.value = true
+      errorMessage.value = ''
+      try { await provisionAndCheckout(data.user.id) }
+      catch (error) { errorMessage.value = error instanceof Error ? error.message : t('errors.generic') }
+      finally { pending.value = false }
+      return
+    }
+    await navigateTo('/dashboard')
+    return
+  }
+
+  step.value = hasBusinessDetails() ? 3 : (hasPersonalDetails() ? 2 : 1)
+  if (!hasPersonalDetails() || !hasBusinessDetails()) return
+
+  pending.value = true
+  errorMessage.value = ''
+  try {
+    await provisionAndCheckout()
+  }
+  catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : t('errors.generic')
+  }
+  finally { pending.value = false }
+}
 </script>
 
 <template>
@@ -271,8 +423,8 @@ watchEffect(() => {
             <FloatingField class="sm:col-span-2" :label="t('onboarding.fullName')"><input id="owner-name" v-model="form.fullName" class="ls-input" autocomplete="name" required></FloatingField>
             <FloatingField :label="t('onboarding.phone')"><input id="owner-phone" v-model="form.phone" class="ls-input" autocomplete="tel" dir="ltr" required></FloatingField>
             <FloatingField :label="t('onboarding.jobTitle')"><input id="owner-role" v-model="form.jobTitle" class="ls-input" required></FloatingField>
-            <FloatingField :label="t('auth.email')"><input id="owner-email" v-model="form.email" type="email" class="ls-input" autocomplete="email" dir="ltr" required></FloatingField>
-            <div><FloatingField :label="t('auth.password')"><input id="owner-password" v-model="form.password" type="password" minlength="8" class="ls-input" autocomplete="new-password" dir="ltr" required></FloatingField><p class="ls-hint">{{ t('onboarding.passwordHint') }}</p></div>
+            <FloatingField :label="t('auth.email')"><input id="owner-email" v-model="form.email" type="email" class="ls-input" autocomplete="email" dir="ltr" :readonly="existingAccountOnboarding" required></FloatingField>
+            <div v-if="!existingAccountOnboarding"><FloatingField :label="t('auth.password')"><input id="owner-password" v-model="form.password" type="password" minlength="8" class="ls-input" autocomplete="new-password" dir="ltr" required></FloatingField><p class="ls-hint">{{ t('onboarding.passwordHint') }}</p></div>
           </div>
 
           <div v-else-if="step === 2" class="grid gap-4 sm:grid-cols-2">
@@ -280,7 +432,7 @@ watchEffect(() => {
             <FloatingField :label="t('onboarding.legalName')"><input id="org-legal-name" v-model="form.legalName" class="ls-input" required></FloatingField>
             <FloatingField :label="t('onboarding.businessType')"><select id="org-type" v-model="form.businessType" class="ls-input"><option v-for="type in businessTypes" :key="type" :value="type">{{ t(`onboarding.businessTypes.${type}`) }}</option></select></FloatingField>
             <FloatingField :label="t('onboarding.country')"><select id="org-country" v-model="form.countryCode" class="ls-input"><option v-for="country in countries" :key="country.code" :value="country.code">{{ t(`onboarding.countries.${country.code}`) }}</option></select></FloatingField>
-            <FloatingField :label="t('accounts.currency')"><select id="org-currency" v-model="form.currency" class="ls-input"><option v-for="currency in ['EGP','SAR','AED','USD','GBP','EUR']" :key="currency">{{ currency }}</option></select></FloatingField>
+              <FloatingField :label="t('accounts.currency')"><select id="org-currency" v-model="form.currency" class="ls-input"><option v-for="currency in supportedCurrencies" :key="currency">{{ currency }}</option></select></FloatingField>
             <FloatingField :label="t('onboarding.timezone')"><input id="org-timezone" v-model="form.timezone" class="ls-input" dir="ltr" required></FloatingField>
             <FloatingField :label="t('onboarding.fiscalYear')"><select id="org-fiscal" v-model.number="form.fiscalYearStartMonth" class="ls-input"><option v-for="month in 12" :key="month" :value="month">{{ t(`onboarding.months.${month}`) }}</option></select></FloatingField>
             <div><FloatingField :label="t('onboarding.taxIdentifier')"><input id="org-tax" v-model="form.taxIdentifier" class="ls-input"></FloatingField><p class="ls-hint">{{ t('onboarding.optional') }}</p></div>

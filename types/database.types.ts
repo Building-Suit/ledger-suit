@@ -2589,6 +2589,23 @@ export type Database = {
         }
         Returns: string
       }
+      complete_account_onboarding_with_plan: {
+        Args: {
+          p_base_currency: string
+          p_billing_interval: Database["public"]["Enums"]["billing_interval"]
+          p_business_type: Database["public"]["Enums"]["organization_business_type"]
+          p_country_code: string
+          p_fiscal_year_start_month: number
+          p_full_name: string
+          p_job_title: string
+          p_legal_name: string
+          p_organization_name: string
+          p_phone: string
+          p_tax_identifier: string | null
+          p_timezone: string
+        }
+        Returns: string
+      }
       complete_notification_email: {
         Args: {
           p_error?: string
@@ -2601,6 +2618,7 @@ export type Database = {
         Args: { p_occurrence_id: string }
         Returns: string
       }
+      resume_saved_signup: { Args: never; Returns: string }
       create_account: {
         Args: {
           p_code?: string
@@ -3560,4 +3578,3 @@ export const Constants = {
     },
   },
 } as const
-
