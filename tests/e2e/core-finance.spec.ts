@@ -53,6 +53,39 @@ test('permanent navigation exposes every creation workflow by section', async ({
   await expect(navigation.getByRole('link', { name: 'Access & permissions' })).toBeVisible()
 })
 
+test('owner can start a separately billed organization from the switcher', async ({ page }) => {
+  let createRequests = 0
+  page.on('request', (request) => {
+    if (request.url().includes('/rest/v1/rpc/create_organization')) createRequests++
+  })
+  await page.route('**/rest/v1/rpc/check_legal_name_availability', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(false),
+  }))
+
+  await page.getByRole('button', { name: 'Organization' }).click()
+  await page.getByRole('button', { name: 'Create another organization' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Create another organization' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText('A separate subscription is required')).toBeVisible()
+  await expect(dialog.getByText('Your existing organization and subscription will not change.', { exact: false })).toBeVisible()
+  await expect(dialog.getByText('EGP 600 / month')).toBeVisible()
+  await expect(dialog.getByText('EGP 4,800 / year')).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Create and continue to Stripe' })).toBeVisible()
+  await expect(dialog.getByLabel('Legal business name')).toHaveAttribute('required', '')
+
+  await dialog.getByLabel('Organization name').fill('Duplicate Legal Name Books')
+  await dialog.getByLabel('Legal business name').fill('Alpha Trading LLC')
+  await dialog.getByRole('button', { name: 'Create and continue to Stripe' }).click()
+  await expect(dialog.getByText('This legal business name is already registered.')).toBeVisible()
+  expect(createRequests).toBe(0)
+
+  await dialog.getByRole('button', { name: 'Close' }).click()
+  await expect(dialog).toBeHidden()
+})
+
 test('owner can review members, role permissions and invitations', async ({ page }) => {
   await page.getByRole('link', { name: 'Access & permissions' }).click()
   await expect(page.getByRole('heading', { name: 'Roles, permissions & invitations' })).toBeVisible()

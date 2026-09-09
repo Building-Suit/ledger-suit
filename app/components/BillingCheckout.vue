@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const { compact = false } = defineProps<{ compact?: boolean }>()
-const supabase = useSupabaseClient()
 const { currentId } = useTenant()
+const { createCheckoutSession } = useBilling()
 const { t } = useI18n()
 const interval = ref<'monthly' | 'yearly'>('monthly')
 const pending = ref(false)
@@ -12,12 +12,8 @@ async function checkout() {
   pending.value = true
   errorMessage.value = ''
   try {
-    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-      body: { organizationId: currentId.value, interval: interval.value },
-    })
-    if (error) throw new Error(await edgeFunctionErrorMessage(error, t('billing.checkoutFailed')))
-    if (!data?.url) throw new Error(data?.error ?? t('billing.checkoutFailed'))
-    window.location.assign(data.url)
+    const url = await createCheckoutSession(currentId.value, interval.value, t('billing.checkoutFailed'))
+    window.location.assign(url)
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : t('billing.checkoutFailed')
