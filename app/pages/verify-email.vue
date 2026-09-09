@@ -28,11 +28,16 @@ function formatCountdown(seconds: number) {
 }
 
 async function verify() {
-  if (!email.value || (!verified.value && (otp.value.length !== 6 || expired.value))) return
+  if (!email.value || pending.value) return
   pending.value = true
   errorMessage.value = ''
   try {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+    if (sessionData.session?.user.email?.toLowerCase() === email.value) verified.value = true
+
     if (!verified.value) {
+      if (otp.value.length !== 6 || expired.value) return
       const { data, error } = await supabase.auth.verifyOtp({
         email: email.value,
         token: otp.value,
@@ -49,23 +54,8 @@ async function verify() {
       return
     }
 
-    const { data: subscription, error: subscriptionError } = await supabase
-      .from('subscriptions')
-      .select('billing_interval')
-      .eq('organization_id', organizationId)
-      .maybeSingle()
-    if (subscriptionError) throw subscriptionError
-
-    const { data: checkout, error: checkoutError } = await supabase.functions.invoke('stripe-checkout', {
-      body: { organizationId, interval: subscription?.billing_interval ?? 'yearly' },
-    })
-    if (checkoutError) {
-      throw new Error(await edgeFunctionErrorMessage(checkoutError, t('billing.checkoutFailed')))
-    }
-    if (!checkout?.url) throw new Error(t('billing.checkoutFailed'))
-
     sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
-    window.location.assign(checkout.url)
+    await navigateTo('/dashboard')
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : t('errors.generic')

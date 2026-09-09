@@ -31,13 +31,14 @@ export function useBilling() {
   const writesAllowed = computed(() => ['trialing', 'active', 'grace_period'].includes(accessState.value))
   const checkoutRequired = computed(() => accessState.value === 'checkout_required')
   const readOnly = computed(() => accessState.value === 'read_only')
+  const paymentRequired = computed(() => checkoutRequired.value || readOnly.value)
 
   async function createCheckoutSession(
     organizationId: string,
     interval: BillingInterval,
     fallbackMessage = 'Secure checkout could not be opened.',
   ): Promise<string> {
-    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+    const { data, error } = await supabase.functions.invoke('paymob-checkout', {
       body: { organizationId, interval },
     })
     if (error) throw new Error(await edgeFunctionErrorMessage(error, fallbackMessage))
@@ -103,6 +104,7 @@ export function useBilling() {
     writesAllowed,
     checkoutRequired,
     readOnly,
+    paymentRequired,
     createCheckoutSession,
     load,
   }

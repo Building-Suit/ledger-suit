@@ -74,10 +74,11 @@ test('an invited user verifies email, creates a password, joins, and can sign in
   await expect(page).toHaveURL('/dashboard')
 })
 
-test('landing page explains the product and leads to paid onboarding', async ({ page }) => {
+test('landing page explains the product and leads to a cardless trial', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Run your finances')
   await expect(page.getByRole('link', { name: 'Start 14-day trial' }).first()).toBeVisible()
+  await expect(page.getByText('14 days free · No credit card required')).toBeVisible()
   await expect(page.getByText('EGP 600 / month')).toBeVisible()
   await expect(page.getByText('EGP 4,800 / year')).toBeVisible()
 
@@ -86,32 +87,26 @@ test('landing page explains the product and leads to paid onboarding', async ({ 
   await expect(page.getByLabel('Full name')).toBeVisible()
   await expect(page.getByLabel('Phone number')).toBeVisible()
   await expect(page.getByLabel('Job title')).toBeVisible()
+  await expect(page.getByText('14-day free trial — no credit card required')).toBeVisible()
 })
 
-test('signup verifies email by OTP before provisioning and checkout', async ({ page }) => {
-  const uniqueSuffix = String(Date.now())
-  const email = `otp-${uniqueSuffix}@ledgersuit.test`
-  const appOrigin = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? '3210'}`
-  await page.route('**/functions/v1/stripe-checkout', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ url: `${appOrigin}/billing/ready?session_id=otp-test` }),
-  }))
+test('signup verifies email by OTP before provisioning the free trial', async ({ page }) => {
+  const unique = Date.now()
+  const email = `otp-${unique}@ledgersuit.test`
 
   await page.goto('/signup')
   await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
   await page.getByLabel('Full name').fill('OTP Test Owner')
-  await page.getByLabel('Phone number').fill(`+2010${uniqueSuffix.slice(-8)}`)
+  await page.getByLabel('Phone number').fill(`+2010${String(unique).slice(-8)}`)
   await page.getByLabel('Job title').fill('Founder')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill('otp-test-password')
   await page.getByRole('button', { name: 'Continue' }).click()
 
   await expect(page.getByRole('heading', { name: 'Business setup' })).toBeVisible()
-  await page.locator('#org-display-name').fill('OTP Test Books')
-  await page.locator('#org-legal-name').fill(`OTP Test Books ${uniqueSuffix} LLC`)
-  await page.getByRole('button', { name: 'Continue' }).click()
-  await page.getByRole('button', { name: 'Create account and continue to Stripe' }).click()
+  await page.locator('#org-display-name').fill(`OTP Test Books ${unique}`)
+  await page.locator('#org-legal-name').fill(`OTP Test Books ${unique} LLC`)
+  await page.getByRole('button', { name: 'Create account and start free trial' }).click()
 
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
   await expect(page.getByText(email)).toBeVisible()
@@ -122,16 +117,16 @@ test('signup verifies email by OTP before provisioning and checkout', async ({ p
   for (let index = 0; index < 6; index++) {
     await page.getByLabel(`Verification code digit ${index + 1}`).fill(otp[index]!)
   }
-  await page.getByRole('button', { name: 'Verify and continue to Stripe' }).click()
+  await page.getByRole('button', { name: 'Verify and start free trial' }).click()
 
-  await expect(page).toHaveURL(/\/billing\/ready\?session_id=otp-test/)
+  await expect(page).toHaveURL('/dashboard')
+  await expect(page.getByText(/Trial: (13d 23h|14d 0h)/)).toBeVisible()
 })
 
 test('signup continues to its saved organization after the OTP tab is closed', async ({ page }) => {
   const uniqueSuffix = String(Date.now())
   const email = `otp-recovery-${uniqueSuffix}@ledgersuit.test`
   const password = 'otp-recovery-password'
-  const appOrigin = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? '3210'}`
 
   await page.goto('/signup')
   await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
@@ -143,16 +138,10 @@ test('signup continues to its saved organization after the OTP tab is closed', a
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.locator('#org-display-name').fill('Recovered Books')
   await page.locator('#org-legal-name').fill(`Recovered Books ${uniqueSuffix} LLC`)
-  await page.getByRole('button', { name: 'Continue' }).click()
-  await page.getByRole('button', { name: 'Create account and continue to Stripe' }).click()
+  await page.getByRole('button', { name: 'Create account and start free trial' }).click()
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
 
   const recoveryPage = await page.context().newPage()
-  await recoveryPage.route('**/functions/v1/stripe-checkout', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ url: `${appOrigin}/billing/ready?session_id=otp-recovery-test` }),
-  }))
   await page.close()
 
   await recoveryPage.goto('/login')
@@ -172,9 +161,10 @@ test('signup continues to its saved organization after the OTP tab is closed', a
       signupNavigations.push(frame.url())
     }
   })
-  await recoveryPage.getByRole('button', { name: 'Verify and continue to Stripe' }).click()
+  await recoveryPage.getByRole('button', { name: 'Verify and start free trial' }).click()
 
-  await expect(recoveryPage).toHaveURL(/\/billing\/ready\?session_id=otp-recovery-test/)
+  await expect(recoveryPage).toHaveURL('/dashboard')
+  await expect(recoveryPage.getByText(/Trial: (13d 23h|14d 0h)/)).toBeVisible()
   expect(signupNavigations).toEqual([])
 })
 

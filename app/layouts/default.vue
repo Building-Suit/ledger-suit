@@ -52,7 +52,7 @@ const { current, currentId, loadOrganizations, loading } = useTenant()
 const { can } = useTenant()
 const {
   accessState,
-  checkoutRequired,
+  paymentRequired,
   readOnly,
   load: loadBilling,
 } = useBilling()
@@ -79,7 +79,7 @@ function isActive(to: string) {
 </script>
 
 <template>
-  <div v-if="accessState === 'loading' || checkoutRequired" class="min-h-dvh bg-background" aria-busy="true" />
+  <div v-if="accessState === 'loading' || paymentRequired" class="min-h-dvh bg-background" aria-busy="true" />
   <div v-else class="min-h-dvh bg-background lg:grid lg:grid-cols-[17rem_1fr] lg:gap-4 lg:p-4">
     <!-- Shown/hidden rather than slid off-screen with a transform: a translate
          utility that silently fails to apply leaves the drawer sitting on top
@@ -157,6 +157,7 @@ function isActive(to: string) {
 
         <div class="min-w-0 flex-1" />
 
+        <TrialCountdown />
         <NotificationMenu />
         <AccountMenu />
         <OrganizationSwitcher class="w-64" />

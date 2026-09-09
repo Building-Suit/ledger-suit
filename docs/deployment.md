@@ -74,43 +74,38 @@ client bundle.
 Public acquisition routes are `/` and `/signup`; the authenticated product
 starts at `/dashboard`. Before publishing signup, configure the hosted Supabase
 Auth confirmation template and Resend SMTP described in the environment guide.
-Signup verifies the six-digit OTP, creates the tenant atomically, and opens
-Stripe Checkout; users do not receive application write access until the signed
-Stripe webhook starts the trial.
+Signup verifies the six-digit OTP, creates the tenant atomically, and starts a
+cardless trial. When it expires, a signed Paymob callback restores paid access.
 
 ### Phase 4 services
 
-The repository contains five Supabase Edge Functions under
-`supabase/functions/`: Stripe Checkout, Stripe Customer Portal, the Stripe
-webhook, scheduled Resend delivery, and team invitation email. Deploy them
+The repository contains four Supabase Edge Functions under
+`supabase/functions/`: Paymob checkout, the Paymob webhook, scheduled Resend
+delivery, and team invitation email. Deploy them
 through the repository's connected Supabase workflow; do not paste function
 code or database DDL into the dashboard.
 
 External provider configuration is necessarily separate from database schema:
 
-1. Create one Stripe Product with monthly and yearly recurring Prices.
+1. Create monthly (30-day) and yearly (360-day) Paymob subscription plans,
+   configure their 3DS/MOTO integrations, and set each plan's webhook URL to
+   `https://<project-ref>.supabase.co/functions/v1/paymob-webhook`.
 2. Add the Edge secrets listed in [environment.md](environment.md).
-3. Point Stripe's webhook endpoint to
-   `https://<project-ref>.supabase.co/functions/v1/stripe-webhook` and subscribe
-   to `checkout.session.completed`, `customer.subscription.created`,
-   `customer.subscription.updated`, `customer.subscription.deleted`,
-   `customer.subscription.trial_will_end`, `invoice.paid`, and
-   `invoice.payment_failed`.
+3. Set the Paymob processed callback URL to
+   `https://<project-ref>.supabase.co/functions/v1/paymob-webhook`. The checkout
+   function also supplies this URL per Intention.
 4. Verify the Resend sender domain used by `RESEND_FROM_EMAIL`.
 5. Store the two scheduler values in Supabase Vault using the exact names in
    the environment guide. The versioned Cron job detects them automatically.
 
-The same Prices are reused for every organization. Do not increase the quantity
-on an account-level subscription: each organization must complete a distinct
-Checkout Session and receives a distinct Stripe Subscription, so cancellation
-or payment failure affects only that organization's access.
+The same plans are reused for every organization. Each organization completes a
+distinct Intention and receives a distinct Paymob subscription, so payment
+failure affects only that organization's access.
 
-The current sandbox provider configuration is:
+The current application configuration is:
 
-- Stripe product: `prod_VBCRr1dyVPbpBx`
-- monthly EGP 600 price: `price_1UAq2LJmxtT9ICNehCkS6Fzx`
-- yearly EGP 4,800 price: `price_1UAq2RJmxtT9ICNeLZcFGmKt`
-- Stripe webhook: `we_1UAq2fJmxtT9ICNeuGEzlqrY`
+- monthly subscription: EGP 600
+- yearly subscription: EGP 4,800
 - application origin: `https://ledger-suit.vercel.app`
 - Resend sender: `notification@building-suit.com`
 
@@ -119,7 +114,7 @@ when production billing is approved; never reuse test-mode identifiers in live
 configuration.
 
 No remote migration command is needed. The linked Git workflow applies the
-schema migration; Stripe and Resend credentials remain external secrets by
+schema migration; Paymob and Resend credentials remain external secrets by
 design.
 
 The committed CI workflow runs lint, strict type checking, the production

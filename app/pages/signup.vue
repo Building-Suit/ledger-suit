@@ -23,7 +23,6 @@ const hydrated = ref(false)
 const provisionedOrganizationId = ref<string | null>(null)
 const existingAccountOnboarding = ref(false)
 const ONBOARDING_STORAGE_KEY = 'ledger-suit.pending-onboarding'
-const CHECKOUT_AFTER_VERIFICATION_KEY = 'ledger-suit.checkout-after-verification'
 const OTP_EXPIRY_SECONDS = 60 * 60
 const RESEND_SECONDS = 60
 type BusinessType = Database['public']['Enums']['organization_business_type']
@@ -31,7 +30,7 @@ const form = reactive({
   fullName: '', phone: '', jobTitle: '', email: '', password: '',
   organizationName: '', legalName: '', businessType: 'limited_liability' as BusinessType,
   countryCode: 'EG', timezone: 'Africa/Cairo', currency: 'EGP',
-  fiscalYearStartMonth: 1, taxIdentifier: '', interval: 'yearly' as 'monthly' | 'yearly',
+  fiscalYearStartMonth: 1, taxIdentifier: '',
 })
 
 const countries = [
@@ -50,10 +49,9 @@ const otpExpired = computed(() => awaitingOtp.value && otpExpiresIn.value === 0)
 const submitButtonText = computed(() => {
   if (pending.value) {
     if (step.value === 1) return t('onboarding.checkingAvailability')
-    if (step.value === 2) return t('onboarding.checkingLegalName')
-    return t('onboarding.sendingOtp')
+    return step.value === 2 ? t('onboarding.creating') : t('onboarding.checkingAvailability')
   }
-  return step.value < 3 ? t('common.continue') : t('onboarding.continueToPayment')
+  return step.value === 1 ? t('common.continue') : t('onboarding.startFreeTrial')
 })
 
 function hasPersonalDetails() {
@@ -88,9 +86,6 @@ function restoreFromUserMetadata(authenticatedUser: { email?: string; user_metad
     form.fiscalYearStartMonth = Number(pendingOnboarding.fiscal_year_start_month)
   }
   if (typeof pendingOnboarding.tax_identifier === 'string') form.taxIdentifier = pendingOnboarding.tax_identifier
-  if (pendingOnboarding.billing_interval === 'monthly' || pendingOnboarding.billing_interval === 'yearly') {
-    form.interval = pendingOnboarding.billing_interval
-  }
 }
 
 function formatCountdown(seconds: number) {
@@ -134,11 +129,6 @@ async function next() {
     errorMessage.value = t('onboarding.completeRequired')
     return
   }
-  if (step.value === 2 && (!form.organizationName.trim() || !form.legalName.trim())) {
-    errorMessage.value = t('onboarding.completeRequired')
-    return
-  }
-
   pending.value = true
   try {
     if (step.value === 1 && !existingAccountOnboarding.value) {
@@ -164,17 +154,6 @@ async function next() {
       }
     }
 
-    if (step.value === 2) {
-      const { data: isAvailable, error } = await supabase.rpc('check_legal_name_availability', {
-        p_legal_name: form.legalName.trim()
-      })
-      if (error) throw error
-      if (!isAvailable) {
-        errorMessage.value = t('onboarding.legalNameTaken')
-        return
-      }
-    }
-
     step.value++
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : t('errors.generic')
@@ -183,38 +162,20 @@ async function next() {
   }
 }
 
-async function openCheckout(organizationId: string) {
-  const { data: checkout, error: checkoutError } = await supabase.functions.invoke('stripe-checkout', {
-    body: { organizationId, interval: form.interval },
-  })
-  if (checkoutError) {
-    throw new Error(await edgeFunctionErrorMessage(checkoutError, t('billing.checkoutFailed')))
-  }
-  if (!checkout?.url) throw new Error(t('billing.checkoutFailed'))
-  clearPendingOnboarding()
-  window.location.assign(checkout.url)
-}
-
-async function provisionAndCheckout(authenticatedUserId?: string) {
+async function provisionAndStartTrial(authenticatedUserId?: string) {
   if (provisionedOrganizationId.value) {
-    await openCheckout(provisionedOrganizationId.value)
+    clearPendingOnboarding()
+    await navigateTo('/dashboard')
     return
   }
 
-  // New owner signups are provisioned by the auth-user database trigger
-  // before the OTP is sent. Reload the membership after confirmation and use
-  // the already-stored organization and billing interval.
+  // An older deployment may already have provisioned the workspace. Reload
+  // first so both fresh and resumed verification tabs reach the same trial.
   await loadOrganizations(authenticatedUserId, { force: true })
   if (currentId.value) {
     provisionedOrganizationId.value = currentId.value
-    const { data: subscription, error: subscriptionError } = await supabase
-      .from('subscriptions')
-      .select('billing_interval')
-      .eq('organization_id', currentId.value)
-      .maybeSingle()
-    if (subscriptionError) throw subscriptionError
-    if (subscription?.billing_interval) form.interval = subscription.billing_interval
-    await openCheckout(currentId.value)
+    clearPendingOnboarding()
+    await navigateTo('/dashboard')
     return
   }
 
@@ -224,20 +185,14 @@ async function provisionAndCheckout(authenticatedUserId?: string) {
   if (resumeError) throw new Error(describeError(resumeError))
   if (resumedOrganizationId) {
     provisionedOrganizationId.value = resumedOrganizationId
-    const { data: subscription, error: subscriptionError } = await supabase
-      .from('subscriptions')
-      .select('billing_interval')
-      .eq('organization_id', resumedOrganizationId)
-      .maybeSingle()
-    if (subscriptionError) throw subscriptionError
-    if (subscription?.billing_interval) form.interval = subscription.billing_interval
-    savePendingOnboarding()
-    await openCheckout(resumedOrganizationId)
+    await loadOrganizations(authenticatedUserId, { force: true })
+    clearPendingOnboarding()
+    await navigateTo('/dashboard')
     return
   }
 
   // Compatibility for older incomplete accounts that have no saved metadata.
-  const { data: organizationId, error: onboardingError } = await supabase.rpc('complete_account_onboarding_with_plan', {
+  const { data: organizationId, error: onboardingError } = await supabase.rpc('complete_account_onboarding', {
     p_full_name: form.fullName.trim(),
     p_phone: form.phone.trim(),
     p_job_title: form.jobTitle.trim(),
@@ -248,20 +203,32 @@ async function provisionAndCheckout(authenticatedUserId?: string) {
     p_timezone: form.timezone,
     p_base_currency: form.currency,
     p_fiscal_year_start_month: form.fiscalYearStartMonth,
-    p_tax_identifier: form.taxIdentifier.trim() || null,
-    p_billing_interval: form.interval,
+    p_tax_identifier: form.taxIdentifier.trim() || undefined,
   })
   if (onboardingError) throw new Error(describeError(onboardingError))
   if (!organizationId) throw new Error(t('errors.generic'))
   provisionedOrganizationId.value = organizationId
   savePendingOnboarding()
-  await openCheckout(organizationId)
+  clearPendingOnboarding()
+  await navigateTo('/dashboard')
 }
 
 async function createAccount() {
   pending.value = true
   errorMessage.value = ''
   try {
+    if (!form.organizationName.trim() || !form.legalName.trim()) {
+      errorMessage.value = t('onboarding.completeRequired')
+      return
+    }
+    const { data: isAvailable, error: availabilityError } = await supabase.rpc('check_legal_name_availability', {
+      p_legal_name: form.legalName.trim(),
+    })
+    if (availabilityError) throw availabilityError
+    if (!isAvailable) {
+      errorMessage.value = t('onboarding.legalNameTaken')
+      return
+    }
     const { data: auth, error: authError } = await supabase.auth.signUp({
       email: form.email.trim().toLowerCase(),
       password: form.password,
@@ -282,14 +249,13 @@ async function createAccount() {
             base_currency: form.currency,
             fiscal_year_start_month: form.fiscalYearStartMonth,
             tax_identifier: form.taxIdentifier.trim(),
-            billing_interval: form.interval,
           },
         },
       },
     })
     if (authError || !auth.user) throw new Error(t('auth.failed'))
     if (!auth.session) showOtpVerification()
-    else await provisionAndCheckout(auth.user.id)
+    else await provisionAndStartTrial(auth.user.id)
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : t('errors.generic')
@@ -301,7 +267,7 @@ async function finishOnboarding() {
   if (existingAccountOnboarding.value) {
     pending.value = true
     errorMessage.value = ''
-    try { await provisionAndCheckout() }
+    try { await provisionAndStartTrial() }
     catch (error) { errorMessage.value = error instanceof Error ? error.message : t('errors.generic') }
     finally { pending.value = false }
     return
@@ -311,21 +277,36 @@ async function finishOnboarding() {
 }
 
 async function verifyOtpAndContinue() {
-  if (otp.value.length !== 6 || otpExpired.value) return
+  if (pending.value) return
   pending.value = true
   errorMessage.value = ''
+  let emailVerified = false
   try {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: form.email.trim().toLowerCase(),
-      token: otp.value,
-      type: 'email',
-    })
-    if (error || !data.session) throw new Error(t('onboarding.otpInvalid'))
-    await provisionAndCheckout(data.session.user.id)
+    const normalizedEmail = form.email.trim().toLowerCase()
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+
+    let userId = sessionData.session?.user.email?.toLowerCase() === normalizedEmail
+      ? sessionData.session.user.id
+      : undefined
+
+    if (!userId) {
+      if (otp.value.length !== 6 || otpExpired.value) return
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: normalizedEmail,
+        token: otp.value,
+        type: 'email',
+      })
+      if (error || !data.session) throw new Error(t('onboarding.otpInvalid'))
+      userId = data.user?.id
+    }
+
+    emailVerified = true
+    await provisionAndStartTrial(userId)
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : t('errors.generic')
-    otp.value = ''
+    if (!emailVerified) otp.value = ''
   }
   finally { pending.value = false }
 }
@@ -383,27 +364,18 @@ async function restoreAuthenticatedOnboarding() {
 
   await loadOrganizations(data.user.id, { force: true })
   if (currentId.value) {
-    const checkoutAfterVerification = sessionStorage.getItem(CHECKOUT_AFTER_VERIFICATION_KEY) === '1'
-    sessionStorage.removeItem(CHECKOUT_AFTER_VERIFICATION_KEY)
-    if (checkoutAfterVerification) {
-      pending.value = true
-      errorMessage.value = ''
-      try { await provisionAndCheckout(data.user.id) }
-      catch (error) { errorMessage.value = error instanceof Error ? error.message : t('errors.generic') }
-      finally { pending.value = false }
-      return
-    }
+    clearPendingOnboarding()
     await navigateTo('/dashboard')
     return
   }
 
-  step.value = hasBusinessDetails() ? 3 : (hasPersonalDetails() ? 2 : 1)
+  step.value = hasPersonalDetails() ? 2 : 1
   if (!hasPersonalDetails() || !hasBusinessDetails()) return
 
   pending.value = true
   errorMessage.value = ''
   try {
-    await provisionAndCheckout()
+    await provisionAndStartTrial(data.user.id)
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : t('errors.generic')
@@ -425,12 +397,13 @@ async function restoreAuthenticatedOnboarding() {
           <p class="ls-brand-hero-muted text-xs font-bold uppercase tracking-[.2em]">{{ t('onboarding.eyebrow') }}</p>
           <h1 class="mt-4 text-3xl font-black tracking-[-.04em]">{{ t('onboarding.title') }}</h1>
           <p class="ls-brand-hero-muted mt-3 text-sm leading-6">{{ t('onboarding.subtitle') }}</p>
+          <p class="mt-5 rounded-control border border-[var(--bs-steel-border)] p-3 text-sm font-semibold">{{ t('onboarding.noCardTrial') }}</p>
           <ol class="mt-8 space-y-6">
-            <li v-for="index in 3" :key="index" class="flex gap-3" :class="index > step ? 'opacity-40' : ''"><span class="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--bs-steel-border)] text-xs font-bold" :class="index === step ? 'bg-[var(--bs-premium-gold)] text-[var(--bs-deep-structure-navy)]' : ''">{{ index }}</span><div><p class="font-bold">{{ t(`onboarding.steps.${index}.title`) }}</p><p class="ls-brand-hero-muted text-xs">{{ t(`onboarding.steps.${index}.body`) }}</p></div></li>
+            <li v-for="index in 2" :key="index" class="flex gap-3" :class="index > step ? 'opacity-40' : ''"><span class="grid size-8 shrink-0 place-items-center rounded-full border border-[var(--bs-steel-border)] text-xs font-bold" :class="index === step ? 'bg-[var(--bs-premium-gold)] text-[var(--bs-deep-structure-navy)]' : ''">{{ index }}</span><div><p class="font-bold">{{ t(`onboarding.steps.${index}.title`) }}</p><p class="ls-brand-hero-muted text-xs">{{ t(`onboarding.steps.${index}.body`) }}</p></div></li>
           </ol>
         </aside>
 
-        <form v-if="!awaitingOtp" class="ls-card p-6 sm:p-8" :data-hydrated="hydrated" @submit.prevent="step < 3 ? next() : finishOnboarding()">
+        <form v-if="!awaitingOtp" class="ls-card p-6 sm:p-8" :data-hydrated="hydrated" @submit.prevent="step === 1 ? next() : finishOnboarding()">
           <div class="mb-8 flex items-center justify-between"><div><p class="text-xs font-bold text-fg-muted">{{ t('onboarding.stepCount', { step }) }}</p><h2 class="mt-1 text-2xl font-black">{{ t(`onboarding.steps.${step}.title`) }}</h2></div><button v-if="step > 1" type="button" class="ls-btn ls-btn-sm" @click="step--">{{ t('common.back') }}</button></div>
 
           <div v-if="step === 1" class="grid gap-4 sm:grid-cols-2">
@@ -452,17 +425,9 @@ async function restoreAuthenticatedOnboarding() {
             <div><FloatingField :label="t('onboarding.taxIdentifier')"><input id="org-tax" v-model="form.taxIdentifier" class="ls-input"></FloatingField><p class="ls-hint">{{ t('onboarding.optional') }}</p></div>
           </div>
 
-          <div v-else class="space-y-6">
-            <div class="grid gap-3 sm:grid-cols-2">
-              <label v-for="option in (['monthly','yearly'] as const)" :key="option" class="cursor-pointer rounded-card border p-6" :class="form.interval === option ? 'border-fg bg-surface-muted' : 'border-[var(--bs-border)]'"><input v-model="form.interval" type="radio" class="sr-only" :value="option"><span class="font-bold">{{ t(`billing.${option}`) }}</span><span class="mt-2 block text-2xl font-black">{{ t(`billing.${option}Price`) }}</span><span v-if="option === 'yearly'" class="mt-2 inline-block rounded-full bg-fg px-2 py-1 text-xs font-bold text-background">{{ t('landing.bestValue') }}</span></label>
-            </div>
-            <div class="rounded-card border border-[var(--bs-border)] bg-surface-muted p-6"><h3 class="font-bold">{{ t('onboarding.readyTitle') }}</h3><ul class="mt-3 grid gap-2 text-sm text-fg-muted sm:grid-cols-2"><li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('billing.featureAccounting') }}</li><li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('billing.featureAutomation') }}</li><li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('billing.featureTeam') }}</li><li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('onboarding.readyAccounts') }}</li></ul></div>
-            <p class="text-sm text-fg-muted">{{ t('onboarding.paymentExplanation') }}</p>
-          </div>
-
           <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
           <button class="ls-btn ls-btn-primary mt-8 w-full" :disabled="pending">{{ submitButtonText }}</button>
-          <p v-if="step === 3" class="mt-3 text-center text-xs text-fg-muted">{{ t('billing.paymentRequired') }}</p>
+          <p v-if="step === 2" class="mt-3 text-center text-xs text-fg-muted">{{ t('onboarding.noCardRequired') }}</p>
         </form>
 
         <form v-else class="ls-card p-6 sm:p-8" :data-hydrated="hydrated" @submit.prevent="verifyOtpAndContinue">
