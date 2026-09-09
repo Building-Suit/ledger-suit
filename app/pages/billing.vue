@@ -12,7 +12,9 @@ function displayDate(value: string | null | undefined) {
   return value ? new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(new Date(value)) : '—'
 }
 
-const renewalDate = computed(() => subscription.value?.trial_ends_at ?? subscription.value?.current_period_end)
+const renewalDate = computed(() => accessState.value === 'trialing'
+  ? subscription.value?.trial_ends_at
+  : subscription.value?.current_period_end)
 
 async function openPortal() {
   if (!currentId.value) return

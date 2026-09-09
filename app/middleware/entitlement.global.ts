@@ -35,7 +35,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const isCheckoutReturn = to.query.checkout === 'success'
   await billing.load({ force: isCheckoutReturn })
 
-  if (billing.checkoutRequired.value && to.path !== '/subscribe') {
+  if (billing.paymentRequired.value && to.path !== '/subscribe') {
     // Older Checkout Sessions return to /billing. Preserve their success
     // marker so the subscribe page can wait for the webhook to arrive.
     return navigateTo({
@@ -44,7 +44,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }, { replace: true })
   }
 
-  if (!billing.checkoutRequired.value && to.path === '/subscribe') {
+  if (!billing.paymentRequired.value && to.path === '/subscribe') {
     return navigateTo('/dashboard')
   }
 })

@@ -3,7 +3,7 @@ import type { Database } from '~~/types/database.types'
 
 const supabase = useSupabaseClient<Database>()
 const { organizations, current, setOrganization, loadOrganizations, roleLabel } = useTenant()
-const { checkoutRequired, createCheckoutSession, load: loadBilling } = useBilling()
+const { paymentRequired, load: loadBilling } = useBilling()
 const { t } = useI18n()
 const route = useRoute()
 const describeError = useErrorMessage()
@@ -14,10 +14,8 @@ const createOpen = ref(false)
 const name = ref('')
 const legalName = ref('')
 const currency = ref('EGP')
-const interval = ref<'monthly' | 'yearly'>('monthly')
 const pending = ref(false)
 const errorMessage = ref('')
-const pendingOrganizationId = ref<string | null>(null)
 
 useClickOutside(root, () => (open.value = false))
 
@@ -25,7 +23,7 @@ async function choose(id: string) {
   open.value = false
   await setOrganization(id)
   await loadBilling()
-  if (checkoutRequired.value) await navigateTo('/subscribe')
+  if (paymentRequired.value) await navigateTo('/subscribe')
   else if (route.path === '/subscribe') await navigateTo('/dashboard')
 }
 
@@ -35,8 +33,6 @@ function showCreate() {
   name.value = ''
   legalName.value = ''
   currency.value = current.value?.base_currency ?? 'EGP'
-  interval.value = 'monthly'
-  pendingOrganizationId.value = null
   errorMessage.value = ''
 }
 
@@ -44,47 +40,40 @@ function closeCreate() {
   if (!pending.value) createOpen.value = false
 }
 
-async function createAndCheckout() {
+async function createAndStartTrial() {
   pending.value = true
   errorMessage.value = ''
   try {
-    if (!pendingOrganizationId.value) {
-      const normalizedName = name.value.trim()
-      const normalizedLegalName = legalName.value.trim()
-      if (!normalizedName || !normalizedLegalName) {
-        errorMessage.value = t('onboarding.completeRequired')
-        return
-      }
-
-      // This gives immediate feedback. The unique index inside
-      // create_organization remains the authoritative race-safe check.
-      const { data: isAvailable, error: availabilityError } = await supabase.rpc('check_legal_name_availability', {
-        p_legal_name: normalizedLegalName,
-      })
-      if (availabilityError) throw availabilityError
-      if (!isAvailable) {
-        errorMessage.value = t('onboarding.legalNameTaken')
-        return
-      }
-
-      const { data, error } = await supabase.rpc('create_organization', {
-        p_name: normalizedName,
-        p_legal_name: normalizedLegalName,
-        p_base_currency: currency.value,
-      })
-      if (error) throw error
-      pendingOrganizationId.value = data
-      // Keep the paid workspace selected while Checkout is being prepared. If
-      // Stripe is temporarily unavailable, the locked workspace is still in
-      // the switcher and this dialog can retry without creating a duplicate.
-      await loadOrganizations(undefined, { force: true })
+    const normalizedName = name.value.trim()
+    const normalizedLegalName = legalName.value.trim()
+    if (!normalizedName || !normalizedLegalName) {
+      errorMessage.value = t('onboarding.completeRequired')
+      return
     }
 
-    const organizationId = pendingOrganizationId.value
+    // This gives immediate feedback. The unique index inside
+    // create_organization remains the authoritative race-safe check.
+    const { data: isAvailable, error: availabilityError } = await supabase.rpc('check_legal_name_availability', {
+      p_legal_name: normalizedLegalName,
+    })
+    if (availabilityError) throw availabilityError
+    if (!isAvailable) {
+      errorMessage.value = t('onboarding.legalNameTaken')
+      return
+    }
+
+    const { data: organizationId, error } = await supabase.rpc('create_organization', {
+      p_name: normalizedName,
+      p_legal_name: normalizedLegalName,
+      p_base_currency: currency.value,
+    })
+    if (error) throw error
     if (!organizationId) throw new Error(t('billing.checkoutFailed'))
-    const url = await createCheckoutSession(organizationId, interval.value, t('billing.checkoutFailed'))
+    await loadOrganizations(undefined, { force: true })
     await setOrganization(organizationId)
-    window.location.assign(url)
+    await loadBilling({ force: true })
+    createOpen.value = false
+    if (route.path === '/subscribe') await navigateTo('/dashboard')
   }
   catch (error) {
     errorMessage.value = describeError(error)
@@ -166,7 +155,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEscape))
           aria-labelledby="create-organization-title"
           @click.self="closeCreate"
         >
-          <form class="ls-modal-panel ls-card w-full max-w-lg space-y-5 p-6 shadow-overlay" @submit.prevent="createAndCheckout">
+          <form class="ls-modal-panel ls-card w-full max-w-lg space-y-5 p-6 shadow-overlay" @submit.prevent="createAndStartTrial">
             <div class="flex items-start justify-between gap-4">
               <div>
                 <p class="text-sm font-semibold text-accent">{{ t('org.additionalEyebrow') }}</p>
@@ -179,34 +168,18 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEscape))
             </div>
 
             <FloatingField :label="t('org.name')">
-              <input id="additional-org-name" v-model="name" class="ls-input" required :disabled="Boolean(pendingOrganizationId)">
+              <input id="additional-org-name" v-model="name" class="ls-input" required>
             </FloatingField>
 
             <FloatingField :label="t('onboarding.legalName')">
-              <input id="additional-org-legal-name" v-model="legalName" class="ls-input" required :disabled="Boolean(pendingOrganizationId)">
+              <input id="additional-org-legal-name" v-model="legalName" class="ls-input" required>
             </FloatingField>
 
             <FloatingField :label="t('accounts.currency')">
-              <select id="additional-org-currency" v-model="currency" class="ls-input" :disabled="Boolean(pendingOrganizationId)">
+              <select id="additional-org-currency" v-model="currency" class="ls-input">
                 <option v-for="code in ['EGP', 'USD', 'EUR', 'GBP', 'SAR', 'AED']" :key="code">{{ code }}</option>
               </select>
             </FloatingField>
-
-            <fieldset>
-              <legend class="ls-label">{{ t('billing.billingCycle') }}</legend>
-              <div class="grid grid-cols-2 gap-2" dir="ltr">
-                <label class="ls-card-flat cursor-pointer p-3 text-center" :class="{ 'border-primary': interval === 'monthly' }">
-                  <input v-model="interval" class="sr-only" type="radio" value="monthly">
-                  <span class="block font-semibold">{{ t('billing.monthly') }}</span>
-                  <span class="mt-1 block text-xs text-fg-muted">{{ t('billing.monthlyPrice') }}</span>
-                </label>
-                <label class="ls-card-flat cursor-pointer p-3 text-center" :class="{ 'border-primary': interval === 'yearly' }">
-                  <input v-model="interval" class="sr-only" type="radio" value="yearly">
-                  <span class="block font-semibold">{{ t('billing.yearly') }}</span>
-                  <span class="mt-1 block text-xs text-fg-muted">{{ t('billing.yearlyPrice') }}</span>
-                </label>
-              </div>
-            </fieldset>
 
             <div class="rounded-control border border-[var(--bs-border)] bg-surface-muted p-3 text-sm">
               <p class="font-semibold">{{ t('org.separateSubscriptionTitle') }}</p>
@@ -215,7 +188,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEscape))
 
             <p v-if="errorMessage" class="ls-error" role="alert">{{ errorMessage }}</p>
             <button type="submit" class="ls-btn ls-btn-accent w-full" :disabled="pending">
-              {{ pending ? t('billing.openingCheckout') : pendingOrganizationId ? t('org.retryPayment') : t('org.createAndPay') }}
+              {{ pending ? t('onboarding.creating') : t('org.createAndStartTrial') }}
             </button>
           </form>
         </div>

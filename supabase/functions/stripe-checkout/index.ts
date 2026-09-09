@@ -7,6 +7,14 @@ interface CheckoutContext {
   organization_name: string
   billing_email: string
   provider_customer_id: string | null
+  access_state: string
+}
+
+async function integrationIdentifier(seed: string): Promise<string> {
+  const alphabet = 'abcdefghijklmnopqrstuvwxyz'
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed)))
+  const suffix = [...digest.slice(0, 8)].map(byte => alphabet[byte % alphabet.length]).join('')
+  return `ledger_suit_org_${suffix}`
 }
 
 async function integrationIdentifier(seed: string): Promise<string> {
@@ -30,6 +38,9 @@ Deno.serve(async (request) => {
     if (error) throw error
     const context = (data as CheckoutContext[] | null)?.[0]
     if (!context) throw new Error('Organization not found')
+    if (!['trialing', 'checkout_required', 'read_only'].includes(context.access_state)) {
+      throw new Error('Subscription is already active')
+    }
 
     const priceId = requiredEnv(interval === 'monthly' ? 'STRIPE_MONTHLY_PRICE_ID' : 'STRIPE_YEARLY_PRICE_ID')
     const appUrl = requiredEnv('APP_BASE_URL').replace(/\/$/, '')
@@ -43,8 +54,6 @@ Deno.serve(async (request) => {
       integration_identifier: await integrationIdentifier(`${organizationId}/${interval}/${bucket}`),
       'line_items[0][price]': priceId,
       'line_items[0][quantity]': '1',
-      payment_method_collection: 'always',
-      'subscription_data[trial_period_days]': '14',
       'subscription_data[metadata][organization_id]': organizationId,
       'metadata[organization_id]': organizationId,
       'metadata[billing_interval]': interval,
