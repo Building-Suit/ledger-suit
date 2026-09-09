@@ -16,6 +16,7 @@ const legalName = ref('')
 const currency = ref('EGP')
 const pending = ref(false)
 const errorMessage = ref('')
+const ownsOrganization = computed(() => organizations.value.some(organization => organization.role === 'owner'))
 
 useClickOutside(root, () => (open.value = false))
 
@@ -133,7 +134,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onEscape))
           <AppIcon v-if="org.id === current?.id" name="check" class="text-[var(--bs-status-success)]" />
         </button>
       </li>
-      <li class="mt-1 border-t border-[var(--bs-border)] pt-1">
+      <li v-if="!ownsOrganization" class="mt-1 border-t border-[var(--bs-border)] pt-1">
         <button
           type="button"
           class="flex w-full items-center gap-2 rounded-chip px-2 py-2 text-start text-sm font-semibold text-accent hover:bg-surface-muted"

@@ -798,6 +798,7 @@
   "errors": {
     "generic": "حدث خطأ ما. حاول مرة أخرى.",
     "LEGAL_NAME_ALREADY_EXISTS": "يوجد نشاط تجاري مسجل بهذا الاسم القانوني بالفعل.",
+    "ORGANIZATION_OWNER_LIMIT_REACHED": "تسمح خطتك الحالية بامتلاك مؤسسة واحدة فقط.",
     "TENANT_ACCESS_DENIED": "هذا السجل يخص مؤسسة أخرى.",
     "INSUFFICIENT_PERMISSION": "صلاحيتك لا تسمح بهذا الإجراء.",
     "UNBALANCED_JOURNAL": "القيد غير متوازن. يجب أن يتساوى المدين مع الدائن.",

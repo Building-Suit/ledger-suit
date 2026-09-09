@@ -17,7 +17,7 @@ select is(
 );
 
 select set_config('request.jwt.claims',
-  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 set local role authenticated;
 
 create temp table billing_ids (key text primary key, value text);
@@ -84,7 +84,7 @@ where organization_id = (select value::uuid from billing_ids where key = 'org');
 
 reset role;
 select set_config('request.jwt.claims',
-  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 set local role authenticated;
 
 select is(
@@ -150,7 +150,7 @@ select is(
 
 reset role;
 select set_config('request.jwt.claims',
-  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 set local role authenticated;
 
 select is(
