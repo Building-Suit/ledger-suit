@@ -1,10 +1,6 @@
 <script setup lang="ts">
-const supabase = useSupabaseClient()
 const { t, locale } = useI18n()
-const { currentId } = useTenant()
 const { accessState, subscription } = useBilling()
-const pending = ref(false)
-const errorMessage = ref('')
 
 useHead({ title: () => `${t('billing.title')} · ${t('app.name')}` })
 
@@ -15,24 +11,6 @@ function displayDate(value: string | null | undefined) {
 const renewalDate = computed(() => accessState.value === 'trialing'
   ? subscription.value?.trial_ends_at
   : subscription.value?.current_period_end)
-
-async function openPortal() {
-  if (!currentId.value) return
-  pending.value = true
-  errorMessage.value = ''
-  try {
-    const { data, error } = await supabase.functions.invoke('stripe-portal', {
-      body: { organizationId: currentId.value },
-    })
-    if (error) throw new Error(await edgeFunctionErrorMessage(error, t('billing.portalFailed')))
-    if (!data?.url) throw new Error(data?.error ?? t('billing.portalFailed'))
-    window.location.assign(data.url)
-  }
-  catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : t('billing.portalFailed')
-  }
-  finally { pending.value = false }
-}
 
 // The global entitlement middleware owns the initial load. Loading again from
 // onMounted made the layout remove and remount this page on every request.
@@ -59,11 +37,10 @@ async function openPortal() {
         <div><dt class="text-xs text-fg-muted">{{ t('billing.nextDate') }}</dt><dd class="font-semibold">{{ displayDate(renewalDate) }}</dd></div>
       </dl>
 
-      <button v-if="subscription?.provider_status" type="button" class="ls-btn ls-btn-primary" :disabled="pending" @click="openPortal">
-        {{ t('billing.manageStripe') }}
-      </button>
+      <p v-if="subscription?.provider_status" class="text-sm text-fg-muted">
+        {{ t('billing.managedByPaymob') }}
+      </p>
       <BillingCheckout v-else compact />
-      <p v-if="errorMessage" class="ls-error" role="alert">{{ errorMessage }}</p>
     </div>
   </div>
 </template>

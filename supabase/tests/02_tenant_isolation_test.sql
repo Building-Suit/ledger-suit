@@ -40,7 +40,7 @@ insert into ids (key, id) values ('org_a', public.create_organization('Alpha Tra
 
 reset role;
 update public.subscriptions
-set status = 'active', provider = 'stripe', provider_subscription_id = 'sub_test_tenant_a',
+set status = 'active', provider = 'paymob', provider_subscription_id = 'sub_test_tenant_a',
     provider_status = 'active', billing_interval = 'monthly', checkout_completed_at = now(),
     current_period_start = now(), current_period_end = now() + interval '30 days'
 where organization_id = (select id from ids where key = 'org_a');
@@ -75,7 +75,7 @@ insert into ids (key, id) values ('org_b', public.create_organization('Beta Supp
 
 reset role;
 update public.subscriptions
-set status = 'active', provider = 'stripe', provider_subscription_id = 'sub_test_tenant_b',
+set status = 'active', provider = 'paymob', provider_subscription_id = 'sub_test_tenant_b',
     provider_status = 'active', billing_interval = 'monthly', checkout_completed_at = now(),
     current_period_start = now(), current_period_end = now() + interval '30 days'
 where organization_id = (select id from ids where key = 'org_b');

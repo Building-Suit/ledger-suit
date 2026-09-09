@@ -38,7 +38,7 @@ export function useBilling() {
     interval: BillingInterval,
     fallbackMessage = 'Secure checkout could not be opened.',
   ): Promise<string> {
-    const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+    const { data, error } = await supabase.functions.invoke('paymob-checkout', {
       body: { organizationId, interval },
     })
     if (error) throw new Error(await edgeFunctionErrorMessage(error, fallbackMessage))

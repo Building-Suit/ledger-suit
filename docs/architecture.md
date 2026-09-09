@@ -245,9 +245,9 @@ profile is gone.
 ## 8. Subscription access
 
 There is one public product: Ledger Suit, billed monthly or yearly through
-Stripe. Creating an organization inserts a `suspended` subscription and does
-**not** start access. Only a signature-verified Stripe event can attach the
-provider subscription and begin the 14-day trial.
+Paymob. Creating an organization starts a cardless 14-day trial. After it
+expires, only a signature-verified Paymob transaction can attach the provider
+subscription and restore paid access.
 
 The central capability predicate applies subscription state after role and
 member overrides. Read capabilities and `billing.manage` remain available;
@@ -265,8 +265,8 @@ public.get_limit(organization_id, limit_key)   -- NULL = unlimited, 0 = denied
 
 `billing_events` is unique on `(provider, provider_event_id)`, which is what
 makes webhook processing idempotent no matter how often a provider retries.
-The webhook verifies Stripe's HMAC over the untouched request body before it
-calls the service-only database transition function.
+The webhook verifies Paymob's fixed-field HMAC-SHA512 signature before it calls
+the service-only database transition function.
 
 Supabase Cron runs recurring transactions, commitment reminders, and automatic
 commitment conversions every 15 minutes. It skips organizations without write
@@ -297,9 +297,10 @@ validation fails, none of the workspace survives. The function resolves the
 caller through `auth.uid()`, refuses replay for an existing active member, fixes
 its `search_path`, and grants execution only to authenticated users.
 
-Stripe Checkout is the final signup step. Until its signed webhook activates
-the trial, the database removes write capabilities. A partially paid or
-client-forged workspace therefore cannot enter normal use.
+Paymob Unified Checkout is required after the cardless trial expires. Until its
+signed webhook activates paid access, the database removes product
+capabilities. A partially paid or client-forged workspace therefore cannot
+re-enter normal use.
 
 The authenticated shell exposes one global floating add control. Its drawer is
 derived from the caller's capabilities and delegates to the existing controlled
