@@ -318,7 +318,7 @@ export type Database = {
         }
         Insert: {
           description: string
-          description_ar: string
+          description_ar?: string
           domain: string
           key: string
         }
@@ -887,6 +887,13 @@ export type Database = {
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "organization_invitations_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "organization_roles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       organization_members: {
@@ -948,10 +955,55 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "organization_members_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "organization_roles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "organization_members_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_roles: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          name_ar: string
+          name_en: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          name_ar: string
+          name_en: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          name_ar?: string
+          name_en?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1002,6 +1054,68 @@ export type Database = {
             foreignKeyName: "organization_settings_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_system_role_capabilities: {
+        Row: {
+          capability_key: string
+          organization_id: string
+          role: Database["public"]["Enums"]["organization_role"]
+        }
+        Insert: {
+          capability_key: string
+          organization_id: string
+          role: Database["public"]["Enums"]["organization_role"]
+        }
+        Update: {
+          capability_key?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["organization_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_system_role_capabilities_capability_key_fkey"
+            columns: ["capability_key"]
+            isOneToOne: false
+            referencedRelation: "capabilities"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "organization_system_role_capabilities_organization_id_role_fkey"
+            columns: ["organization_id", "role"]
+            isOneToOne: false
+            referencedRelation: "organization_system_roles"
+            referencedColumns: ["organization_id", "role"]
+          },
+        ]
+      }
+      organization_system_roles: {
+        Row: {
+          created_at: string
+          organization_id: string
+          role: Database["public"]["Enums"]["organization_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          organization_id: string
+          role: Database["public"]["Enums"]["organization_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["organization_role"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_system_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1287,44 +1401,6 @@ export type Database = {
           },
         ]
       }
-      organization_roles: {
-        Row: {
-          created_at: string
-          id: string
-          key: string
-          name_ar: string
-          name_en: string
-          organization_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          key: string
-          name_ar: string
-          name_en: string
-          organization_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          key?: string
-          name_ar?: string
-          name_en?: string
-          organization_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "organization_roles_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       role_capabilities: {
         Row: {
           capability_key: string
@@ -1348,6 +1424,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "capabilities"
             referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "role_capabilities_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "organization_roles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2422,19 +2505,6 @@ export type Database = {
         Args: { p_token: string }
         Returns: string
       }
-      check_legal_name_availability: {
-        Args: {
-          p_legal_name: string
-        }
-        Returns: boolean
-      }
-      check_owner_availability: {
-        Args: {
-          p_email: string
-          p_phone: string
-        }
-        Returns: Json
-      }
       apply_stripe_subscription_event: {
         Args: {
           p_cancel_at_period_end?: boolean
@@ -2480,6 +2550,14 @@ export type Database = {
       }
       check_balance_sheet_integrity: {
         Args: { p_as_of_date?: string; p_organization_id: string }
+        Returns: Json
+      }
+      check_legal_name_availability: {
+        Args: { p_legal_name: string }
+        Returns: boolean
+      }
+      check_owner_availability: {
+        Args: { p_email: string; p_phone: string }
         Returns: Json
       }
       claim_notification_emails: {
@@ -2638,13 +2716,10 @@ export type Database = {
         Args: { p_as_of_date?: string; p_organization_id: string }
         Returns: Json
       }
+      delete_organization_role: { Args: { p_role_id: string }; Returns: string }
       get_limit: {
         Args: { p_limit_key: string; p_organization_id: string }
         Returns: number
-      }
-      delete_organization_role: {
-        Args: { p_role_id: string }
-        Returns: string
       }
       manage_organization_member: {
         Args: {
@@ -2701,19 +2776,11 @@ export type Database = {
           inviter_name: string
           organization_name: string
           role: Database["public"]["Enums"]["organization_role"]
-          role_key: string | null
-          role_name_ar: string | null
-          role_name_en: string | null
+          role_key: string
+          role_name_ar: string
+          role_name_en: string
+          user_exists: boolean
         }[]
-      }
-      update_organization_role: {
-        Args: {
-          p_capabilities: string[]
-          p_name_ar: string
-          p_name_en: string
-          p_role_id: string
-        }
-        Returns: string
       }
       record_asset_purchase: {
         Args: {
@@ -3062,6 +3129,23 @@ export type Database = {
           p_title: string
         }
         Returns: string
+      }
+      update_organization_role: {
+        Args: {
+          p_capabilities: string[]
+          p_name_ar: string
+          p_name_en: string
+          p_role_id: string
+        }
+        Returns: string
+      }
+      update_organization_system_role: {
+        Args: {
+          p_capabilities: string[]
+          p_organization_id: string
+          p_role: Database["public"]["Enums"]["organization_role"]
+        }
+        Returns: Database["public"]["Enums"]["organization_role"]
       }
       void_transaction: {
         Args: { p_reason?: string; p_transaction_id: string }
