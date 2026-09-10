@@ -43,6 +43,9 @@ Deno.serve(async (request) => {
     const prefix = interval === 'monthly' ? 'PAYMOB_MONTHLY' : 'PAYMOB_YEARLY'
     const amount = Number(requiredEnv(`${prefix}_AMOUNT_CENTS`))
     const planId = Number(requiredEnv(`${prefix}_PLAN_ID`))
+    // Initial enrollment is customer-present and must use the online 3DS
+    // integration. The separate MOTO ID belongs to the Paymob plan and is
+    // used by Paymob itself for later automatic deductions.
     const integrationId = Number(requiredEnv('PAYMOB_CARD_INTEGRATION_ID'))
     if (![amount, planId, integrationId].every(Number.isSafeInteger) || amount <= 0) {
       throw new Error('Paymob billing configuration is invalid')
@@ -83,7 +86,7 @@ Deno.serve(async (request) => {
       special_reference: reference,
       expiration: 1800,
       notification_url: `${functionUrl}/functions/v1/paymob-webhook`,
-      redirection_url: `${appUrl}/subscribe?checkout=success`,
+      redirection_url: `${appUrl}/subscribe?checkout=complete`,
     })
     if (!intention.client_secret) throw new Error('Paymob did not return a checkout client secret')
     return json({ id: intention.id, orderId: intention.intention_order_id, url: paymobCheckoutUrl(intention.client_secret) })
