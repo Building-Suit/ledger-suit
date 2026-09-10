@@ -4,16 +4,16 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(18);
 
-select is(
-  (select count(*) from public.subscription_plans where is_public and is_active),
-  1::bigint,
-  'exactly one subscription plan is available'
+select ok(
+  (select is_active and not is_public and not is_purchasable
+   from public.subscription_plans where key = 'ledger_suit'),
+  'the legacy Ledger Suit plan remains active and private'
 );
 
 select is(
-  (select key from public.subscription_plans where is_public and is_active),
-  'ledger_suit',
-  'the single plan is Ledger Suit'
+  (select count(*) from public.subscription_plans where key = 'ledger_suit'),
+  1::bigint,
+  'the billing compatibility plan remains unique'
 );
 
 select set_config('request.jwt.claims',

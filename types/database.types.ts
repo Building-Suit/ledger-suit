@@ -1613,6 +1613,7 @@ export type Database = {
           id: string
           is_active: boolean
           is_public: boolean
+          is_purchasable: boolean
           key: string
           name: string
           sort_order: number
@@ -1624,6 +1625,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_public?: boolean
+          is_purchasable?: boolean
           key: string
           name: string
           sort_order?: number
@@ -1635,6 +1637,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_public?: boolean
+          is_purchasable?: boolean
           key?: string
           name?: string
           sort_order?: number
@@ -3125,6 +3128,18 @@ export type Database = {
       subscription_access_state: {
         Args: { p_organization_id: string }
         Returns: string
+      }
+      subscription_plan_catalog: {
+        Args: never
+        Returns: {
+          description: string
+          entitlements: Json
+          is_purchasable: boolean
+          name: string
+          plan_key: string
+          prices: Json
+          sort_order: number
+        }[]
       }
       update_account: {
         Args: { p_account_id: string; p_code?: string; p_name: string }
