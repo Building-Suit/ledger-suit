@@ -244,10 +244,24 @@ profile is gone.
 
 ## 8. Subscription access
 
-There is one public product: Ledger Suit, billed monthly or yearly through
-Paymob. Creating an organization starts a cardless 14-day trial. After it
-expires, only a signature-verified Paymob transaction can attach the provider
-subscription and restore paid access.
+The database contains a dormant launch catalog for Solo, Starter, Business, and
+the non-purchasable Scale preview. Existing organizations, trials, checkout,
+and Paymob webhooks continue to use the private active `ledger_suit`
+compatibility plan until the later plan-aware checkout and approved customer
+migration steps. Creating an organization starts a cardless 14-day trial. After
+it expires, only a signature-verified Paymob transaction can attach the current
+provider subscription and restore paid access.
+
+`subscription_plans.is_purchasable` is the server-authoritative distinction
+between something that can appear publicly and something checkout may sell.
+`app.resolve_purchasable_plan()` resolves only an active, public, purchasable
+plan plus an active commercial price. Scale, Enterprise, and the compatibility
+plan cannot resolve. Enterprise is intentionally not a plan row.
+
+Raw plan tables are not client-readable because price rows may later carry
+provider mappings. `public.subscription_plan_catalog()` is executable by public
+and authenticated clients and returns only public commercial prices and
+entitlements; provider identifiers are omitted.
 
 The central capability predicate applies subscription state after role and
 member overrides. Read capabilities and `billing.manage` remain available;
