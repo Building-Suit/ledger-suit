@@ -53,6 +53,11 @@ test('permanent navigation exposes every creation workflow by section', async ({
   await expect(navigation.getByRole('link', { name: 'Access & permissions' })).toBeVisible()
 })
 
+test('owner cannot create a second organization on the current plan', async ({ page }) => {
+  await page.getByRole('button', { name: 'Organization' }).click()
+  await expect(page.getByRole('button', { name: 'Create your own organization' })).toHaveCount(0)
+})
+
 test('owner can review members, role permissions and invitations', async ({ page }) => {
   await page.getByRole('link', { name: 'Access & permissions' }).click()
   await expect(page.getByRole('heading', { name: 'Roles, permissions & invitations' })).toBeVisible()

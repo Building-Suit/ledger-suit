@@ -2505,10 +2505,8 @@ export type Database = {
         Args: { p_token: string }
         Returns: string
       }
-      apply_stripe_subscription_event: {
+      apply_paymob_subscription_event: {
         Args: {
-          p_cancel_at_period_end?: boolean
-          p_customer_id: string
           p_event_id: string
           p_event_type: string
           p_interval: Database["public"]["Enums"]["billing_interval"]
@@ -2520,8 +2518,6 @@ export type Database = {
           p_period_start?: string
           p_provider_status: string
           p_subscription_id: string
-          p_trial_end?: string
-          p_trial_start?: string
         }
         Returns: boolean
       }
@@ -2535,6 +2531,8 @@ export type Database = {
           access_state: string
           billing_email: string
           billing_interval: Database["public"]["Enums"]["billing_interval"]
+          billing_name: string
+          billing_phone: string
           organization_id: string
           organization_name: string
           provider_customer_id: string
@@ -2585,6 +2583,23 @@ export type Database = {
           p_organization_name: string
           p_phone: string
           p_tax_identifier?: string
+          p_timezone: string
+        }
+        Returns: string
+      }
+      complete_account_onboarding_with_plan: {
+        Args: {
+          p_base_currency: string
+          p_billing_interval: Database["public"]["Enums"]["billing_interval"]
+          p_business_type: Database["public"]["Enums"]["organization_business_type"]
+          p_country_code: string
+          p_fiscal_year_start_month: number
+          p_full_name: string
+          p_job_title: string
+          p_legal_name: string
+          p_organization_name: string
+          p_phone: string
+          p_tax_identifier: string
           p_timezone: string
         }
         Returns: string
@@ -3002,6 +3017,7 @@ export type Database = {
           type: Database["public"]["Enums"]["account_type"]
         }[]
       }
+      resume_saved_signup: { Args: never; Returns: string }
       retry_recurring_occurrence: {
         Args: { p_occurrence_id: string }
         Returns: {
@@ -3560,4 +3576,3 @@ export const Constants = {
     },
   },
 } as const
-

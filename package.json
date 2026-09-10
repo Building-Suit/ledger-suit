@@ -16,7 +16,8 @@
     "db:reset": "supabase db reset",
     "db:lint": "supabase db lint --level warning",
     "db:test": "supabase test db",
-    "db:types": "supabase gen types typescript --local > types/database.types.ts"
+    "db:types": "supabase gen types typescript --local > types/database.types.ts",
+    "paymob:provision-plans": "deno run --allow-env=PAYMOB_BASE_URL,PAYMOB_API_KEY,PAYMOB_MOTO_INTEGRATION_ID,PAYMOB_MONTHLY_AMOUNT_CENTS,PAYMOB_YEARLY_AMOUNT_CENTS --allow-net --env-file=.env scripts/provision-paymob-plans.ts"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.3.0",

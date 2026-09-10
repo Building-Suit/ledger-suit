@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(14);
+select plan(18);
 
 select is(
   (select count(*) from public.subscription_plans where is_public and is_active),
@@ -17,7 +17,7 @@ select is(
 );
 
 select set_config('request.jwt.claims',
-  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 set local role authenticated;
 
 create temp table billing_ids (key text primary key, value text);
@@ -31,8 +31,8 @@ select is(
   public.subscription_access_state(
     (select value::uuid from billing_ids where key = 'org')
   ),
-  'checkout_required',
-  'creating an organization does not start the trial'
+  'trialing',
+  'creating an organization starts the cardless trial'
 );
 
 select ok(
@@ -50,20 +50,19 @@ select ok(
 );
 
 select ok(
-  not ('transactions.post' = any(public.my_capabilities(
+  'transactions.post' = any(public.my_capabilities(
     (select value::uuid from billing_ids where key = 'org')
-  ))),
-  'write capabilities are removed before checkout'
+  )),
+  'write capabilities are available during the trial'
 );
 
-select throws_ok(
+select lives_ok(
   format(
     'select public.create_account(%L, %L, %L, %L)',
     (select value from billing_ids where key = 'org'),
-    'Blocked account', 'asset', 'bank'
+    'Trial account', 'asset', 'bank'
   ),
-  '42501', null,
-  'the database blocks writes before checkout'
+  'writes succeed during the cardless trial'
 );
 
 select lives_ok(
@@ -79,48 +78,94 @@ select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000000000","role":"service_role"}', true);
 set local role service_role;
 
-select is(
-  public.apply_stripe_subscription_event(
-    'evt_phase4_test', 'checkout.session.completed', '{"test":true}',
-    (select value::uuid from billing_ids where key = 'org'),
-    'cus_phase4_test', 'sub_phase4_test', 'trialing', 'monthly',
-    now(), now() + interval '14 days', now(), now() + interval '14 days', false,
-    null, null
-  ),
-  true,
-  'a verified Stripe event activates the trial'
-);
-
-select is(
-  public.apply_stripe_subscription_event(
-    'evt_phase4_test', 'checkout.session.completed', '{"test":true}',
-    (select value::uuid from billing_ids where key = 'org'),
-    'cus_phase4_test', 'sub_phase4_test', 'trialing', 'monthly',
-    now(), now() + interval '14 days', now(), now() + interval '14 days', false,
-    null, null
-  ),
-  false,
-  'replayed Stripe events are idempotent'
-);
+update public.subscriptions
+set trial_ends_at = now() - interval '1 second'
+where organization_id = (select value::uuid from billing_ids where key = 'org');
 
 reset role;
 select set_config('request.jwt.claims',
-  '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 set local role authenticated;
 
 select is(
   public.subscription_access_state(
     (select value::uuid from billing_ids where key = 'org')
   ),
-  'trialing',
-  'checkout starts the 14-day trial'
+  'checkout_required',
+  'an expired trial requires payment'
+);
+
+select ok(
+  not ('organization.read' = any(public.my_capabilities(
+    (select value::uuid from billing_ids where key = 'org')
+  ))),
+  'product read capabilities are removed after trial expiry'
+);
+
+select ok(
+  'billing.manage' = any(public.my_capabilities(
+    (select value::uuid from billing_ids where key = 'org')
+  )),
+  'billing remains reachable after trial expiry'
+);
+
+select throws_ok(
+  format(
+    'select public.create_account(%L, %L, %L, %L)',
+    (select value from billing_ids where key = 'org'),
+    'Expired account', 'asset', 'bank'
+  ),
+  '42501', null,
+  'the database blocks product changes after trial expiry'
+);
+
+reset role;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000000000","role":"service_role"}', true);
+set local role service_role;
+
+select is(
+  public.apply_paymob_subscription_event(
+    'txn_phase4_test', 'transaction.succeeded', '{"test":true}',
+    (select value::uuid from billing_ids where key = 'org'),
+    'subscription_phase4_test', 'active', 'monthly',
+    now(), now() + interval '1 month',
+    null, null
+  ),
+  true,
+  'a verified Paymob event activates the paid plan'
+);
+
+select is(
+  public.apply_paymob_subscription_event(
+    'txn_phase4_test', 'transaction.succeeded', '{"test":true}',
+    (select value::uuid from billing_ids where key = 'org'),
+    'subscription_phase4_test', 'active', 'monthly',
+    now(), now() + interval '1 month',
+    null, null
+  ),
+  false,
+  'replayed Paymob events are idempotent'
+);
+
+reset role;
+select set_config('request.jwt.claims',
+  '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
+set local role authenticated;
+
+select is(
+  public.subscription_access_state(
+    (select value::uuid from billing_ids where key = 'org')
+  ),
+  'active',
+  'checkout restores access with a paid subscription'
 );
 
 select ok(
   'transactions.post' = any(public.my_capabilities(
     (select value::uuid from billing_ids where key = 'org')
   )),
-  'write capabilities return during the trial'
+  'write capabilities return with the paid subscription'
 );
 
 select lives_ok(
@@ -129,7 +174,7 @@ select lives_ok(
     (select value from billing_ids where key = 'org'),
     'Allowed account', 'asset', 'bank'
   ),
-  'writes succeed atomically after Stripe activation'
+  'writes succeed atomically after paid Paymob activation'
 );
 
 select set_config('request.jwt.claims',

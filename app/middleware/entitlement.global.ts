@@ -24,16 +24,18 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const tenant = useTenant()
   await tenant.loadOrganizations(user.id)
 
-  // A confirmed user who has not completed organization setup is sent to the
-  // setup flow by the normal product route. There is no subscription yet to
-  // pay for, so do not manufacture a billing decision here.
-  if (!tenant.currentId.value) return
+  // The product layout waits for billing state and therefore cannot render
+  // without a tenant. Resume the paid owner-onboarding journey instead of
+  // leaving the authenticated user on an empty product shell.
+  if (!tenant.currentId.value) {
+    return navigateTo('/signup', { replace: true })
+  }
 
   const billing = useBilling()
   const isCheckoutReturn = to.query.checkout === 'success'
   await billing.load({ force: isCheckoutReturn })
 
-  if (billing.checkoutRequired.value && to.path !== '/subscribe') {
+  if (billing.paymentRequired.value && to.path !== '/subscribe') {
     // Older Checkout Sessions return to /billing. Preserve their success
     // marker so the subscribe page can wait for the webhook to arrive.
     return navigateTo({
@@ -42,7 +44,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }, { replace: true })
   }
 
-  if (!billing.checkoutRequired.value && to.path === '/subscribe') {
+  if (!billing.paymentRequired.value && to.path === '/subscribe') {
     return navigateTo('/dashboard')
   }
 })

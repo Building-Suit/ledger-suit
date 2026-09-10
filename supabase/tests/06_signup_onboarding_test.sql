@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(13);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password,
                         email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
@@ -38,12 +38,26 @@ select is((select business_type::text from public.organizations where id = (sele
 select is((select tax_identifier from public.organizations where id = (select organization_id from onboarding_ids)), 'TAX-ONBOARD-01', 'tax identifier is stored');
 select is((select legal_name from public.organizations where id = (select organization_id from onboarding_ids)), 'Ready Books LLC', 'legal business name is stored in normalized form');
 select is((select count(*) from public.accounts where organization_id = (select organization_id from onboarding_ids)), 0::bigint, 'chart of accounts starts empty');
-select is((select count(*) from public.subscriptions where organization_id = (select organization_id from onboarding_ids)), 1::bigint, 'one checkout-required subscription is provisioned');
+select is(
+  (select count(*) from public.subscriptions
+   where organization_id = (select organization_id from onboarding_ids)
+     and status = 'trialing'
+     and trial_started_at is not null
+     and trial_ends_at between now() + interval '13 days 23 hours' and now() + interval '14 days 1 minute'),
+  1::bigint,
+  'one 14-day cardless trial is provisioned'
+);
 
 select throws_ok(
   $$select public.create_organization('Duplicate Books', 'EGP'::char(3), 'EG'::char(2), 'Africa/Cairo', '  ready books llc  ', 1::smallint)$$,
   '23505', 'LEGAL_NAME_ALREADY_EXISTS: legal business name must be unique',
   'legal business names are unique regardless of case and surrounding whitespace'
+);
+
+select throws_ok(
+  $$select public.create_organization('Second Books', 'EGP'::char(3), 'EG'::char(2), 'Africa/Cairo', 'Second Books LLC', 1::smallint)$$,
+  '23514', 'ORGANIZATION_OWNER_LIMIT_REACHED: current plan allows 1 owned organization(s)',
+  'the current plan permits a user to own only one active organization'
 );
 
 select throws_ok(
