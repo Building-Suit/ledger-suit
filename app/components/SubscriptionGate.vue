@@ -3,7 +3,8 @@ const { t } = useI18n()
 const { current } = useTenant()
 const { load, loading } = useBilling()
 const route = useRoute()
-const processing = computed(() => route.query.checkout === 'success')
+const paymentFailed = computed(() => route.query.checkout === 'complete' && route.query.success === 'false')
+const processing = computed(() => route.query.checkout === 'complete' && !paymentFailed.value)
 
 function checkAgain() {
   return load({ force: true })
@@ -28,6 +29,9 @@ function checkAgain() {
         <button type="button" class="mt-2 text-link" :disabled="loading" @click="checkAgain">
           {{ t('billing.checkAgain') }}
         </button>
+      </div>
+      <div v-else-if="paymentFailed" class="ls-error" role="alert">
+        {{ t('billing.paymentFailed') }}
       </div>
       <BillingCheckout />
     </div>

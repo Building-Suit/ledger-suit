@@ -87,15 +87,18 @@ code or database DDL into the dashboard.
 
 External provider configuration is necessarily separate from database schema:
 
-1. Create monthly (30-day) and yearly (360-day) Paymob subscription plans,
-   configure their 3DS/MOTO integrations, and set each plan's webhook URL to
-   `https://<project-ref>.supabase.co/functions/v1/paymob-webhook`.
-2. Add the Edge secrets listed in [environment.md](environment.md).
-3. Set the Paymob processed callback URL to
+1. Ask Paymob to enable a MIGS MOTO integration for recurring deductions. Keep
+   it distinct from the existing Test online/VPC Integration ID `5902990`.
+2. With `PAYMOB_API_KEY` and `PAYMOB_MOTO_INTEGRATION_ID` in the ignored local
+   `.env`, provision the 30-day and 360-day plans using:
+   `pnpm paymob:provision-plans -- --webhook-url=https://<project-ref>.supabase.co/functions/v1/paymob-webhook`.
+3. Add the Edge runtime secrets listed in [environment.md](environment.md),
+   including the two plan IDs printed by the provisioning command.
+4. Set the Paymob processed callback URL to
    `https://<project-ref>.supabase.co/functions/v1/paymob-webhook`. The checkout
    function also supplies this URL per Intention.
-4. Verify the Resend sender domain used by `RESEND_FROM_EMAIL`.
-5. Store the two scheduler values in Supabase Vault using the exact names in
+5. Verify the Resend sender domain used by `RESEND_FROM_EMAIL`.
+6. Store the two scheduler values in Supabase Vault using the exact names in
    the environment guide. The versioned Cron job detects them automatically.
 
 The same plans are reused for every organization. Each organization completes a
