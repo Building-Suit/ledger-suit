@@ -67,6 +67,7 @@ development rather than only in the test suite.
 | `pnpm db:test` | pgTAP suite (`supabase/tests/`) |
 | `pnpm db:lint` | Supabase schema linter |
 | `pnpm db:types` | Regenerate `types/database.types.ts` from the local database |
+| `pnpm paymob:provision-plans -- --webhook-url=...` | Create or reuse the Paymob monthly/yearly plans after MOTO is enabled |
 
 ---
 

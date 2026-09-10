@@ -64,7 +64,7 @@ and must never be prefixed with `NUXT_PUBLIC_` or exposed to browser code.
 | `PAYMOB_SECRET_KEY` | Server-side secret key used to create payment Intentions |
 | `PAYMOB_PUBLIC_KEY` | Public key included in the Unified Checkout URL |
 | `PAYMOB_HMAC_SECRET` | Verifies Paymob transaction callbacks with HMAC-SHA512 |
-| `PAYMOB_CARD_INTEGRATION_ID` | Online 3DS card integration used for the first subscription transaction |
+| `PAYMOB_CARD_INTEGRATION_ID` | Test-mode online 3DS/VPC integration (`5902990` for the current Paymob account) used for the first subscription transaction |
 | `PAYMOB_MONTHLY_PLAN_ID` | Paymob subscription plan configured for 30-day deductions |
 | `PAYMOB_YEARLY_PLAN_ID` | Paymob subscription plan configured for 360-day deductions |
 | `PAYMOB_MONTHLY_AMOUNT_CENTS` | Monthly charge in the currency's smallest unit (`60000` for EGP 600) |
@@ -73,14 +73,44 @@ and must never be prefixed with `NUXT_PUBLIC_` or exposed to browser code.
 | `RESEND_FROM_EMAIL` | Verified sender: `notification@building-suit.com` |
 | `APP_BASE_URL` | Checkout return URL and email-link origin |
 
+Secret and public keys are mode-specific. Copy the Test values while the app is
+in Paymob Test mode, and replace them together with the Integration ID when
+moving to Live mode. The Egypt API origin is the same in both modes.
+
+Two additional values are used only while provisioning plans from a trusted
+developer machine; the deployed Edge Functions do not read them:
+
+| Variable | Purpose |
+|---|---|
+| `PAYMOB_API_KEY` | Generates the temporary Bearer token used by Paymob's subscription-plan API; Paymob uses the same API key in Test and Live modes |
+| `PAYMOB_MOTO_INTEGRATION_ID` | MIGS MOTO integration used by Paymob for automatic, customer-not-present renewal deductions |
+
+Do not substitute the online card Integration ID for the MOTO Integration ID.
+The online ID handles the customer's initial 3DS checkout; MOTO handles later
+automatic deductions.
+
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are supplied
 to deployed Supabase Edge Functions by the platform. The service role key is
 used only by the verified Paymob webhook and scheduled email worker.
 
 The Paymob account needs two subscription plans with `use_transaction_amount`
 enabled: EGP 600 every 30 days and EGP 4,800 every 360 days. The amount secrets
-must match those plans. The UI displays
-the configured product amounts and Unified Checkout confirms them before pay.
+must match those plans. The UI displays the configured product amounts and
+Unified Checkout confirms them before payment.
+
+Once Paymob enables MOTO, put `PAYMOB_API_KEY`,
+`PAYMOB_MOTO_INTEGRATION_ID`, and the two amount variables in the ignored local
+`.env`, then provision or safely reuse the plans:
+
+```bash
+pnpm paymob:provision-plans -- \
+  --webhook-url=https://<project-ref>.supabase.co/functions/v1/paymob-webhook
+```
+
+The command refuses to duplicate a named plan whose settings differ and prints
+the resulting `PAYMOB_MONTHLY_PLAN_ID` and `PAYMOB_YEARLY_PLAN_ID`. Add those
+two IDs to Supabase Edge Function Secrets. `PAYMOB_API_KEY` and
+`PAYMOB_MOTO_INTEGRATION_ID` do not need to remain in the deployed runtime.
 
 The plans are shared, but each organization creates a distinct Paymob
 subscription. The organization UUID and billing interval are copied into the

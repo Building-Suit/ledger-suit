@@ -9,7 +9,8 @@ const { restore } = useTheme()
 const route = useRoute()
 const redirecting = ref(false)
 const checkoutConfirmationActive = ref(false)
-const processing = computed(() => route.query.checkout === 'success')
+const paymentFailed = computed(() => route.query.checkout === 'complete' && route.query.success === 'false')
+const processing = computed(() => route.query.checkout === 'complete' && !paymentFailed.value)
 
 useHead({ title: () => `${t('billing.title')} · ${t('app.name')}` })
 
