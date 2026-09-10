@@ -367,6 +367,27 @@ subscription plan, and no unverified SLA or infrastructure claim should appear.
 Storage values use binary gigabytes because the existing storage limit is in
 bytes and the UI can label them as GB consistently.
 
+### 4.4 Launch pricing formula
+
+Monthly prices remain EGP 399 for Solo, EGP 599 for Starter, and EGP 1,099 for
+Business. Every annual price is calculated from its monthly price with a 32%
+discount on twelve monthly payments:
+
+```text
+annual price = monthly price × 12 × 0.68
+```
+
+| Plan | Monthly | Annual before discount | 32% discount | Final annual price |
+|---|---:|---:|---:|---:|
+| Solo | EGP 399 | EGP 4,788 | EGP 1,532.16 | EGP 3,255.84 |
+| Starter | EGP 599 | EGP 7,188 | EGP 2,300.16 | EGP 4,887.84 |
+| Business | EGP 1,099 | EGP 13,188 | EGP 4,220.16 | EGP 8,967.84 |
+
+The catalog stores these as integer minor-unit amounts: `325584`, `488784`,
+and `896784`. For reference, a plan priced at EGP 600 monthly produces EGP
+4,896 annually under the same formula. The formula is authoritative if a
+monthly price changes; annual amounts must not be independently hard-coded.
+
 ## 5. Business decisions required before customer migration
 
 These decisions cannot be inferred safely from the repository. They do not
@@ -402,8 +423,14 @@ must not require reversing accounting data.
 ## 6. Numbered execution plan
 
 Each numbered item is one focused branch and one pull request targeting `dev`.
-The next item starts only after the previous PR is merged. Branch names are
-suggestions and may be adjusted to repository convention.
+The next item may start as soon as the previous PR exists; merging into `dev` is
+not a prerequisite for continuing the execution sequence. Every new step still
+fetches and inspects the latest `origin/dev`. If a step depends on code in an
+unmerged PR, its branch may include that dependency as an explicit stacked
+commit chain while its PR continues to target `dev`; the PR description must
+name the dependency and reviewers must review only the new step-specific
+commits. Branch names are suggestions and may be adjusted to repository
+convention.
 
 ### Step 1 — Current-state audit and launch execution plan
 
@@ -607,6 +634,8 @@ Branch: `feat/launch-pricing-ui`
 
 - Replace single-plan pricing on public, subscribe, and billing surfaces with
   localized Solo/Starter/Business cards and monthly/yearly switching.
+- Display annual prices from the 32%-discount formula: EGP 3,255.84 for Solo,
+  EGP 4,887.84 for Starter, and EGP 8,967.84 for Business.
 - Mark Starter Most Popular; represent included/not included accurately.
 - Add Scale as disabled Coming Soon and Enterprise as separate Contact us /
   Coming Soon with no checkout path.
@@ -683,7 +712,8 @@ Branch: `docs/launch-deployment-checklist`
 Launch approval requires evidence that:
 
 - only Solo, Starter, and Business reach checkout;
-- all six EGP prices match both catalog and Paymob configuration;
+- all six EGP prices match both catalog and Paymob configuration, with annual
+  prices derived from monthly price × 12 × 0.68;
 - Scale and Enterprise cannot be purchased through UI, RPC, direct Edge
   Function calls, or altered request bodies;
 - every resource quota is server-authoritative and concurrency-safe;
