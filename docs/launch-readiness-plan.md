@@ -423,14 +423,14 @@ must not require reversing accounting data.
 ## 6. Numbered execution plan
 
 Each numbered item is one focused branch and one pull request targeting `dev`.
-The next item may start as soon as the previous PR exists; merging into `dev` is
-not a prerequisite for continuing the execution sequence. Every new step still
-fetches and inspects the latest `origin/dev`. If a step depends on code in an
-unmerged PR, its branch may include that dependency as an explicit stacked
-commit chain while its PR continues to target `dev`; the PR description must
-name the dependency and reviewers must review only the new step-specific
-commits. Branch names are suggestions and may be adjusted to repository
-convention.
+Every PR must be squash-merged into `dev` before the next step starts. The agent
+does not merge the PR; it stops for review and waits for confirmation. When the
+user approves moving on, the agent first verifies that the prior PR is merged,
+fetches the updated remote, confirms the squash commit is present in
+`origin/dev`, and creates the next feature branch from that exact latest
+`origin/dev` state. Stacked implementation PRs are not used. This keeps every
+new branch and validation run based on all previously accepted launch work.
+Branch names are suggestions and may be adjusted to repository convention.
 
 ### Step 1 — Current-state audit and launch execution plan
 
