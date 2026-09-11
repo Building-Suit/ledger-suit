@@ -1,6 +1,29 @@
 -- Counterparty creation is a controlled, audited operation. Archived rows keep
 -- consuming capacity, as defined by app.plan_quota_usage.
 
+create or replace function app.enforce_counterparty_quota()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform app.assert_plan_quota(new.organization_id, 'max_counterparties');
+  return new;
+end;
+$$;
+
+comment on function app.enforce_counterparty_quota() is
+  'Blocks counterparty inserts that would exceed max_counterparties; archived rows continue to count.';
+
+drop trigger if exists counterparties_enforce_plan_quota on public.counterparties;
+create trigger counterparties_enforce_plan_quota
+  before insert on public.counterparties
+  for each row execute function app.enforce_counterparty_quota();
+
+revoke all on function app.enforce_counterparty_quota()
+  from public, anon, authenticated;
+
 create or replace function public.create_counterparty(
   p_organization_id uuid,
   p_name text,
@@ -24,8 +47,6 @@ begin
     raise exception 'INVALID_INPUT: counterparty name is required'
       using errcode = '22023';
   end if;
-
-  perform app.assert_plan_quota(p_organization_id, 'max_counterparties');
 
   insert into public.counterparties (
     organization_id, name, type, phone, email, tax_identifier, notes, created_by

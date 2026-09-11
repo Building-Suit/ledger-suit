@@ -3,7 +3,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 create extension if not exists dblink with schema extensions;
-select plan(25);
+select plan(26);
 
 create temp table counterparty_quota_ids (key text primary key, value uuid not null);
 grant all on counterparty_quota_ids to authenticated, service_role;
@@ -109,6 +109,19 @@ select throws_ok(
   'Solo rejects its one-hundred-first counterparty with a stable error'
 );
 
+reset role;
+select throws_ok(
+  format(
+    'insert into public.counterparties (organization_id, name) values (%L, %L)',
+    (select value from counterparty_quota_ids where key = 'alpha_org'),
+    'Privileged counterparty bypass'
+  ),
+  'P0001',
+  'PLAN_COUNTERPARTY_LIMIT_REACHED: usage 100, requested 1, limit 100',
+  'the table trigger blocks privileged direct inserts at the exact limit'
+);
+
+set local role authenticated;
 select throws_ok(
   format(
     'insert into public.counterparties (organization_id, name) values (%L, %L)',
