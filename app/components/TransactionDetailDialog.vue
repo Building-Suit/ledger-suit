@@ -69,11 +69,36 @@ async function uploadAttachment(event: Event) {
   try {
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
     const key = `${currentId.value}/transaction/${props.transactionId}/${crypto.randomUUID()}.${ext}`
-    const { error: uploadError } = await supabase.storage.from('attachments').upload(key, file)
-    if (uploadError) throw uploadError
-    const { data: user } = await supabase.auth.getUser()
-    const { error } = await supabase.from('attachments').insert({ organization_id: currentId.value, entity_type: 'transaction', entity_id: props.transactionId, file_name: file.name, mime_type: file.type, size_bytes: file.size, storage_key: key, uploaded_by: user.user?.id })
-    if (error) { await supabase.storage.from('attachments').remove([key]); throw error }
+    const { data: reservationId, error: reserveError } = await supabase.rpc('reserve_attachment_upload', {
+      p_organization_id: currentId.value,
+      p_entity_type: 'transaction',
+      p_entity_id: props.transactionId,
+      p_file_name: file.name,
+      p_mime_type: file.type,
+      p_size_bytes: file.size,
+      p_storage_key: key,
+    })
+    if (reserveError) throw reserveError
+
+    const { error: uploadError } = await supabase.storage.from('attachments').upload(key, file, {
+      contentType: file.type,
+      upsert: false,
+    })
+    if (uploadError) {
+      await supabase.rpc('abort_attachment_upload', { p_reservation_id: reservationId })
+      throw uploadError
+    }
+
+    let { error: commitError } = await supabase.rpc('commit_attachment_upload', { p_reservation_id: reservationId })
+    if (commitError) {
+      const retry = await supabase.rpc('commit_attachment_upload', { p_reservation_id: reservationId })
+      commitError = retry.error
+    }
+    if (commitError) {
+      await supabase.storage.from('attachments').remove([key])
+      await supabase.rpc('abort_attachment_upload', { p_reservation_id: reservationId })
+      throw commitError
+    }
     await refreshAttachments(); emit('changed')
   }
   catch (error) { errorMessage.value = describeError(error) }
@@ -87,10 +112,10 @@ async function downloadAttachment(item: NonNullable<typeof attachments.value>[nu
 }
 
 async function deleteAttachment(item: NonNullable<typeof attachments.value>[number]) {
-  const { error: storageError } = await supabase.storage.from(item.storage_bucket).remove([item.storage_key])
-  if (storageError) return (errorMessage.value = describeError(storageError))
-  const { error } = await supabase.from('attachments').delete().eq('id', item.id)
+  const { data, error } = await supabase.rpc('begin_attachment_delete', { p_attachment_id: item.id })
   if (error) return (errorMessage.value = describeError(error))
+  const cleanup = data?.[0]
+  if (cleanup) await supabase.storage.from(cleanup.storage_bucket).remove([cleanup.storage_key])
   await refreshAttachments(); emit('changed')
 }
 
