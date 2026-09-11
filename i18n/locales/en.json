@@ -803,6 +803,7 @@
     "PLAN_ACCOUNT_LIMIT_REACHED": "Your plan’s account limit has been reached. Existing and archived accounts remain available; upgrade your plan to create another account.",
     "PLAN_COUNTERPARTY_LIMIT_REACHED": "Your plan’s counterparty limit has been reached. Existing and archived counterparties remain available; upgrade your plan to create another counterparty.",
     "PLAN_RECURRING_LIMIT_REACHED": "Your plan’s recurring-rule limit has been reached. Complete an existing rule or upgrade your plan to activate another recurring rule.",
+    "PLAN_CUSTOM_ROLE_LIMIT_REACHED": "Your plan’s custom-role limit has been reached. Remove an unused custom role or upgrade your plan to create another role.",
     "TENANT_ACCESS_DENIED": "That record belongs to a different organization.",
     "INSUFFICIENT_PERMISSION": "Your role does not allow this action.",
     "UNBALANCED_JOURNAL": "The journal does not balance. Debits must equal credits.",
