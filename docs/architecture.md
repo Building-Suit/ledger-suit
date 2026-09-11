@@ -303,6 +303,16 @@ holds that lock until transaction end, and recounts usage after locking. This
 serializes competing writes for the same organization and resource while
 allowing unrelated tenants and resource types to proceed independently.
 
+Workspace seat usage is the number of active memberships plus unexpired
+pending invitations. Database triggers protect both tables, including
+privileged direct writes. Creating an invitation, renewing an expired one, and
+reactivating a suspended member must acquire `max_members` capacity. Accepting
+a live invitation converts its existing reservation into an active membership
+while holding the same lock, so concurrent requests cannot overbook a plan.
+Expired or revoked invitations and suspended members do not consume capacity.
+Suspension, revocation, and removal remain available while over limit, and a
+downgrade never deletes membership or invitation history.
+
 The current monthly-transaction usage projection uses `posted_at` within the
 organization-timezone calendar month. The transaction-quota step will persist
 immutable month boundaries before it activates enforcement. Storage currently
