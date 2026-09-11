@@ -37,10 +37,6 @@ select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000000000","role":"service_role"}', true);
 set local role service_role;
 
-update public.subscriptions
-set plan_id = (select id from public.subscription_plans where key = 'solo')
-where organization_id = (select value from quota_test_ids where key = 'launch_org');
-
 insert into public.organization_invitations (
   organization_id, email, token_hash, expires_at
 ) values
@@ -52,6 +48,13 @@ insert into public.organization_invitations (
     (select value from quota_test_ids where key = 'launch_org'),
     'expired-seat@example.com', 'quota-expired-seat', now() - interval '1 day'
   );
+
+-- Build the over-limit fixture while it is still on the unlimited
+-- compatibility plan, then model a downgrade to Solo. Resource-specific
+-- enforcement must preserve existing rows after that transition.
+update public.subscriptions
+set plan_id = (select id from public.subscription_plans where key = 'solo')
+where organization_id = (select value from quota_test_ids where key = 'launch_org');
 
 reset role;
 
