@@ -2662,6 +2662,18 @@ export type Database = {
         }
         Returns: string
       }
+      create_counterparty: {
+        Args: {
+          p_email?: string
+          p_name: string
+          p_notes?: string
+          p_organization_id: string
+          p_phone?: string
+          p_tax_identifier?: string
+          p_type?: Database["public"]["Enums"]["counterparty_type"]
+        }
+        Returns: string
+      }
       create_draft_transaction: {
         Args: {
           p_adjustment_reason?: string
