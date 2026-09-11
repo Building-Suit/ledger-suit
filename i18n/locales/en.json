@@ -800,6 +800,7 @@
     "LEGAL_NAME_ALREADY_EXISTS": "A business with this legal name already exists.",
     "ORGANIZATION_OWNER_LIMIT_REACHED": "Your current plan allows you to own one organization.",
     "PLAN_MEMBER_LIMIT_REACHED": "Your plan’s workspace member limit has been reached. Suspend a member, revoke a pending invitation, or upgrade your plan.",
+    "PLAN_ACCOUNT_LIMIT_REACHED": "Your plan’s account limit has been reached. Existing and archived accounts remain available; upgrade your plan to create another account.",
     "TENANT_ACCESS_DENIED": "That record belongs to a different organization.",
     "INSUFFICIENT_PERMISSION": "Your role does not allow this action.",
     "UNBALANCED_JOURNAL": "The journal does not balance. Debits must equal credits.",
