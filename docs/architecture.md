@@ -268,7 +268,11 @@ member overrides. Read capabilities and `billing.manage` remain available;
 every other mutation requires `trialing`, `active`, or a time-bounded payment
 grace period. A lapsed organization therefore keeps its financial history but
 cannot post, edit, invite, import, export, or run scheduled accounting writes.
-This is a database rule, not a frontend redirect.
+`read_only` is returned for expired trials and periods, exhausted grace,
+suspension, and cancellation. `checkout_required` is reserved for the invalid
+case where an organization has no subscription row. RLS policies and controlled
+RPCs enforce this distinction; the product shell mirrors it with a persistent
+read-only notice and no mutation actions.
 
 Public UI lookups retain their original signatures:
 
@@ -373,8 +377,8 @@ Organization invitations return a one-time token, store only its SHA-256 hash,
 verify the signed-in user's email on acceptance, and create membership in the
 same database transaction.
 
-A suspended or cancelled subscription switches features off but never destroys
-financial history.
+A lapsed, suspended, or cancelled subscription switches feature entitlements
+and product mutations off but never destroys or hides financial history.
 
 ---
 
