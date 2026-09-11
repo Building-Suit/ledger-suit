@@ -2504,6 +2504,10 @@ export type Database = {
       }
     }
     Functions: {
+      abort_attachment_upload: {
+        Args: { p_reservation_id: string }
+        Returns: boolean
+      }
       accept_organization_invitation: {
         Args: { p_token: string }
         Returns: string
@@ -2525,6 +2529,14 @@ export type Database = {
         Returns: boolean
       }
       archive_account: { Args: { p_account_id: string }; Returns: string }
+      begin_attachment_delete: {
+        Args: { p_attachment_id: string }
+        Returns: {
+          reservation_id: string
+          storage_bucket: string
+          storage_key: string
+        }[]
+      }
       billing_checkout_context: {
         Args: {
           p_interval: Database["public"]["Enums"]["billing_interval"]
@@ -2561,6 +2573,14 @@ export type Database = {
         Args: { p_email: string; p_phone: string }
         Returns: Json
       }
+      claim_attachment_storage_cleanup: {
+        Args: { p_limit?: number }
+        Returns: {
+          reservation_id: string
+          storage_bucket: string
+          storage_key: string
+        }[]
+      }
       claim_notification_emails: {
         Args: { p_limit?: number }
         Returns: {
@@ -2573,6 +2593,10 @@ export type Database = {
           recipient_name: string
           subject: string
         }[]
+      }
+      commit_attachment_upload: {
+        Args: { p_reservation_id: string }
+        Returns: string
       }
       complete_account_onboarding: {
         Args: {
@@ -2606,6 +2630,10 @@ export type Database = {
           p_timezone: string
         }
         Returns: string
+      }
+      complete_attachment_storage_cleanup: {
+        Args: { p_error?: string; p_reservation_id: string }
+        Returns: boolean
       }
       complete_notification_email: {
         Args: {
@@ -3035,6 +3063,18 @@ export type Database = {
           name: string
           type: Database["public"]["Enums"]["account_type"]
         }[]
+      }
+      reserve_attachment_upload: {
+        Args: {
+          p_entity_id: string
+          p_entity_type: string
+          p_file_name: string
+          p_mime_type: string
+          p_organization_id: string
+          p_size_bytes: number
+          p_storage_key: string
+        }
+        Returns: string
       }
       resume_saved_signup: { Args: never; Returns: string }
       retry_recurring_occurrence: {

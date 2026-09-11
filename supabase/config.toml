@@ -390,6 +390,9 @@ verify_jwt = false
 [functions.scheduled-notifications]
 verify_jwt = false
 
+[functions.storage-cleanup]
+verify_jwt = false
+
 [functions.send-invitation]
 verify_jwt = true
 
