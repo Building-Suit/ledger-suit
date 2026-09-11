@@ -684,7 +684,7 @@
     "paymentFailed": "The payment was not completed. No paid access was activated; you can try checkout again.",
     "checkAgain": "Check again",
     "readOnlyTitle": "This workspace is read-only",
-    "readOnlyBody": "Your records are safe, but new financial changes are blocked until billing is restored.",
+    "readOnlyBody": "You can continue viewing records, attachments, and reports. Creating or changing data is blocked until billing is restored.",
     "fixBilling": "Restore subscription",
     "states": {
       "loading": "Checking subscription…",

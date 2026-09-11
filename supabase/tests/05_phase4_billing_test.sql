@@ -91,15 +91,15 @@ select is(
   public.subscription_access_state(
     (select value::uuid from billing_ids where key = 'org')
   ),
-  'checkout_required',
-  'an expired trial requires payment'
+  'read_only',
+  'an expired trial preserves readable history while requiring payment for writes'
 );
 
 select ok(
-  not ('organization.read' = any(public.my_capabilities(
+  'organization.read' = any(public.my_capabilities(
     (select value::uuid from billing_ids where key = 'org')
-  ))),
-  'product read capabilities are removed after trial expiry'
+  )),
+  'product read capabilities remain after trial expiry'
 );
 
 select ok(
