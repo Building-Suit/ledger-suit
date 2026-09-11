@@ -270,12 +270,40 @@ grace period. A lapsed organization therefore keeps its financial history but
 cannot post, edit, invite, import, export, or run scheduled accounting writes.
 This is a database rule, not a frontend redirect.
 
-Entitlements are evaluated in exactly two places:
+Public UI lookups retain their original signatures:
 
 ```sql
 public.can_use_feature(organization_id, feature_key)
 public.get_limit(organization_id, limit_key)   -- NULL = unlimited, 0 = denied
+public.get_usage(organization_id, quota_key)
+public.subscription_usage_summary(organization_id)
 ```
+
+The usage APIs are tenant checked and use the same counting predicates as
+enforcement. The summary reports subscription write access separately from
+plan capacity, so an expired subscription and an active subscription at quota
+remain distinct states. It also exposes over-limit state without deleting or
+hiding existing resources after a downgrade.
+
+Trusted database write paths use private `app` helpers. Raw entitlement
+resolution deliberately ignores membership and subscription status, then the
+calling path applies access control independently. Missing entitlements on the
+private `ledger_suit` compatibility plan remain unlimited; missing launch-plan
+entitlements fail closed as configuration errors. Feature and quota assertions
+return stable error prefixes for localization and upgrade actions.
+
+Every quota-increasing write must call `app.assert_plan_quota()` in its
+transaction before inserting or reactivating a resource. The assertion derives
+one advisory-lock key from the organization UUID and canonical quota key,
+holds that lock until transaction end, and recounts usage after locking. This
+serializes competing writes for the same organization and resource while
+allowing unrelated tenants and resource types to proceed independently.
+
+The current monthly-transaction usage projection uses `posted_at` within the
+organization-timezone calendar month. The transaction-quota step will persist
+immutable month boundaries before it activates enforcement. Storage currently
+reports committed attachment metadata; its enforcement step will add live
+upload reservations to the same usage contract.
 
 `billing_events` is unique on `(provider, provider_event_id)`, which is what
 makes webhook processing idempotent no matter how often a provider retries.
