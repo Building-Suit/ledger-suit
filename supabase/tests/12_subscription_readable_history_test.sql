@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(27);
 
 create temp table readable_history_ids (key text primary key, value uuid not null);
 grant all on readable_history_ids to authenticated, service_role;
@@ -260,16 +260,23 @@ select throws_ok(
   'direct attachment metadata creation remains blocked by RLS'
 );
 
-delete from public.attachments
-where organization_id = (select value from readable_history_ids where key = 'org')
-  and file_name = 'historical-invoice.pdf';
+select throws_ok(
+  format(
+    'select * from public.begin_attachment_delete(%L)',
+    (select id from public.attachments
+     where organization_id = (select value from readable_history_ids where key = 'org')
+       and file_name = 'historical-invoice.pdf')
+  ),
+  '42501', null,
+  'controlled attachment deletion remains blocked for a lapsed subscription'
+);
 
 select is(
   (select count(*) from public.attachments
    where organization_id = (select value from readable_history_ids where key = 'org')
      and file_name = 'historical-invoice.pdf'),
   1::bigint,
-  'attachment metadata deletion remains blocked by RLS'
+  'rejected attachment deletion leaves readable metadata present'
 );
 
 select ok(
