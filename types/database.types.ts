@@ -2739,6 +2739,10 @@ export type Database = {
         Args: { p_limit_key: string; p_organization_id: string }
         Returns: number
       }
+      get_usage: {
+        Args: { p_organization_id: string; p_quota_key: string }
+        Returns: number
+      }
       manage_organization_member: {
         Args: {
           p_granted_capabilities?: string[]
@@ -3139,6 +3143,21 @@ export type Database = {
           plan_key: string
           prices: Json
           sort_order: number
+        }[]
+      }
+      subscription_usage_summary: {
+        Args: { p_organization_id: string }
+        Returns: {
+          is_at_limit: boolean
+          is_over_limit: boolean
+          is_unlimited: boolean
+          limit_value: number
+          plan_key: string
+          quota_key: string
+          remaining_value: number
+          subscription_status: Database["public"]["Enums"]["billing_status"]
+          used_value: number
+          writes_allowed: boolean
         }[]
       }
       update_account: {

@@ -128,6 +128,25 @@ will introduce server-side provider mappings and its own production checklist.
 The existing two-plan provisioning command remains for the active compatibility
 path until that cutover.
 
+The central quota engine is also dormant with respect to product writes until
+each resource-specific enforcement migration connects its lowest shared write
+boundary. It requires no environment variables or provider configuration. The
+public usage functions are safe for organization members; raw plan resolution,
+assertions, and advisory-lock helpers remain private to trusted database code.
+
+After migration, a smoke check can confirm the seven-row usage contract for an
+organization while signed in as one of its members:
+
+```sql
+select *
+from public.subscription_usage_summary('<organization-id>');
+```
+
+Rollback is achieved by reverting the migration before dependent enforcement
+steps are deployed. Once later migrations call these helpers, roll them back in
+reverse order first. This migration changes no subscriptions, plan prices,
+provider identifiers, or accounting rows.
+
 If the dormant catalog must be withdrawn before checkout activation, set
 `is_purchasable = false` and `is_public = false` for `solo`, `starter`,
 `business`, and `scale`. Leave their rows and the renamed `legacy_*` rows in
