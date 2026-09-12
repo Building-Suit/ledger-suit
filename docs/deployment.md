@@ -112,6 +112,49 @@ The current application configuration is:
 - application origin: `https://ledger-suit.vercel.app`
 - Resend sender: `notification@building-suit.com`
 
+The database also contains a dormant launch catalog. It does not change the
+current Paymob integration or move any subscription:
+
+| Plan | Monthly | Annual | Checkout status |
+|---|---:|---:|---|
+| Solo | EGP 399 | EGP 3,255.84 | cataloged for later activation |
+| Starter | EGP 599 | EGP 4,887.84 | cataloged for later activation |
+| Business | EGP 1,099 | EGP 8,967.84 | cataloged for later activation |
+| Scale | — | — | Coming Soon; not purchasable |
+
+Annual prices are monthly price × 12 × 0.68. Do not provision or enable the six
+launch Paymob plans during this catalog-only step. The plan-aware checkout step
+will introduce server-side provider mappings and its own production checklist.
+The existing two-plan provisioning command remains for the active compatibility
+path until that cutover.
+
+The central quota engine is also dormant with respect to product writes until
+each resource-specific enforcement migration connects its lowest shared write
+boundary. It requires no environment variables or provider configuration. The
+public usage functions are safe for organization members; raw plan resolution,
+assertions, and advisory-lock helpers remain private to trusted database code.
+
+After migration, a smoke check can confirm the seven-row usage contract for an
+organization while signed in as one of its members:
+
+```sql
+select *
+from public.subscription_usage_summary('<organization-id>');
+```
+
+Rollback is achieved by reverting the migration before dependent enforcement
+steps are deployed. Once later migrations call these helpers, roll them back in
+reverse order first. This migration changes no subscriptions, plan prices,
+provider identifiers, or accounting rows.
+
+If the dormant catalog must be withdrawn before checkout activation, set
+`is_purchasable = false` and `is_public = false` for `solo`, `starter`,
+`business`, and `scale`. Leave their rows and the renamed `legacy_*` rows in
+place; deleting or renaming catalog records is unnecessary and makes later
+forward migration harder. The private active `ledger_suit` plan remains the
+runtime fallback throughout, so this rollback does not change subscriptions,
+provider IDs, trials, or accounting access.
+
 These identifiers are sandbox-only. Create a separate live catalog and webhook
 when production billing is approved; never reuse test-mode identifiers in live
 configuration.

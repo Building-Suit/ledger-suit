@@ -31,7 +31,9 @@ export function useBilling() {
   const writesAllowed = computed(() => ['trialing', 'active', 'grace_period'].includes(accessState.value))
   const checkoutRequired = computed(() => accessState.value === 'checkout_required')
   const readOnly = computed(() => accessState.value === 'read_only')
-  const paymentRequired = computed(() => checkoutRequired.value || readOnly.value)
+  // Only a workspace with no subscription is kept out of the product shell.
+  // A lapsed subscription stays inside the shell with read-only capabilities.
+  const paymentRequired = computed(() => checkoutRequired.value)
 
   async function createCheckoutSession(
     organizationId: string,

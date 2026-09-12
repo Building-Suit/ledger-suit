@@ -103,7 +103,15 @@ async function createCounterparty() {
   const organizationId = currentId.value
   if (!organizationId) return
   await run('counterparties', async () => {
-    const { error } = await supabase.from('counterparties').insert({ organization_id: organizationId, name: counterpartyForm.name, type: counterpartyForm.type as Database['public']['Enums']['counterparty_type'], email: counterpartyForm.email || null, phone: counterpartyForm.phone || null, tax_identifier: counterpartyForm.taxIdentifier || null, notes: counterpartyForm.notes || null, created_by: (await supabase.auth.getUser()).data.user?.id ?? null })
+    const { error } = await supabase.rpc('create_counterparty', {
+      p_organization_id: organizationId,
+      p_name: counterpartyForm.name,
+      p_type: counterpartyForm.type as Database['public']['Enums']['counterparty_type'],
+      p_email: counterpartyForm.email || undefined,
+      p_phone: counterpartyForm.phone || undefined,
+      p_tax_identifier: counterpartyForm.taxIdentifier || undefined,
+      p_notes: counterpartyForm.notes || undefined,
+    })
     if (error) throw error
     Object.assign(counterpartyForm, { name: '', email: '', phone: '', taxIdentifier: '', notes: '' })
   })
