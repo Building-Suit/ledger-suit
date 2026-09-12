@@ -738,6 +738,168 @@ export type Database = {
         }
         Relationships: []
       }
+      import_batches: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string | null
+          duplicate_rows: number
+          failed_rows: number
+          filename: string
+          id: string
+          invalid_rows: number
+          mapping: Json | null
+          organization_id: string
+          posted_rows: number
+          status: string
+          total_rows: number
+          updated_at: string
+          valid_rows: number
+          validated_at: string | null
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          duplicate_rows?: number
+          failed_rows?: number
+          filename: string
+          id?: string
+          invalid_rows?: number
+          mapping?: Json | null
+          organization_id: string
+          posted_rows?: number
+          status?: string
+          total_rows?: number
+          updated_at?: string
+          valid_rows?: number
+          validated_at?: string | null
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          duplicate_rows?: number
+          failed_rows?: number
+          filename?: string
+          id?: string
+          invalid_rows?: number
+          mapping?: Json | null
+          organization_id?: string
+          posted_rows?: number
+          status?: string
+          total_rows?: number
+          updated_at?: string
+          valid_rows?: number
+          validated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batches_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_batches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_rows: {
+        Row: {
+          attempt_count: number
+          batch_id: string
+          created_at: string
+          deterministic_key: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          normalized_data: Json | null
+          organization_id: string
+          raw_data: Json
+          row_number: number
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          batch_id: string
+          created_at?: string
+          deterministic_key?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          normalized_data?: Json | null
+          organization_id: string
+          raw_data: Json
+          row_number: number
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          batch_id?: string
+          created_at?: string
+          deterministic_key?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          normalized_data?: Json | null
+          organization_id?: string
+          raw_data?: Json
+          row_number?: number
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_rows_batch_same_org"
+            columns: ["batch_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "import_batches"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "import_rows_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_rows_transaction_same_org"
+            columns: ["transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_summaries"
+            referencedColumns: ["id", "organization_id"]
+          },
+          {
+            foreignKeyName: "import_rows_transaction_same_org"
+            columns: ["transaction_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_url: string | null
@@ -2561,6 +2723,10 @@ export type Database = {
         Args: { p_commitment_id: string; p_reason?: string }
         Returns: string
       }
+      change_organization_base_currency: {
+        Args: { p_base_currency: string; p_organization_id: string }
+        Returns: string
+      }
       check_balance_sheet_integrity: {
         Args: { p_as_of_date?: string; p_organization_id: string }
         Returns: Json
@@ -2643,6 +2809,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      confirm_csv_import_batch: { Args: { p_batch_id: string }; Returns: Json }
       confirm_recurring_occurrence: {
         Args: { p_occurrence_id: string }
         Returns: string
@@ -2700,6 +2867,10 @@ export type Database = {
           p_tax_identifier?: string
           p_type?: Database["public"]["Enums"]["counterparty_type"]
         }
+        Returns: string
+      }
+      create_csv_import_batch: {
+        Args: { p_filename: string; p_organization_id: string; p_rows: Json }
         Returns: string
       }
       create_draft_transaction: {
@@ -3248,6 +3419,10 @@ export type Database = {
           p_role: Database["public"]["Enums"]["organization_role"]
         }
         Returns: Database["public"]["Enums"]["organization_role"]
+      }
+      validate_csv_import_batch: {
+        Args: { p_batch_id: string; p_mapping: Json }
+        Returns: string
       }
       void_transaction: {
         Args: { p_reason?: string; p_transaction_id: string }
