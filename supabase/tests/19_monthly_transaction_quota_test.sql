@@ -3,7 +3,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 create extension if not exists dblink with schema extensions;
-select plan(20);
+select plan(23);
 
 create temp table transaction_quota_ids (key text primary key, value uuid not null);
 insert into transaction_quota_ids
@@ -181,6 +181,59 @@ select is((select count(*) from public.transactions
   where organization_id = (select value from transaction_quota_ids where key = 'org')
     and posted_at is not null and posted_at <= now()),
   12::bigint, 'quota enforcement never deletes existing transaction history');
+
+-- A timezone change may create a shortened bridge between reset boundaries,
+-- but that bridge must retain the preceding bucket's consumed allowance.
+insert into public.organizations (
+  id, name, slug, country_code, timezone, base_currency, created_by
+) values (
+  '19000000-0000-4000-8000-000000000020', 'Timezone Quota Safety',
+  'timezone-quota-safety', 'EG', 'Africa/Cairo', 'EGP',
+  'b0000000-0000-4000-8000-000000000001'
+);
+update public.subscriptions
+set plan_id = (select id from public.subscription_plans where key = 'solo')
+where organization_id = '19000000-0000-4000-8000-000000000020';
+insert into public.transactions (
+  organization_id, type, status, source, transaction_date, posting_date,
+  currency_code, exchange_rate, posted_at, description
+)
+select '19000000-0000-4000-8000-000000000020', 'income', 'posted', 'manual',
+  date '2026-09-30', date '2026-09-30', 'EGP', 1,
+  timestamptz '2026-09-30 20:30:00+00', 'Cairo quota ' || n
+from generate_series(1, 10) n;
+select is((select used_value from app.transaction_usage_buckets
+  where organization_id = '19000000-0000-4000-8000-000000000020'
+    and timestamptz '2026-09-30 20:30:00+00' >= bucket_start
+    and timestamptz '2026-09-30 20:30:00+00' < bucket_end),
+  10::bigint, 'the Africa/Cairo month is filled to its exact limit');
+
+update public.organizations set timezone = 'Pacific/Honolulu'
+where id = '19000000-0000-4000-8000-000000000020';
+select throws_ok($sql$
+  insert into public.transactions (
+    organization_id, type, status, source, transaction_date, posting_date,
+    currency_code, exchange_rate, posted_at, description
+  ) values (
+    '19000000-0000-4000-8000-000000000020', 'income', 'posted', 'manual',
+    date '2026-09-30', date '2026-09-30', 'EGP', 1,
+    timestamptz '2026-09-30 22:00:00+00', 'Blocked timezone bridge'
+  )
+$sql$, 'P0001', 'PLAN_TRANSACTION_LIMIT_REACHED: usage 10, requested 1, limit 10',
+  'a shortened Honolulu transition bucket does not grant fresh quota');
+
+insert into public.transactions (
+  organization_id, type, status, source, transaction_date, posting_date,
+  currency_code, exchange_rate, posted_at, description
+) values (
+  '19000000-0000-4000-8000-000000000020', 'income', 'posted', 'manual',
+  date '2026-10-01', date '2026-10-01', 'EGP', 1,
+  timestamptz '2026-10-01 10:01:00+00', 'Honolulu legitimate reset'
+);
+select is((select used_value from app.transaction_usage_buckets
+  where organization_id = '19000000-0000-4000-8000-000000000020'
+    and bucket_start = timestamptz '2026-10-01 10:00:00+00'),
+  1::bigint, 'fresh capacity begins only at Honolulu''s legitimate month boundary');
 
 -- Two independent sessions race for Solo's five-hundredth slot.
 select extensions.dblink_connect('transaction_quota_1',

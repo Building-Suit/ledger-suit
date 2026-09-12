@@ -69,7 +69,9 @@ declare
   v_bucket app.transaction_usage_buckets%rowtype;
   v_bounds record;
   v_previous_end timestamptz;
+  v_previous_usage bigint;
   v_next_start timestamptz;
+  v_initial_usage bigint := 0;
 begin
   if p_organization_id is null or p_posted_at is null then
     raise exception 'TRANSACTION_USAGE_ARGUMENT_INVALID' using errcode = '22023';
@@ -94,21 +96,30 @@ begin
 
     -- A later workspace-timezone change must not create overlapping months or
     -- reset quota early. Existing boundaries win at either side of the new one.
-    select max(bucket.bucket_end) into v_previous_end
+    select bucket.bucket_end, bucket.used_value
+    into v_previous_end, v_previous_usage
     from app.transaction_usage_buckets bucket
     where bucket.organization_id = p_organization_id
-      and bucket.bucket_end <= p_posted_at;
+      and bucket.bucket_end <= p_posted_at
+    order by bucket.bucket_end desc
+    limit 1;
     select min(bucket.bucket_start) into v_next_start
     from app.transaction_usage_buckets bucket
     where bucket.organization_id = p_organization_id
       and bucket.bucket_start > p_posted_at;
-    v_bounds.bucket_start := greatest(v_bounds.bucket_start, v_previous_end);
+    if v_previous_end is not null and v_bounds.bucket_start < v_previous_end then
+      -- This is a shortened bridge caused by a timezone change, not a genuine
+      -- calendar-month reset. Preserve the preceding month's consumption.
+      v_bounds.bucket_start := v_previous_end;
+      v_initial_usage := v_previous_usage;
+    end if;
     v_bounds.bucket_end := least(v_bounds.bucket_end, v_next_start);
 
     insert into app.transaction_usage_buckets (
-      organization_id, bucket_start, bucket_end, timezone
+      organization_id, bucket_start, bucket_end, timezone, used_value
     ) values (
-      p_organization_id, v_bounds.bucket_start, v_bounds.bucket_end, v_bounds.timezone
+      p_organization_id, v_bounds.bucket_start, v_bounds.bucket_end,
+      v_bounds.timezone, v_initial_usage
     )
     on conflict (organization_id, bucket_start) do nothing;
 
