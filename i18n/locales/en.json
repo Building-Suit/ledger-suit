@@ -528,6 +528,8 @@
   },
   "reports": {
     "title": "Reports",
+    "csvExports": "Export financial reports to CSV.",
+    "exportFailed": "The report could not be exported. Check your access and try again.",
     "tabs": {
       "overview": "Overview",
       "profitLoss": "Profit & Loss",
