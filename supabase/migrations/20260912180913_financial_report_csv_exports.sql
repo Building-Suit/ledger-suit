@@ -18,6 +18,19 @@ as $$
   end
 $$;
 
+create or replace function app.csv_untrusted_text(p_value text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when p_value ~ '^[[:space:][:cntrl:]]*[=+@-]'
+      then '''' || p_value
+    else p_value
+  end
+$$;
+
 create or replace function app.csv_line(variadic p_values text[])
 returns text
 language sql
@@ -76,7 +89,8 @@ begin
       end if;
       v_header := app.csv_line('section', 'code', 'account', 'amount', 'currency');
       select string_agg(app.csv_line(
-        report.section, report.code, report.name,
+        report.section, app.csv_untrusted_text(report.code),
+        app.csv_untrusted_text(report.name),
         app.csv_amount(p_organization_id, report.amount_minor), v_currency
       ), E'\n' order by report.section, report.code nulls last, report.name)
       into v_body
@@ -85,7 +99,8 @@ begin
     when 'balance_sheet' then
       v_header := app.csv_line('section', 'code', 'account', 'amount', 'currency');
       select string_agg(app.csv_line(
-        report.section, report.code, report.name,
+        report.section, app.csv_untrusted_text(report.code),
+        app.csv_untrusted_text(report.name),
         app.csv_amount(p_organization_id, report.amount_minor), v_currency
       ), E'\n' order by report.section, report.code nulls last, report.name)
       into v_body
@@ -94,7 +109,8 @@ begin
     when 'trial_balance' then
       v_header := app.csv_line('code', 'account', 'type', 'debit', 'credit', 'currency');
       select string_agg(app.csv_line(
-        report.code, report.name, report.type::text,
+        app.csv_untrusted_text(report.code), app.csv_untrusted_text(report.name),
+        report.type::text,
         app.csv_amount(p_organization_id, report.debit_minor),
         app.csv_amount(p_organization_id, report.credit_minor), v_currency
       ), E'\n' order by report.code nulls last, report.name)
@@ -124,7 +140,10 @@ begin
         'running_balance', 'currency'
       );
       select string_agg(app.csv_line(
-        report.entry_date::text, report.reference, report.description, report.memo,
+        report.entry_date::text,
+        app.csv_untrusted_text(report.reference),
+        app.csv_untrusted_text(report.description),
+        app.csv_untrusted_text(report.memo),
         app.csv_amount(p_organization_id, report.debit_minor),
         app.csv_amount(p_organization_id, report.credit_minor),
         app.csv_amount(p_organization_id, report.running_balance_minor), v_currency
@@ -152,5 +171,6 @@ from public, anon;
 grant execute on function public.export_financial_report_csv(uuid, text, date, date, date, uuid)
 to authenticated, service_role;
 
-revoke all on function app.csv_cell(text), app.csv_line(variadic text[]),
+revoke all on function app.csv_cell(text), app.csv_untrusted_text(text),
+  app.csv_line(variadic text[]),
   app.csv_amount(uuid, bigint) from public, anon, authenticated;
