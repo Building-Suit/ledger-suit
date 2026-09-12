@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(31);
 
 create temp table multi_currency_ids (key text primary key, value uuid not null);
 grant all on multi_currency_ids to authenticated, service_role;
@@ -41,6 +41,42 @@ select 'rent_category', id from public.categories
 where organization_id = (select value from multi_currency_ids where key = 'org')
   and name = 'Rent';
 
+insert into public.commitments (
+  id, organization_id, type, status, title, amount_minor, currency_code,
+  due_date, original_due_date, linked_account_id, auto_payment_account_id
+) values (
+  '20000000-0000-4000-8000-000000000002',
+  (select value from multi_currency_ids where key = 'org'), 'payable', 'upcoming',
+  'Legacy USD commitment', 100, 'USD', current_date + 30, current_date + 30,
+  (select value from multi_currency_ids where key = 'revenue'),
+  (select value from multi_currency_ids where key = 'usd_account')
+);
+insert into public.commitments (
+  id, organization_id, type, status, title, amount_minor, currency_code,
+  due_date, original_due_date
+) values (
+  '20000000-0000-4000-8000-000000000006',
+  (select value from multi_currency_ids where key = 'org'), 'payable', 'upcoming',
+  'Base commitment', 100, 'EGP', current_date + 30, current_date + 30
+);
+insert into public.recurring_rules (
+  id, organization_id, name, transaction_type, template, frequency, start_date, status
+) values
+  ('20000000-0000-4000-8000-000000000003',
+   (select value from multi_currency_ids where key = 'org'),
+   'Legacy USD recurring', 'expense',
+   jsonb_build_object('source_account_id',
+     (select value from multi_currency_ids where key = 'usd_account'),
+     'currency_code', 'USD'),
+   'monthly', current_date + 30, 'active'),
+  ('20000000-0000-4000-8000-000000000004',
+   (select value from multi_currency_ids where key = 'org'),
+   'Legacy USD recurring completion', 'expense',
+   jsonb_build_object('source_account_id',
+     (select value from multi_currency_ids where key = 'usd_account'),
+     'currency_code', 'USD'),
+   'monthly', current_date + 30, 'active');
+
 select lives_ok(
   format('select app.assert_write_currency(%L, %L)',
     (select value from multi_currency_ids where key = 'org'), 'USD'),
@@ -66,6 +102,21 @@ select set_config(
   true
 );
 set local role authenticated;
+
+select throws_ok(
+  format('update public.organizations set base_currency = %L where id = %L',
+    'USD', (select value from multi_currency_ids where key = 'org')),
+  '42501', null,
+  'an authorized PostgREST updater cannot change the base-currency column directly');
+select throws_ok(
+  format('select public.change_organization_base_currency(%L, %L)',
+    (select value from multi_currency_ids where key = 'org'), 'USD'),
+  '23514', 'BASE_CURRENCY_LOCKED: accounting state already exists',
+  'the controlled correction path refuses a workspace with accounting state');
+select is(
+  (select base_currency::text from public.organizations
+   where id = (select value from multi_currency_ids where key = 'org')),
+  'EGP', 'a failed correction cannot make USD appear to be the workspace base currency');
 
 select throws_ok(
   format($sql$select public.create_account(%L, 'Blocked USD account', 'asset', 'bank', 'USD')$sql$,
@@ -146,6 +197,21 @@ select throws_ok(
   'P0001', 'MULTI_CURRENCY_REQUIRES_BUSINESS: multi_currency',
   'the commitment RPC rejects foreign currency');
 select throws_ok(
+  format($sql$select public.create_commitment(
+    %L, 'payable', 'Blocked base commitment with USD account', 100,
+    current_date + 30, 'EGP', p_linked_account_id => %L)$sql$,
+    (select value from multi_currency_ids where key = 'org'),
+    (select value from multi_currency_ids where key = 'usd_account')),
+  'P0001', 'MULTI_CURRENCY_REQUIRES_BUSINESS: multi_currency',
+  'a base-currency commitment cannot hide a legacy foreign linked account');
+select throws_ok(
+  format($sql$select public.update_commitment(
+    '20000000-0000-4000-8000-000000000006', 'Base commitment',
+    p_auto_convert => true, p_auto_payment_account_id => %L)$sql$,
+    (select value from multi_currency_ids where key = 'usd_account')),
+  'P0001', 'MULTI_CURRENCY_REQUIRES_BUSINESS: multi_currency',
+  'a base-currency commitment cannot hide a legacy foreign auto-payment account');
+select throws_ok(
   format($sql$select public.create_recurring_rule(
     %L, 'Blocked USD recurring', 'expense',
     jsonb_build_object('amount_minor', 100, 'source_account_id', %L,
@@ -171,12 +237,45 @@ select is(
   (select currency::text from public.accounts
    where id = (select value from multi_currency_ids where key = 'usd_account')),
   'USD', 'foreign-currency history remains readable after downgrade');
+select lives_ok(
+  format('select public.archive_account(%L)',
+    (select value from multi_currency_ids where key = 'usd_account')),
+  'a legacy foreign account can be archived after downgrade');
 select throws_ok(
-  format('update public.accounts set name = %L where id = %L',
-    'Mutated legacy USD bank',
+  format('update public.accounts set is_archived = false where id = %L',
     (select value from multi_currency_ids where key = 'usd_account')),
   'P0001', 'MULTI_CURRENCY_REQUIRES_BUSINESS: multi_currency',
-  'foreign-currency records are immutable after downgrade');
+  'an archived foreign account cannot be reactivated after downgrade');
+select lives_ok(
+  $$select public.cancel_commitment(
+    '20000000-0000-4000-8000-000000000002', 'No longer required')$$,
+  'a legacy foreign commitment can be cancelled after downgrade');
+select throws_ok(
+  $$update public.commitments set status = 'upcoming'
+    where id = '20000000-0000-4000-8000-000000000002'$$,
+  '23514', null,
+  'a closed foreign commitment cannot be reactivated');
+select lives_ok(
+  $$select public.set_recurring_rule_status(
+    '20000000-0000-4000-8000-000000000003', 'paused')$$,
+  'a legacy foreign recurring rule can be deactivated after downgrade');
+select throws_ok(
+  $$select public.set_recurring_rule_status(
+    '20000000-0000-4000-8000-000000000003', 'active')$$,
+  'P0001', 'MULTI_CURRENCY_REQUIRES_BUSINESS: multi_currency',
+  'a deactivated foreign recurring rule cannot return to a live state');
+select lives_ok(
+  $$select public.set_recurring_rule_status(
+    '20000000-0000-4000-8000-000000000004', 'completed')$$,
+  'a legacy foreign recurring rule can be completed after downgrade');
+select is(
+  (select count(*) from public.commitments c
+   where c.id = '20000000-0000-4000-8000-000000000002'
+     and c.status = 'cancelled')
+  + (select count(*) from public.recurring_rules r
+     where r.id in ('20000000-0000-4000-8000-000000000003',
+                    '20000000-0000-4000-8000-000000000004')),
+  3::bigint, 'closed foreign commitment and recurring history remains readable');
 select lives_ok(
   format('update public.accounts set name = name where id = %L',
     (select value from multi_currency_ids where key = 'bank')),
@@ -187,15 +286,16 @@ set plan_id = (select id from public.subscription_plans where key = 'business')
 where organization_id = (select value from multi_currency_ids where key = 'org');
 select lives_ok(
   format($sql$insert into public.accounts (
-    organization_id, code, name, type, subtype, currency
-  ) values (%L, 'MCUSD2', 'Business USD bank', 'asset', 'bank', 'USD')$sql$,
+    id, organization_id, code, name, type, subtype, currency
+  ) values ('20000000-0000-4000-8000-000000000005', %L,
+    'MCUSD2', 'Business USD bank', 'asset', 'bank', 'USD')$sql$,
     (select value from multi_currency_ids where key = 'org')),
   'Business can create foreign-currency accounts');
 select lives_ok(
   format($sql$select public.record_income(%L, 100, %L,
     p_revenue_account_id => %L, p_currency_code => 'USD', p_exchange_rate => 50)$sql$,
     (select value from multi_currency_ids where key = 'org'),
-    (select value from multi_currency_ids where key = 'usd_account'),
+    '20000000-0000-4000-8000-000000000005',
     (select value from multi_currency_ids where key = 'revenue')),
   'Business may use the existing exchange-rate posting engine');
 
