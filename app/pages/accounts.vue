@@ -20,6 +20,18 @@ useHead({ title: () => `${t('accounts.title')} · ${t('app.name')}` })
 
 const showArchived = ref(false)
 
+const { data: canMultiCurrency } = usePlanFeature('multi_currency')
+
+const { data: currencies } = useLazyAsyncData<Array<{ code: string, name: string }>>('reference:currencies', async () => {
+  const { data, error } = await supabase
+    .from('currencies')
+    .select('code,name')
+    .eq('is_active', true)
+    .order('code')
+  if (error) throw error
+  return data ?? []
+}, { default: () => [] })
+
 interface BalanceRow {
   organization_id: string
   account_id: string
@@ -94,7 +106,9 @@ const editorOpen = ref(false)
 const editing = ref<BalanceRow | null>(null)
 const submitting = ref(false)
 const editorError = ref<string | null>(null)
-const form = reactive({ name: '', code: '', type: 'asset' as BalanceRow['type'], subtype: 'bank' })
+const form = reactive({
+  name: '', code: '', type: 'asset' as BalanceRow['type'], subtype: 'bank', currency: baseCurrency.value,
+})
 
 const subtypeOptions: Record<BalanceRow['type'], string[]> = {
   asset: ['cash', 'bank', 'mobile_wallet', 'accounts_receivable', 'inventory', 'prepaid_expenses', 'equipment', 'vehicles', 'property', 'other_asset'],
@@ -111,6 +125,7 @@ function openCreate() {
     code: '',
     type: tab.value,
     subtype: subtypeOptions[tab.value][0]!,
+    currency: baseCurrency.value,
   })
   editorError.value = null
   editorOpen.value = true
@@ -151,7 +166,7 @@ async function saveAccount() {
           p_code: form.code || undefined,
           p_type: form.type,
           p_subtype: form.subtype,
-          p_currency: baseCurrency.value,
+          p_currency: form.currency,
         } as never)
     const { error } = await call
     if (error) throw error
@@ -293,6 +308,14 @@ async function archiveAccount(row: BalanceRow) {
           <template v-if="!editing">
             <FloatingField :label="t('accounts.type')"><select id="account-type" v-model="form.type" class="ls-input"><option v-for="type in GROUP_TYPES" :key="type" :value="type">{{ t(`accounts.groups.${type}`) }}</option></select></FloatingField>
             <FloatingField :label="t('accounts.subtype')"><select id="account-subtype" v-model="form.subtype" class="ls-input"><option v-for="subtype in subtypeOptions[form.type]" :key="subtype" :value="subtype">{{ subtype.replaceAll('_', ' ') }}</option></select></FloatingField>
+            <FloatingField v-if="canMultiCurrency" :label="t('accounts.currency')">
+              <select id="account-currency" v-model="form.currency" class="ls-input">
+                <option v-for="currency in currencies" :key="currency.code" :value="currency.code">
+                  {{ currency.code }} — {{ currency.name }}
+                </option>
+              </select>
+            </FloatingField>
+            <p v-else class="text-sm text-fg-muted">{{ t('accounts.multiCurrencyUpgrade') }}</p>
           </template>
           <p v-if="editorError" class="ls-error" role="alert">{{ editorError }}</p>
           <div class="flex justify-end gap-2"><button type="button" class="ls-btn" @click="editorOpen = false">{{ t('common.cancel') }}</button><button class="ls-btn ls-btn-primary" :disabled="submitting">{{ submitting ? t('common.saving') : t('common.save') }}</button></div>
