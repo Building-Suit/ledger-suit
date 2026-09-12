@@ -20,6 +20,7 @@ const describeError = useErrorMessage()
 const { data: accounts } = useOrgAccounts()
 const { data: categories } = useOrgCategories()
 const { data: counterparties } = useOrgCounterparties()
+const { data: canMultiCurrency } = usePlanFeature('multi_currency')
 
 const paymentAccounts = usePaymentAccounts(accounts)
 const assetAccounts = useAccountsOfType(accounts, ['asset'])
@@ -59,6 +60,9 @@ const form = reactive({
   dueDate: '',
   usefulLifeMonths: '',
   reason: '',
+  exchangeRate: '',
+  destinationAmount: '',
+  destinationExchangeRate: '',
   lines: [] as JournalLine[],
 })
 
@@ -89,6 +93,9 @@ function resetForm() {
     dueDate: '',
     usefulLifeMonths: '',
     reason: '',
+    exchangeRate: '',
+    destinationAmount: '',
+    destinationExchangeRate: '',
     lines: [
       { accountId: '', side: 'debit', amount: '' },
       { accountId: '', side: 'credit', amount: '' },
@@ -103,9 +110,37 @@ watch(open, (isOpen) => {
 })
 
 /** Parses an amount field, returning null and setting an error if invalid. */
-function toMinor(input: string, label: string): number | null {
+function accountCurrency(accountId: string) {
+  return accounts.value.find(account => account.id === accountId)?.currency
+}
+
+const effectiveCurrency = computed(() => {
+  switch (flow.value) {
+    case 'income': return accountCurrency(form.destinationAccountId) ?? baseCurrency.value
+    case 'expense': return accountCurrency(form.sourceAccountId) ?? baseCurrency.value
+    case 'transfer': return accountCurrency(form.sourceAccountId) ?? baseCurrency.value
+    case 'asset_purchase': return accountCurrency(form.sourceAccountId) ?? baseCurrency.value
+    case 'liability_created': return accountCurrency(form.destinationAccountId) ?? baseCurrency.value
+    case 'liability_payment': return accountCurrency(form.sourceAccountId) ?? baseCurrency.value
+    case 'owner_contribution': return accountCurrency(form.destinationAccountId) ?? baseCurrency.value
+    case 'owner_withdrawal': return accountCurrency(form.sourceAccountId) ?? baseCurrency.value
+    default: return baseCurrency.value
+  }
+})
+
+const destinationCurrency = computed(() =>
+  accountCurrency(form.destinationAccountId) ?? effectiveCurrency.value,
+)
+const isCrossCurrencyTransfer = computed(() =>
+  flow.value === 'transfer'
+  && Boolean(form.sourceAccountId)
+  && Boolean(form.destinationAccountId)
+  && effectiveCurrency.value !== destinationCurrency.value,
+)
+
+function toMinor(input: string, label: string, currency = effectiveCurrency.value): number | null {
   try {
-    const minor = parseMoneyToMinor(input, baseCurrency.value)
+    const minor = parseMoneyToMinor(input, currency)
     if (minor <= 0n) {
       fieldError.value = t('add.validation.amountPositive', { field: label })
       return null
@@ -153,6 +188,15 @@ function removeLine(index: number) {
 
 const nullable = (value: string) => (value.trim() === '' ? null : value)
 
+function positiveRate(input: string): number | null {
+  const rate = Number(input)
+  if (!Number.isFinite(rate) || rate <= 0) {
+    fieldError.value = t('errors.INVALID_EXCHANGE_RATE')
+    return null
+  }
+  return rate
+}
+
 async function submit() {
   if (!currentId.value) return
   fieldError.value = null
@@ -160,6 +204,10 @@ async function submit() {
 
   try {
     const org = currentId.value
+    const exchangeRate = effectiveCurrency.value === baseCurrency.value || !canMultiCurrency.value
+      ? undefined
+      : positiveRate(form.exchangeRate)
+    if (exchangeRate === null) return
     const shared = {
       p_organization_id: org,
       p_transaction_date: form.date,
@@ -180,6 +228,8 @@ async function submit() {
           p_destination_account_id: form.destinationAccountId,
           p_category_id: nullable(form.categoryId),
           p_counterparty_id: nullable(form.counterpartyId),
+          p_currency_code: effectiveCurrency.value,
+          p_exchange_rate: exchangeRate,
         } }
         break
       }
@@ -193,6 +243,8 @@ async function submit() {
           p_source_account_id: form.sourceAccountId,
           p_category_id: nullable(form.categoryId),
           p_counterparty_id: nullable(form.counterpartyId),
+          p_currency_code: effectiveCurrency.value,
+          p_exchange_rate: exchangeRate,
         } }
         break
       }
@@ -202,12 +254,23 @@ async function submit() {
         if (amount === null) return
         const fee = optionalMinor(form.feeAmount, t('add.transferFee'))
         if (fee === null) return
+        const destinationAmount = isCrossCurrencyTransfer.value
+          ? toMinor(form.destinationAmount, t('add.destinationAmount'), destinationCurrency.value)
+          : undefined
+        const destinationExchangeRate = !isCrossCurrencyTransfer.value
+          || destinationCurrency.value === baseCurrency.value
+          ? undefined
+          : positiveRate(form.destinationExchangeRate)
+        if (destinationAmount === null || destinationExchangeRate === null) return
         rpc = { fn: 'record_transfer', args: {
           ...shared,
           p_amount_minor: amount,
           p_from_account_id: form.sourceAccountId,
           p_to_account_id: form.destinationAccountId,
           p_fee_minor: fee,
+          p_destination_amount_minor: destinationAmount,
+          p_exchange_rate: exchangeRate,
+          p_destination_exchange_rate: destinationExchangeRate,
         } }
         break
       }
@@ -222,6 +285,7 @@ async function submit() {
           p_payment_account_id: form.sourceAccountId,
           p_counterparty_id: nullable(form.counterpartyId),
           p_useful_life_months: form.usefulLifeMonths ? Number(form.usefulLifeMonths) : null,
+          p_exchange_rate: exchangeRate,
         } }
         break
       }
@@ -236,6 +300,7 @@ async function submit() {
           p_destination_account_id: form.destinationAccountId,
           p_counterparty_id: nullable(form.counterpartyId),
           p_due_date: nullable(form.dueDate),
+          p_exchange_rate: exchangeRate,
         } }
         break
       }
@@ -257,6 +322,7 @@ async function submit() {
           p_interest_minor: interest,
           p_fees_minor: fees,
           p_counterparty_id: nullable(form.counterpartyId),
+          p_exchange_rate: exchangeRate,
         } }
         break
       }
@@ -269,6 +335,7 @@ async function submit() {
           p_amount_minor: amount,
           p_destination_account_id: form.destinationAccountId,
           p_equity_account_id: nullable(form.equityAccountId),
+          p_exchange_rate: exchangeRate,
         } }
         break
       }
@@ -281,6 +348,7 @@ async function submit() {
           p_amount_minor: amount,
           p_source_account_id: form.sourceAccountId,
           p_drawings_account_id: nullable(form.equityAccountId),
+          p_exchange_rate: exchangeRate,
         } }
         break
       }
@@ -369,7 +437,7 @@ async function submit() {
           <div class="grid gap-4 sm:grid-cols-2">
             <!-- Amount: every flow except the split ones -->
             <div v-if="!['liability_payment', 'adjustment'].includes(flow)">
-              <label class="ls-label" for="amount">{{ t('add.amount', { currency: baseCurrency }) }}</label>
+              <label class="ls-label" for="amount">{{ t('add.amount', { currency: effectiveCurrency }) }}</label>
               <input id="amount" v-model="form.amount" class="ls-input" inputmode="decimal" placeholder="0.00" required>
             </div>
 
@@ -377,6 +445,25 @@ async function submit() {
               <label class="ls-label" for="date">{{ t('add.date') }}</label>
               <input id="date" v-model="form.date" type="date" class="ls-input" required>
             </div>
+
+            <div v-if="canMultiCurrency && effectiveCurrency !== baseCurrency">
+              <label class="ls-label" for="exchange-rate">{{ t('add.exchangeRate', { currency: effectiveCurrency, base: baseCurrency }) }}</label>
+              <input id="exchange-rate" v-model="form.exchangeRate" class="ls-input" inputmode="decimal" placeholder="1.00" required>
+            </div>
+            <p v-else-if="effectiveCurrency !== baseCurrency" class="text-sm text-fg-muted sm:col-span-2">
+              {{ t('add.multiCurrencyUpgrade') }}
+            </p>
+
+            <template v-if="canMultiCurrency && isCrossCurrencyTransfer">
+              <div>
+                <label class="ls-label" for="destination-amount">{{ t('add.destinationAmount', { currency: destinationCurrency }) }}</label>
+                <input id="destination-amount" v-model="form.destinationAmount" class="ls-input" inputmode="decimal" placeholder="0.00" required>
+              </div>
+              <div v-if="destinationCurrency !== baseCurrency">
+                <label class="ls-label" for="destination-exchange-rate">{{ t('add.exchangeRate', { currency: destinationCurrency, base: baseCurrency }) }}</label>
+                <input id="destination-exchange-rate" v-model="form.destinationExchangeRate" class="ls-input" inputmode="decimal" placeholder="1.00" required>
+              </div>
+            </template>
 
             <!-- Income -->
             <template v-if="flow === 'income'">
