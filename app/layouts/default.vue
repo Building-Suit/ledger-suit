@@ -16,6 +16,7 @@ const NAV_GROUPS = computed(() => [
     key: 'transactions',
     links: [
       ...(can('transactions.read') ? [{ to: '/transactions', label: 'nav.allTransactions' }] : []),
+      ...(can('imports.create') ? [{ to: '/imports', label: 'nav.importTransactions' }] : []),
       ...(can('transactions.create') ? TRANSACTION_LINKS : []),
     ],
   },
