@@ -11,6 +11,9 @@ export function usePlanFeature(featureKey: string) {
       p_feature_key: featureKey,
     })
     if (error) throw error
-    return Boolean(data)
-  }, { watch: [currentId], default: () => false })
+    return data === true
+  // Plan gates are advisory UI state; the database remains authoritative.
+  // Resolve them in the authenticated browser session to avoid rendering a
+  // stale entitlement from an SSR request without the persisted client token.
+  }, { watch: [currentId], default: () => false, server: false })
 }
