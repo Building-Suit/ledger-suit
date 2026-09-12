@@ -2691,6 +2691,10 @@ export type Database = {
         Returns: boolean
       }
       archive_account: { Args: { p_account_id: string }; Returns: string }
+      audit_history_window_days: {
+        Args: { p_organization_id: string }
+        Returns: number
+      }
       begin_attachment_delete: {
         Args: { p_attachment_id: string }
         Returns: {
@@ -2964,6 +2968,26 @@ export type Database = {
       get_usage: {
         Args: { p_organization_id: string; p_quota_key: string }
         Returns: number
+      }
+      list_audit_history: {
+        Args: {
+          p_before_created_at?: string
+          p_before_id?: number
+          p_limit?: number
+          p_organization_id: string
+        }
+        Returns: {
+          action: string
+          actor_email: string
+          actor_id: string
+          after_state: Json
+          before_state: Json
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: number
+          metadata: Json
+        }[]
       }
       manage_organization_member: {
         Args: {
