@@ -2946,6 +2946,17 @@ export type Database = {
         Returns: Json
       }
       delete_organization_role: { Args: { p_role_id: string }; Returns: string }
+      export_financial_report_csv: {
+        Args: {
+          p_account_id?: string
+          p_as_of_date?: string
+          p_from_date?: string
+          p_organization_id: string
+          p_report: string
+          p_to_date?: string
+        }
+        Returns: string
+      }
       get_limit: {
         Args: { p_limit_key: string; p_organization_id: string }
         Returns: number
