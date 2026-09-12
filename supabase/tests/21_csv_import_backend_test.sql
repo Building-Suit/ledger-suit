@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(30);
+select plan(34);
 
 create temp table import_test_ids (key text primary key, value uuid not null);
 grant all on import_test_ids to authenticated, service_role;
@@ -29,6 +29,14 @@ insert into import_test_ids
 select 'income_category', id from public.categories
 where organization_id = (select value from import_test_ids where key = 'alpha_org')
   and kind = 'income' and is_active order by name limit 1;
+insert into import_test_ids
+select 'income_account', default_account_id from public.categories
+where id = (select value from import_test_ids where key = 'income_category');
+insert into import_test_ids
+select 'expense_account', default_account_id from public.categories
+where organization_id = (select value from import_test_ids where key = 'alpha_org')
+  and kind = 'expense' and is_active and default_account_id is not null
+order by name limit 1;
 
 update public.subscriptions set plan_id = (select id from public.subscription_plans where key = 'solo')
 where organization_id = (select value from import_test_ids where key = 'alpha_org');
@@ -246,6 +254,74 @@ select is((select count(*) from public.transactions where organization_id =
   (select value from import_test_ids where key = 'alpha_org')
   and idempotency_key like 'csv-import:%'), 3::bigint,
   'confirmation and retries produce exactly one transaction per deterministic key');
+
+reset role;
+update public.subscriptions set plan_id = (select id from public.subscription_plans where key = 'ledger_suit')
+where organization_id = (select value from import_test_ids where key = 'alpha_org');
+set local role authenticated;
+insert into import_test_ids
+select 'semantic_batch', public.create_csv_import_batch(
+  (select value from import_test_ids where key = 'alpha_org'), 'semantic.csv',
+  jsonb_build_array(jsonb_build_object(
+    'kind', 'income', 'date', '2026-09-07', 'amount', '13.00',
+    'account', (select value from import_test_ids where key = 'alpha_bank'),
+    'category', (select value from import_test_ids where key = 'income_category')))
+);
+select public.validate_csv_import_batch(
+  (select value from import_test_ids where key = 'semantic_batch'),
+  '{"type":"kind","date":"date","amount":"amount","account":"account",
+    "category":"category"}'::jsonb
+);
+reset role;
+update public.categories set default_account_id =
+  (select value from import_test_ids where key = 'expense_account')
+where id = (select value from import_test_ids where key = 'income_category');
+set local role authenticated;
+select public.confirm_csv_import_batch(
+  (select value from import_test_ids where key = 'semantic_batch'));
+select is((select error_code from public.import_rows where batch_id =
+  (select value from import_test_ids where key = 'semantic_batch')),
+  'IMPORT_ROW_CATEGORY_INVALID',
+  'confirmation rejects a category whose current ledger account has the wrong type');
+select is((select count(*) from public.import_rows where batch_id =
+  (select value from import_test_ids where key = 'semantic_batch')
+  and transaction_id is not null), 0::bigint,
+  'a mutated category relationship cannot produce an imported transaction');
+
+reset role;
+update public.categories set default_account_id =
+  (select value from import_test_ids where key = 'income_account')
+where id = (select value from import_test_ids where key = 'income_category');
+update public.subscriptions set plan_id = (select id from public.subscription_plans where key = 'starter')
+where organization_id = (select value from import_test_ids where key = 'alpha_org');
+set local role authenticated;
+insert into import_test_ids
+select 'downgrade_batch', public.create_csv_import_batch(
+  (select value from import_test_ids where key = 'alpha_org'), 'downgrade.csv',
+  jsonb_build_array(jsonb_build_object(
+    'kind', 'income', 'date', '2026-09-08', 'amount', '14.00',
+    'account', (select value from import_test_ids where key = 'alpha_bank'),
+    'category', (select value from import_test_ids where key = 'income_category')))
+);
+select public.validate_csv_import_batch(
+  (select value from import_test_ids where key = 'downgrade_batch'),
+  '{"type":"kind","date":"date","amount":"amount","account":"account",
+    "category":"category"}'::jsonb
+);
+reset role;
+update public.subscriptions set plan_id = (select id from public.subscription_plans where key = 'solo')
+where organization_id = (select value from import_test_ids where key = 'alpha_org');
+set local role authenticated;
+select throws_ok(
+  format('select public.confirm_csv_import_batch(%L)',
+    (select value from import_test_ids where key = 'downgrade_batch')),
+  'P0001', 'FEATURE_NOT_AVAILABLE_ON_PLAN: imports',
+  'a batch validated on Starter cannot confirm after downgrade to Solo');
+select results_eq(
+  format($sql$select status, transaction_id is null from public.import_rows where batch_id = %L$sql$,
+    (select value from import_test_ids where key = 'downgrade_batch')),
+  $$values ('valid'::text, true)$$,
+  'downgrade rejection occurs before any validated row posts');
 
 select * from finish();
 rollback;

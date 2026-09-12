@@ -330,6 +330,75 @@ as $$
   where b.id = p_batch_id;
 $$;
 
+-- Validation previews can become stale before confirmation. Recheck the
+-- accounting meaning of the selected account and category immediately before
+-- the low-level posting engine is called.
+create or replace function app.assert_csv_import_posting_semantics(
+  p_organization_id uuid,
+  p_normalized_data jsonb
+)
+returns uuid
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_type text := p_normalized_data ->> 'type';
+  v_account public.accounts%rowtype;
+  v_category public.categories%rowtype;
+  v_category_account public.accounts%rowtype;
+  v_expected_category_type public.account_type;
+begin
+  if v_type = 'income' then
+    v_account := app.require_account(
+      p_organization_id, (p_normalized_data ->> 'account_id')::uuid,
+      array['asset']::public.account_type[], 'import destination account'
+    );
+    v_expected_category_type := 'revenue';
+  elsif v_type = 'expense' then
+    v_account := app.require_account(
+      p_organization_id, (p_normalized_data ->> 'account_id')::uuid,
+      array['asset', 'liability']::public.account_type[], 'import source account'
+    );
+    v_expected_category_type := 'expense';
+  else
+    raise exception 'IMPORT_ROW_TYPE_INVALID: expected income or expense'
+      using errcode = '22023';
+  end if;
+  if not v_account.is_active then
+    raise exception 'IMPORT_ROW_ACCOUNT_INVALID: selected account is inactive'
+      using errcode = '22023';
+  end if;
+
+  select * into v_category from public.categories c
+  where c.id = (p_normalized_data ->> 'category_id')::uuid;
+  if not found or v_category.organization_id <> p_organization_id then
+    raise exception 'TENANT_ACCESS_DENIED: import category does not belong to this organization'
+      using errcode = '42501';
+  end if;
+  if not v_category.is_active or v_category.kind::text <> v_type
+     or v_category.default_account_id is null then
+    raise exception 'IMPORT_ROW_CATEGORY_INVALID: category is inactive or has the wrong kind'
+      using errcode = '22023';
+  end if;
+
+  select * into v_category_account from public.accounts a
+  where a.id = v_category.default_account_id;
+  if not found or v_category_account.organization_id <> p_organization_id then
+    raise exception 'TENANT_ACCESS_DENIED: import category account does not belong to this organization'
+      using errcode = '42501';
+  end if;
+  if not v_category_account.is_active or v_category_account.is_archived
+     or v_category_account.type <> v_expected_category_type then
+    raise exception 'IMPORT_ROW_CATEGORY_INVALID: category ledger account must be an active % account',
+      v_expected_category_type
+      using errcode = '22023';
+  end if;
+  return v_category_account.id;
+end;
+$$;
+
 create or replace function public.create_csv_import_batch(
   p_organization_id uuid,
   p_filename text,
@@ -498,8 +567,8 @@ begin
         end if;
 
         v_data := v_row.normalized_data;
-        v_category_account := app.category_account(
-          v_batch.organization_id, (v_data ->> 'category_id')::uuid
+        v_category_account := app.assert_csv_import_posting_semantics(
+          v_batch.organization_id, v_data
         );
         v_transaction_id := app.create_and_post(
           p_organization_id => v_batch.organization_id,
@@ -572,4 +641,5 @@ grant execute on function public.create_csv_import_batch(uuid, text, jsonb),
 
 revoke all on function app.validate_csv_import_mapping(jsonb),
   app.validate_csv_import_row(uuid, jsonb, jsonb),
+  app.assert_csv_import_posting_semantics(uuid, jsonb),
   app.refresh_import_batch_counts(uuid) from public, anon, authenticated;
