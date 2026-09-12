@@ -420,6 +420,7 @@
     "confirming": "Posting…",
     "resultsTitle": "Import results",
     "importAnother": "Import another file",
+    "startOver": "Start over",
     "rowsCaption": "CSV import row results",
     "row": "Row",
     "issue": "Issue",
@@ -452,6 +453,26 @@
       "file": "Choose a CSV file no larger than 5 MB and 10,000 rows.",
       "entitlement": "This workspace plan does not include CSV imports.",
       "generic": "The import could not be completed. Review the file and try again."
+    },
+    "issues": {
+      "IMPORT_ROW_DUPLICATE": "An identical transaction already exists.",
+      "IMPORT_ROW_TYPE_INVALID": "Use income or expense as the transaction type.",
+      "IMPORT_ROW_DATE_INVALID": "Use a valid calendar date in YYYY-MM-DD format.",
+      "IMPORT_ROW_ACCOUNT_INVALID": "Choose an active, eligible payment or source account.",
+      "IMPORT_ROW_CATEGORY_INVALID": "Choose an active category that matches the transaction type.",
+      "IMPORT_ROW_COUNTERPARTY_INVALID": "Choose a unique counterparty from this workspace.",
+      "IMPORT_ROW_AMOUNT_INVALID": "Enter a positive amount with valid currency precision.",
+      "IMPORT_ROW_TEXT_TOO_LONG": "Shorten the description or reference.",
+      "INVALID_CURRENCY": "Choose an active currency allowed by this workspace plan.",
+      "INVALID_EXCHANGE_RATE": "Enter a valid exchange rate for this currency.",
+      "PLAN_TRANSACTION_LIMIT_REACHED": "This workspace has reached its monthly transaction limit.",
+      "BOOKS_LOCKED": "The accounting period for this date is locked.",
+      "ACCOUNT_ARCHIVED": "A referenced account is archived.",
+      "INVALID_ACCOUNT": "A referenced account is not available for this transaction.",
+      "MISSING_SYSTEM_ACCOUNT": "A required system account is not configured.",
+      "UNBALANCED_JOURNAL": "This row could not produce a balanced journal.",
+      "TENANT_ACCESS_DENIED": "A referenced record does not belong to this workspace.",
+      "generic": "This row could not be imported. Review its values and try again."
     }
   },
   "detail": {

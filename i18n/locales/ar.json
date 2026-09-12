@@ -420,6 +420,7 @@
     "confirming": "جارٍ الترحيل…",
     "resultsTitle": "نتائج الاستيراد",
     "importAnother": "استيراد ملف آخر",
+    "startOver": "البدء من جديد",
     "rowsCaption": "نتائج صفوف استيراد CSV",
     "row": "الصف",
     "issue": "المشكلة",
@@ -452,6 +453,26 @@
       "file": "اختر ملف CSV لا يتجاوز 5 ميجابايت و10,000 صف.",
       "entitlement": "لا تتضمن خطة مساحة العمل استيراد CSV.",
       "generic": "تعذر إكمال الاستيراد. راجع الملف وحاول مرة أخرى."
+    },
+    "issues": {
+      "IMPORT_ROW_DUPLICATE": "توجد معاملة مطابقة بالفعل.",
+      "IMPORT_ROW_TYPE_INVALID": "استخدم إيرادًا أو مصروفًا كنوع للمعاملة.",
+      "IMPORT_ROW_DATE_INVALID": "استخدم تاريخًا صحيحًا بالصيغة YYYY-MM-DD.",
+      "IMPORT_ROW_ACCOUNT_INVALID": "اختر حساب دفع أو مصدر نشطًا ومؤهلًا.",
+      "IMPORT_ROW_CATEGORY_INVALID": "اختر تصنيفًا نشطًا يطابق نوع المعاملة.",
+      "IMPORT_ROW_COUNTERPARTY_INVALID": "اختر طرف تعامل فريدًا من مساحة العمل.",
+      "IMPORT_ROW_AMOUNT_INVALID": "أدخل مبلغًا موجبًا بدقة صحيحة للعملة.",
+      "IMPORT_ROW_TEXT_TOO_LONG": "اختصر الوصف أو المرجع.",
+      "INVALID_CURRENCY": "اختر عملة نشطة تسمح بها خطة مساحة العمل.",
+      "INVALID_EXCHANGE_RATE": "أدخل سعر صرف صحيحًا لهذه العملة.",
+      "PLAN_TRANSACTION_LIMIT_REACHED": "بلغت مساحة العمل حد المعاملات الشهري.",
+      "BOOKS_LOCKED": "الفترة المحاسبية لهذا التاريخ مقفلة.",
+      "ACCOUNT_ARCHIVED": "أحد الحسابات المشار إليها مؤرشف.",
+      "INVALID_ACCOUNT": "أحد الحسابات المشار إليها غير متاح لهذه المعاملة.",
+      "MISSING_SYSTEM_ACCOUNT": "لم يتم إعداد أحد حسابات النظام المطلوبة.",
+      "UNBALANCED_JOURNAL": "تعذر إنشاء قيد متوازن من هذا الصف.",
+      "TENANT_ACCESS_DENIED": "أحد السجلات المشار إليها لا يتبع مساحة العمل.",
+      "generic": "تعذر استيراد هذا الصف. راجع قيمه وحاول مرة أخرى."
     }
   },
   "detail": {

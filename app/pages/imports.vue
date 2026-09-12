@@ -6,7 +6,7 @@ definePageMeta({ layout: 'default' })
 
 const supabase = useSupabaseClient<Database>()
 const { currentId, can } = useTenant()
-const { t } = useI18n()
+const { t, te } = useI18n()
 const { data: importsEnabled, pending: featurePending } = usePlanFeature('imports')
 
 useHead({ title: () => `${t('imports.title')} · ${t('app.name')}` })
@@ -28,14 +28,13 @@ interface ImportRow {
   status: string
   raw_data: Record<string, string>
   error_code: string | null
-  error_message: string | null
   transaction_id: string | null
 }
 interface DisplayRow {
   id: string
   rowNumber: number
   status: string
-  errorMessage: string | null
+  issue: string
   typeValue: string
   dateValue: string
   amountValue: string
@@ -60,6 +59,10 @@ const errorMessage = ref('')
 
 const previewRows = computed(() => sourceRows.value.slice(0, 5))
 const requiredMappingComplete = computed(() => REQUIRED_FIELDS.every(field => mapping[field]))
+const canConfirm = computed(() => Boolean(batch.value && (
+  batch.value.valid_rows > 0
+  || (batch.value.total_rows > 0 && batch.value.duplicate_rows === batch.value.total_rows)
+)))
 const steps = computed(() => [
   { key: 'upload', done: phase.value !== 'upload' },
   { key: 'mapping', done: ['validated', 'results'].includes(phase.value) },
@@ -73,7 +76,7 @@ const displayRows = computed<DisplayRow[]>(() => resultRows.value.map((row) => {
     id: row.id,
     rowNumber: row.row_number,
     status: row.status,
-    errorMessage: row.error_message,
+    issue: localizedIssue(row.error_code),
     typeValue: mapping.type ? (raw[mapping.type] ?? '') : '',
     dateValue: mapping.date ? (raw[mapping.date] ?? '') : '',
     amountValue: mapping.amount ? (raw[mapping.amount] ?? '') : '',
@@ -82,6 +85,12 @@ const displayRows = computed<DisplayRow[]>(() => resultRows.value.map((row) => {
 
 function isRequiredField(field: string) {
   return REQUIRED_FIELDS.some(required => required === field)
+}
+
+function localizedIssue(errorCode: string | null) {
+  if (!errorCode) return ''
+  const key = `imports.issues.${errorCode}`
+  return te(key) ? t(key) : t('imports.issues.generic')
 }
 
 function reset() {
@@ -134,7 +143,7 @@ async function loadBatch(batchId: string) {
   const [batchResult, rowsResult] = await Promise.all([
     supabase.from('import_batches').select('*').eq('id', batchId).single(),
     supabase.from('import_rows')
-      .select('id,row_number,status,raw_data,error_code,error_message,transaction_id')
+      .select('id,row_number,status,raw_data,error_code,transaction_id')
       .eq('batch_id', batchId).order('row_number').range(0, 99),
   ])
   if (batchResult.error) throw batchResult.error
@@ -291,7 +300,8 @@ async function confirmImport() {
             </dl>
             <div class="mt-5 flex flex-wrap justify-end gap-2">
               <button v-if="phase === 'results'" type="button" class="ls-btn" @click="reset">{{ t('imports.importAnother') }}</button>
-              <button v-else type="button" class="ls-btn ls-btn-accent" :disabled="batch.valid_rows === 0 || !!busy" @click="confirmImport">
+              <button v-else type="button" class="ls-btn" :disabled="!!busy" @click="reset">{{ t('imports.startOver') }}</button>
+              <button v-if="phase === 'validated' && canConfirm" type="button" class="ls-btn ls-btn-accent" :disabled="!!busy" @click="confirmImport">
                 {{ busy === 'confirming' ? t('imports.confirming') : t('imports.confirm') }}
               </button>
             </div>
@@ -318,7 +328,7 @@ async function confirmImport() {
                     <td>{{ row.typeValue }}</td>
                     <td>{{ row.dateValue }}</td>
                     <td>{{ row.amountValue }}</td>
-                    <td class="max-w-80 text-xs text-fg-muted">{{ row.errorMessage || t('common.dash') }}</td>
+                    <td class="max-w-80 text-xs text-fg-muted">{{ row.issue || t('common.dash') }}</td>
                   </tr>
                 </tbody>
               </table>
