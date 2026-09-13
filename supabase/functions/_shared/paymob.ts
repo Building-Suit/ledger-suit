@@ -1,4 +1,4 @@
-import { requiredEnv } from './http.ts'
+import { requiredEnv } from './env.ts'
 
 type JsonRecord = Record<string, unknown>
 
