@@ -7,6 +7,7 @@ definePageMeta({ layout: 'default' })
 const supabase = useSupabaseClient<Database>()
 const { currentId, can } = useTenant()
 const { t, te } = useI18n()
+const describeError = useErrorMessage()
 const { data: importsEnabled, pending: featurePending } = usePlanFeature('imports')
 
 useHead({ title: () => `${t('imports.title')} · ${t('app.name')}` })
@@ -112,7 +113,7 @@ function readableError(error: unknown) {
   if (message.includes('CSV_ROW_WIDTH_INVALID')) return t('imports.errors.rowWidth')
   if (message.includes('CSV_UNCLOSED_QUOTE')) return t('imports.errors.quote')
   if (message.includes('CSV_FILE_INVALID')) return t('imports.errors.file')
-  if (message.includes('FEATURE_NOT_AVAILABLE_ON_PLAN')) return t('imports.errors.entitlement')
+  if (message.includes('FEATURE_NOT_AVAILABLE_ON_PLAN')) return describeError(error)
   return t('imports.errors.generic')
 }
 

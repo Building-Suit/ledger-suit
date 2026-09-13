@@ -41,7 +41,8 @@ const checkoutEnabled = computed(() => ['trialing', 'checkout_required', 'read_o
       <p v-if="subscription?.provider_status" class="text-sm text-fg-muted">
         {{ t('billing.managedByPaymob') }}
       </p>
-      <BillingCheckout :surface="checkoutEnabled ? 'checkout' : 'display'" compact />
+      <div id="plans"><BillingCheckout :surface="checkoutEnabled ? 'checkout' : 'display'" compact /></div>
     </div>
+    <UsageMeters />
   </div>
 </template>

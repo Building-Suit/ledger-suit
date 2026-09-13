@@ -15,6 +15,7 @@ const { currentId, can, baseCurrency } = useTenant()
 const { t } = useI18n()
 const toasts = useToasts()
 const describeError = useErrorMessage()
+const { refresh: refreshPlanUsage } = usePlanUsage()
 
 useHead({ title: () => `${t('accounts.title')} · ${t('app.name')}` })
 
@@ -170,6 +171,7 @@ async function saveAccount() {
         } as never)
     const { error } = await call
     if (error) throw error
+    if (!editing.value) await refreshPlanUsage()
     editorOpen.value = false
     toasts.success(t('accounts.saved'))
     await refreshNuxtData('org:account-balances')
@@ -303,6 +305,7 @@ async function archiveAccount(row: BalanceRow) {
             <h2 class="text-lg font-bold">{{ editing ? t('accounts.edit') : t('accounts.add') }}</h2>
             <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="editorOpen = false"><AppIcon name="close" /></button>
           </div>
+          <QuotaUsageMeter v-if="!editing" quota-key="max_accounts" compact />
           <FloatingField :label="t('accounts.name')"><input id="account-name" v-model="form.name" class="ls-input" required></FloatingField>
           <FloatingField :label="t('accounts.code')"><input id="account-code" v-model="form.code" class="ls-input" dir="ltr"></FloatingField>
           <template v-if="!editing">

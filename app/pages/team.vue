@@ -57,6 +57,7 @@ const { show: showInvitation, revision: invitationRevision } = useTeamInvitation
 const { t, locale } = useI18n()
 const toasts = useToasts()
 const describeError = useErrorMessage()
+const { refresh: refreshPlanUsage } = usePlanUsage()
 
 useHead({ title: () => `${t('access.title')} · ${t('app.name')}` })
 
@@ -331,6 +332,7 @@ async function saveRole() {
         p_capabilities: [...roleForm.value.caps],
       })
       if (error) throw error
+      await refreshPlanUsage()
     }
     roleModalOpen.value = false
     await loadAccess()
@@ -536,6 +538,7 @@ async function resendInvitation(invitation: InvitationRow) {
         <div v-if="roleModalOpen" class="fixed inset-0 z-[70] grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" @click.self="roleModalOpen = false">
           <form class="ls-modal-panel ls-card max-h-[90dvh] w-full max-w-3xl overflow-y-auto p-6 shadow-overlay" @submit.prevent="saveRole">
             <div class="flex items-start justify-between gap-4"><div><h2 class="text-lg font-bold">{{ roleForm.systemRole ? t('access.editRoleFor', { role: t(`org.roles.${roleForm.systemRole}`) }) : roleForm.id ? t('access.editRole') : t('access.newRole') }}</h2></div><button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="roleModalOpen = false"><AppIcon name="close" /></button></div>
+            <QuotaUsageMeter v-if="!roleForm.id && !roleForm.systemRole" quota-key="max_custom_roles" compact class="mt-4" />
             <div v-if="!roleForm.systemRole" class="mt-6 grid gap-4 sm:grid-cols-2">
               <FloatingField :label="t('access.roleNameEn')"><input v-model="roleForm.name_en" type="text" class="ls-input" dir="ltr" required maxlength="80"></FloatingField>
               <FloatingField :label="t('access.roleNameAr')"><input v-model="roleForm.name_ar" type="text" class="ls-input" dir="rtl" required maxlength="80"></FloatingField>
