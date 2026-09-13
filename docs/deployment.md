@@ -90,10 +90,10 @@ External provider configuration is necessarily separate from database schema:
 1. Ask Paymob to enable a MIGS MOTO integration for recurring deductions. Keep
    it distinct from the existing Test online/VPC Integration ID `5902990`.
 2. With `PAYMOB_API_KEY` and `PAYMOB_MOTO_INTEGRATION_ID` in the ignored local
-   `.env`, provision the 30-day and 360-day plans using:
+   `.env`, provision the six launch plan/interval combinations using:
    `pnpm paymob:provision-plans -- --webhook-url=https://<project-ref>.supabase.co/functions/v1/paymob-webhook`.
 3. Add the Edge runtime secrets listed in [environment.md](environment.md),
-   including the two plan IDs printed by the provisioning command.
+   including the six plan IDs printed by the provisioning command.
 4. Set the Paymob processed callback URL to
    `https://<project-ref>.supabase.co/functions/v1/paymob-webhook`. The checkout
    function also supplies this URL per Intention.
@@ -105,28 +105,20 @@ The same plans are reused for every organization. Each organization completes a
 distinct Intention and receives a distinct Paymob subscription, so payment
 failure affects only that organization's access.
 
-The current application configuration is:
-
-- monthly subscription: EGP 600
-- yearly subscription: EGP 4,800
-- application origin: `https://ledger-suit.vercel.app`
-- Resend sender: `notification@building-suit.com`
-
-The database also contains a dormant launch catalog. It does not change the
-current Paymob integration or move any subscription:
+The production checkout catalog is:
 
 | Plan | Monthly | Annual | Checkout status |
 |---|---:|---:|---|
-| Solo | EGP 399 | EGP 3,255.84 | cataloged for later activation |
-| Starter | EGP 599 | EGP 4,887.84 | cataloged for later activation |
-| Business | EGP 1,099 | EGP 8,967.84 | cataloged for later activation |
+| Solo | EGP 399 | EGP 3,255.84 | purchasable |
+| Starter | EGP 599 | EGP 4,887.84 | purchasable |
+| Business | EGP 1,099 | EGP 8,967.84 | purchasable |
 | Scale | — | — | Coming Soon; not purchasable |
 
-Annual prices are monthly price × 12 × 0.68. Do not provision or enable the six
-launch Paymob plans during this catalog-only step. The plan-aware checkout step
-will introduce server-side provider mappings and its own production checklist.
-The existing two-plan provisioning command remains for the active compatibility
-path until that cutover.
+Annual prices are monthly price × 12 × 0.68. Before enabling checkout, confirm
+all six Paymob plan IDs are configured as Edge Function secrets, each provider
+amount matches this table, and both Test and Live environments use identifiers
+from their own Paymob mode. Existing `ledger_suit` subscriptions are not migrated
+by this deployment and continue to be updated through their provider subscription IDs.
 
 The central quota engine is also dormant with respect to product writes until
 each resource-specific enforcement migration connects its lowest shared write

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-const { compact = false } = defineProps<{ compact?: boolean }>()
+const { compact = false, planKey = 'starter' } = defineProps<{
+  compact?: boolean
+  planKey?: 'solo' | 'starter' | 'business'
+}>()
 const { currentId } = useTenant()
 const { createCheckoutSession } = useBilling()
 const { t } = useI18n()
@@ -12,7 +15,7 @@ async function checkout() {
   pending.value = true
   errorMessage.value = ''
   try {
-    const url = await createCheckoutSession(currentId.value, interval.value, t('billing.checkoutFailed'))
+    const url = await createCheckoutSession(currentId.value, planKey, interval.value, t('billing.checkoutFailed'))
     window.location.assign(url)
   }
   catch (error) {

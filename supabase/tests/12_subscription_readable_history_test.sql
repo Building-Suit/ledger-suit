@@ -194,8 +194,9 @@ select lives_ok(
 
 select lives_ok(
   format(
-    'select * from public.billing_checkout_context(%L, %L)',
+    'select * from public.billing_checkout_context(%L, %L, %L)',
     (select value from readable_history_ids where key = 'org'),
+    'starter',
     'monthly'
   ),
   'billing management remains reachable from read-only mode'

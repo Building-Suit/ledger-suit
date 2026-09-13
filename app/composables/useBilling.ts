@@ -13,6 +13,7 @@ export interface SubscriptionSummary {
 }
 
 export type BillingInterval = Database['public']['Enums']['billing_interval']
+export type LaunchPlanKey = 'solo' | 'starter' | 'business'
 
 // Composables are instantiated by middleware, layouts, and pages. Keep the
 // in-flight request on the Nuxt app instance so those callers await the same
@@ -37,11 +38,12 @@ export function useBilling() {
 
   async function createCheckoutSession(
     organizationId: string,
+    planKey: LaunchPlanKey,
     interval: BillingInterval,
     fallbackMessage = 'Secure checkout could not be opened.',
   ): Promise<string> {
     const { data, error } = await supabase.functions.invoke('paymob-checkout', {
-      body: { organizationId, interval },
+      body: { organizationId, planKey, interval },
     })
     if (error) throw new Error(await edgeFunctionErrorMessage(error, fallbackMessage))
     if (!data?.url) throw new Error(data?.error ?? fallbackMessage)

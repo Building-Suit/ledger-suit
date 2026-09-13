@@ -2678,13 +2678,16 @@ export type Database = {
         Args: {
           p_event_id: string
           p_event_type: string
+          p_amount_minor?: number
           p_interval: Database["public"]["Enums"]["billing_interval"]
+          p_plan_key?: string
           p_last_payment_at?: string
           p_organization_id: string
           p_payload: Json
           p_payment_failed_at?: string
           p_period_end?: string
           p_period_start?: string
+          p_price_id?: string
           p_provider_status: string
           p_subscription_id: string
         }
@@ -2710,6 +2713,7 @@ export type Database = {
         Args: {
           p_interval: Database["public"]["Enums"]["billing_interval"]
           p_organization_id: string
+          p_plan_key: string
         }
         Returns: {
           access_state: string
@@ -2717,8 +2721,13 @@ export type Database = {
           billing_interval: Database["public"]["Enums"]["billing_interval"]
           billing_name: string
           billing_phone: string
+          amount_minor: number
+          currency_code: string
           organization_id: string
           organization_name: string
+          plan_id: string
+          plan_key: string
+          price_id: string
           provider_customer_id: string
         }[]
       }
