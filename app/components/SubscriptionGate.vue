@@ -12,14 +12,14 @@ function checkAgain() {
 </script>
 
 <template>
-  <section class="mx-auto max-w-xl py-8">
+  <section class="mx-auto max-w-7xl py-8">
     <div class="ls-card space-y-6 p-6 md:p-8">
       <div>
         <p class="text-sm font-semibold text-accent">{{ t('billing.singlePlan') }}</p>
         <h1 class="mt-1 text-h1 font-bold">{{ t('billing.unlock', { organization: current?.name }) }}</h1>
         <p class="mt-2 text-sm text-fg-muted">{{ t('billing.gateDescription') }}</p>
       </div>
-      <ul class="grid gap-2 text-sm">
+      <ul class="grid gap-2 text-sm sm:grid-cols-3">
         <li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('billing.featureAccounting') }}</li>
         <li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('billing.featureAutomation') }}</li>
         <li class="flex items-center gap-2"><AppIcon name="check" :size="18" class="text-[var(--bs-status-success)]" />{{ t('billing.featureTeam') }}</li>

@@ -11,6 +11,7 @@ function displayDate(value: string | null | undefined) {
 const renewalDate = computed(() => accessState.value === 'trialing'
   ? subscription.value?.trial_ends_at
   : subscription.value?.current_period_end)
+const checkoutEnabled = computed(() => ['trialing', 'checkout_required', 'read_only'].includes(accessState.value))
 
 // The global entitlement middleware owns the initial load. Loading again from
 // onMounted made the layout remove and remount this page on every request.
@@ -23,7 +24,7 @@ const renewalDate = computed(() => accessState.value === 'trialing'
       <p class="mt-1 text-sm text-fg-muted">{{ t('billing.subtitle') }}</p>
     </header>
 
-    <div class="ls-card max-w-2xl space-y-6 p-6">
+    <div class="ls-card space-y-6 p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p class="text-lg font-bold">{{ t('billing.singlePlan') }}</p>
@@ -40,7 +41,7 @@ const renewalDate = computed(() => accessState.value === 'trialing'
       <p v-if="subscription?.provider_status" class="text-sm text-fg-muted">
         {{ t('billing.managedByPaymob') }}
       </p>
-      <BillingCheckout v-else compact />
+      <BillingCheckout :surface="checkoutEnabled ? 'checkout' : 'display'" compact />
     </div>
   </div>
 </template>

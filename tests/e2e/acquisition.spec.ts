@@ -79,8 +79,9 @@ test('landing page explains the product and leads to a cardless trial', async ({
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Run your finances')
   await expect(page.getByRole('link', { name: 'Start 14-day trial' }).first()).toBeVisible()
   await expect(page.getByText('14 days free · No credit card required')).toBeVisible()
-  await expect(page.getByText('EGP 600 / month')).toBeVisible()
-  await expect(page.getByText('EGP 4,800 / year')).toBeVisible()
+  await expect(page.locator('[data-plan="solo"]')).toContainText('EGP 399')
+  await expect(page.locator('[data-plan="starter"]')).toContainText('EGP 599')
+  await expect(page.locator('[data-plan="business"]')).toContainText('EGP 1,099')
 
   await page.getByRole('link', { name: 'Start 14-day trial' }).first().click()
   await expect(page).toHaveURL('/signup')
