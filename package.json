@@ -26,7 +26,9 @@
     "@hugeicons/vue": "1.0.6",
     "@nuxtjs/i18n": "^10.6.0",
     "@nuxtjs/supabase": "^1.4.6",
+    "@primevue/nuxt-module": "4.5.5",
     "nuxt": "^4.0.3",
+    "primevue": "4.5.5",
     "vue": "^3.5.18",
     "vue-router": "^5.3.0",
     "zod": "^3.25.76"
