@@ -42,6 +42,9 @@ select is(
   (select count(*) from public.subscriptions
    where organization_id = (select organization_id from onboarding_ids)
      and status = 'trialing'
+     and (select plan_key from public.subscription_usage_summary(
+       (select organization_id from onboarding_ids)
+     ) limit 1) = 'trial'
      and trial_started_at is not null
      and trial_ends_at between now() + interval '13 days 23 hours' and now() + interval '14 days 1 minute'),
   1::bigint,

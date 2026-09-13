@@ -81,6 +81,31 @@ with expected_prices(plan_key, interval, amount_minor) as (
   join public.subscription_entitlements entitlement
     on entitlement.plan_id = plan.id
   where plan.key in ('solo', 'starter', 'business')
+), trial_entitlements as (
+  select entitlement.feature_key, entitlement.is_enabled,
+         entitlement.limit_value
+  from public.subscription_plans plan
+  join public.subscription_entitlements entitlement
+    on entitlement.plan_id = plan.id
+  where plan.key = 'trial'
+), business_entitlements as (
+  select entitlement.feature_key, entitlement.is_enabled,
+         entitlement.limit_value
+  from public.subscription_plans plan
+  join public.subscription_entitlements entitlement
+    on entitlement.plan_id = plan.id
+  where plan.key = 'business'
+), trial_business_drift as (
+  select coalesce(trial.feature_key, business.feature_key) as feature_key
+  from trial_entitlements trial
+  full join business_entitlements business using (feature_key)
+  where coalesce(trial.feature_key, business.feature_key) <> 'priority_support'
+    and (
+      trial.feature_key is null
+      or business.feature_key is null
+      or trial.is_enabled is distinct from business.is_enabled
+      or trial.limit_value is distinct from business.limit_value
+    )
 ), checks(check_name, passed, details) as (
   select 'launch catalog flags',
     count(*) = 3 and bool_and(is_public and is_active and is_purchasable),
@@ -153,6 +178,25 @@ with expected_prices(plan_key, interval, amount_minor) as (
     'Step 21 migration was intentionally skipped'
   from public.subscription_plans where key = 'ledger_suit'
   union all
+  select 'dedicated trial plan contract',
+    count(*) = 1 and bool_and(
+      not plan.is_public and plan.is_active and not plan.is_purchasable
+      and not exists (
+        select 1 from public.subscription_plan_prices price
+        where price.plan_id = plan.id
+      )
+      and (select count(*) from trial_entitlements) = 17
+      and not exists (select 1 from trial_business_drift)
+      and exists (
+        select 1 from trial_entitlements entitlement
+        where entitlement.feature_key = 'priority_support'
+          and not entitlement.is_enabled
+          and entitlement.limit_value is null
+      )
+  ),
+    'private 14-day trial matches Business product entitlements except Priority Support'
+  from public.subscription_plans plan where plan.key = 'trial'
+  union all
   select 'sensitive direct access remains revoked',
     not has_table_privilege('authenticated', 'public.subscriptions', 'UPDATE')
     and not has_table_privilege('authenticated', 'public.audit_logs', 'SELECT')
@@ -193,8 +237,8 @@ select check_name, passed, details
 from checks
 order by passed, check_name;
 
--- Review compatibility subscriptions before launch. Step 21 was skipped, so
--- ledger_suit and legacy_* rows are expected and must remain unchanged.
+-- Review subscription distribution before launch. New organizations use trial;
+-- Step 21 was skipped, so ledger_suit and legacy_* rows remain unchanged.
 select plan.key as plan_key, subscription.status, count(*) as subscriptions
 from public.subscriptions subscription
 join public.subscription_plans plan on plan.id = subscription.plan_id

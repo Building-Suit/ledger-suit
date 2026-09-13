@@ -68,7 +68,9 @@ select is((select count(*) from public.organization_members where user_id = auth
 select is(
   (select count(*) from public.subscriptions s
    join public.organizations o on o.id = s.organization_id
+   join public.subscription_plans plan on plan.id = s.plan_id
    where o.created_by = auth.uid()
+     and plan.key = 'trial'
      and s.status = 'trialing'
      and s.trial_started_at is not null
      and s.trial_ends_at between now() + interval '13 days 23 hours' and now() + interval '14 days 1 minute'),
