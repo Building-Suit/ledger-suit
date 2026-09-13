@@ -4,16 +4,16 @@ begin;
 create extension if not exists pgtap with schema extensions;
 select plan(18);
 
-select is(
-  (select count(*) from public.subscription_plans where is_public and is_active),
-  1::bigint,
-  'exactly one subscription plan is available'
+select ok(
+  (select is_active and not is_public and not is_purchasable
+   from public.subscription_plans where key = 'ledger_suit'),
+  'the legacy Ledger Suit plan remains active and private'
 );
 
 select is(
-  (select key from public.subscription_plans where is_public and is_active),
-  'ledger_suit',
-  'the single plan is Ledger Suit'
+  (select count(*) from public.subscription_plans where key = 'ledger_suit'),
+  1::bigint,
+  'the billing compatibility plan remains unique'
 );
 
 select set_config('request.jwt.claims',
@@ -67,8 +67,8 @@ select lives_ok(
 
 select lives_ok(
   format(
-    'select * from public.billing_checkout_context(%L, %L)',
-    (select value from billing_ids where key = 'org'), 'monthly'
+    'select * from public.billing_checkout_context(%L, %L, %L)',
+    (select value from billing_ids where key = 'org'), 'starter', 'monthly'
   ),
   'an owner can request an authorized checkout context'
 );
@@ -91,15 +91,15 @@ select is(
   public.subscription_access_state(
     (select value::uuid from billing_ids where key = 'org')
   ),
-  'checkout_required',
-  'an expired trial requires payment'
+  'read_only',
+  'an expired trial preserves readable history while requiring payment for writes'
 );
 
 select ok(
-  not ('organization.read' = any(public.my_capabilities(
+  'organization.read' = any(public.my_capabilities(
     (select value::uuid from billing_ids where key = 'org')
-  ))),
-  'product read capabilities are removed after trial expiry'
+  )),
+  'product read capabilities remain after trial expiry'
 );
 
 select ok(
@@ -128,9 +128,13 @@ select is(
   public.apply_paymob_subscription_event(
     'txn_phase4_test', 'transaction.succeeded', '{"test":true}',
     (select value::uuid from billing_ids where key = 'org'),
-    'subscription_phase4_test', 'active', 'monthly',
+    'subscription_phase4_test', 'active', 'monthly', 'starter',
     now(), now() + interval '1 month',
-    null, null
+    null, null,
+    (select price.id from public.subscription_plan_prices price
+     join public.subscription_plans plan on plan.id = price.plan_id
+     where plan.key = 'starter' and price.interval = 'monthly' and price.is_active),
+    59900
   ),
   true,
   'a verified Paymob event activates the paid plan'
@@ -140,9 +144,13 @@ select is(
   public.apply_paymob_subscription_event(
     'txn_phase4_test', 'transaction.succeeded', '{"test":true}',
     (select value::uuid from billing_ids where key = 'org'),
-    'subscription_phase4_test', 'active', 'monthly',
+    'subscription_phase4_test', 'active', 'monthly', 'starter',
     now(), now() + interval '1 month',
-    null, null
+    null, null,
+    (select price.id from public.subscription_plan_prices price
+     join public.subscription_plans plan on plan.id = price.plan_id
+     where plan.key = 'starter' and price.interval = 'monthly' and price.is_active),
+    59900
   ),
   false,
   'replayed Paymob events are idempotent'

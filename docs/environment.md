@@ -65,10 +65,12 @@ and must never be prefixed with `NUXT_PUBLIC_` or exposed to browser code.
 | `PAYMOB_PUBLIC_KEY` | Public key included in the Unified Checkout URL |
 | `PAYMOB_HMAC_SECRET` | Verifies Paymob transaction callbacks with HMAC-SHA512 |
 | `PAYMOB_CARD_INTEGRATION_ID` | Test-mode online 3DS/VPC integration (`5902990` for the current Paymob account) used for the first subscription transaction |
-| `PAYMOB_MONTHLY_PLAN_ID` | Paymob subscription plan configured for 30-day deductions |
-| `PAYMOB_YEARLY_PLAN_ID` | Paymob subscription plan configured for 360-day deductions |
-| `PAYMOB_MONTHLY_AMOUNT_CENTS` | Monthly charge in the currency's smallest unit (`60000` for EGP 600) |
-| `PAYMOB_YEARLY_AMOUNT_CENTS` | Yearly charge in the currency's smallest unit (`480000` for EGP 4,800) |
+| `PAYMOB_SOLO_MONTHLY_PLAN_ID` | Paymob plan for Solo monthly (EGP 399) |
+| `PAYMOB_SOLO_YEARLY_PLAN_ID` | Paymob plan for Solo yearly (EGP 3,255.84) |
+| `PAYMOB_STARTER_MONTHLY_PLAN_ID` | Paymob plan for Starter monthly (EGP 599) |
+| `PAYMOB_STARTER_YEARLY_PLAN_ID` | Paymob plan for Starter yearly (EGP 4,887.84) |
+| `PAYMOB_BUSINESS_MONTHLY_PLAN_ID` | Paymob plan for Business monthly (EGP 1,099) |
+| `PAYMOB_BUSINESS_YEARLY_PLAN_ID` | Paymob plan for Business yearly (EGP 8,967.84) |
 | `RESEND_API_KEY` | Sends invitation and operational notification emails |
 | `RESEND_FROM_EMAIL` | Verified sender: `notification@building-suit.com` |
 | `APP_BASE_URL` | Checkout return URL and email-link origin |
@@ -91,15 +93,16 @@ automatic deductions.
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are supplied
 to deployed Supabase Edge Functions by the platform. The service role key is
-used only by the verified Paymob webhook and scheduled email worker.
+used by the verified Paymob webhook, scheduled notification worker, and
+storage-cleanup worker. It must never be exposed to browser code.
 
-The Paymob account needs two subscription plans with `use_transaction_amount`
-enabled: EGP 600 every 30 days and EGP 4,800 every 360 days. The amount secrets
-must match those plans. The UI displays the configured product amounts and
-Unified Checkout confirms them before payment.
+The Paymob account needs monthly and yearly subscription plans for Solo,
+Starter, and Business, with `use_transaction_amount` enabled. Their amounts must
+match the six database prices; the checkout function always takes the charged
+amount from that database catalog.
 
 Once Paymob enables MOTO, put `PAYMOB_API_KEY`,
-`PAYMOB_MOTO_INTEGRATION_ID`, and the two amount variables in the ignored local
+`PAYMOB_MOTO_INTEGRATION_ID` in the ignored local
 `.env`, then provision or safely reuse the plans:
 
 ```bash
@@ -108,18 +111,19 @@ pnpm paymob:provision-plans -- \
 ```
 
 The command refuses to duplicate a named plan whose settings differ and prints
-the resulting `PAYMOB_MONTHLY_PLAN_ID` and `PAYMOB_YEARLY_PLAN_ID`. Add those
-two IDs to Supabase Edge Function Secrets. `PAYMOB_API_KEY` and
+the resulting six plan IDs. Add all six IDs to Supabase Edge Function Secrets.
+`PAYMOB_API_KEY` and
 `PAYMOB_MOTO_INTEGRATION_ID` do not need to remain in the deployed runtime.
 
 The plans are shared, but each organization creates a distinct Paymob
-subscription. The organization UUID and billing interval are copied into the
-Intention extras and unique reference so the signed callback activates exactly
-one workspace.
+subscription. Organization, plan, price, interval, and amount identity are
+server-signed in the Intention extras so the verified callback activates exactly
+one workspace on the purchased database plan.
 
 ## Supabase Vault scheduler secrets
 
-The email Cron job reads two values from Supabase Vault:
+The notification-email and storage-cleanup Cron jobs read two values from
+Supabase Vault:
 
 - `ledger_suit_project_url` — the Supabase project URL, without a trailing slash
 - `ledger_suit_service_role_key` — the server-only service role key

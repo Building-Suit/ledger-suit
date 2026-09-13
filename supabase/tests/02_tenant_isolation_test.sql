@@ -143,11 +143,11 @@ select is(
   'a user cannot read another organization''s profile'
 );
 
-select is(
-  (select count(*) from public.audit_logs
-   where organization_id = (select id from ids where key = 'org_a')),
-  0::bigint,
-  'a user cannot read another organization''s audit log'
+select throws_ok(
+  format($sql$select public.list_audit_history(%L, 50)$sql$,
+    (select id from ids where key = 'org_a')),
+  '42501', 'TENANT_ACCESS_DENIED: not a member of this organization',
+  'a user cannot read another organization''s audit history'
 );
 
 select is(
@@ -243,20 +243,18 @@ select throws_ok(
   'a category cannot point at an account owned by another organization'
 );
 
--- Storage keys are pinned to the owning organization prefix.
+-- The controlled reservation validates both entity ownership and storage scope.
 select throws_ok(
-  format($fmt$insert into public.attachments
-            (organization_id, entity_type, entity_id, file_name, mime_type,
-             size_bytes, storage_key, uploaded_by)
-          values (%L, 'transaction', %L, 'x.pdf', 'application/pdf', 10,
-                  %L || '/transaction/x.pdf', %L)$fmt$,
+  format($fmt$select public.reserve_attachment_upload(
+            %L, 'transaction', %L, 'x.pdf', 'application/pdf', 10,
+            %L || '/transaction/' || %L || '/x.pdf')$fmt$,
     (select id from ids where key = 'org_b'),
     (select id from ids where key = 'txn_a'),
     (select id from ids where key = 'org_a'),
-    'bbbbbbbb-2222-4222-8222-222222222222'),
-  '23514',
-  null,
-  'an attachment cannot be filed under another organization''s storage prefix'
+    (select id from ids where key = 'txn_a')),
+  '22023',
+  'ATTACHMENT_INVALID: upload metadata is invalid',
+  'an attachment reservation rejects a foreign entity and storage prefix'
 );
 
 select is(

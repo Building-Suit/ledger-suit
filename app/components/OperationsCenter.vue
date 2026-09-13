@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Database } from '~~/types/database.types'
+import type { QuotaKey } from '~/composables/usePlanUsage'
 
 const supabase = useSupabaseClient<Database>()
 const { currentId, baseCurrency, can } = useTenant()
@@ -10,6 +11,7 @@ const { data: counterparties } = useOrgCounterparties()
 const toasts = useToasts()
 const describeError = useErrorMessage()
 const { t } = useI18n()
+const { refresh: refreshPlanUsage } = usePlanUsage()
 
 const paymentAccounts = usePaymentAccounts(accounts)
 const liabilityAccounts = computed(() => accounts.value.filter(account => account.type === 'liability' && !account.is_archived))
@@ -25,6 +27,7 @@ const counterpartyForm = reactive({ name: '', type: 'other', email: '', phone: '
 const tagForm = reactive({ name: '', color: '#2F77C9' })
 
 const title = computed(() => t(tab.value === 'commitments' ? 'operations.addCommitment' : tab.value === 'recurring' ? 'operations.addRule' : tab.value === 'counterparties' ? 'recordPages.addCounterparty' : 'recordPages.addTag'))
+const quotaKey = computed<QuotaKey | null>(() => tab.value === 'recurring' ? 'max_recurring_rules' : tab.value === 'counterparties' ? 'max_counterparties' : null)
 
 watch(open, (isOpen) => {
   if (isOpen) errorMessage.value = null
@@ -35,6 +38,7 @@ async function run(kind: OperationsTab, action: () => Promise<void>) {
   errorMessage.value = null
   try {
     await action()
+    if (quotaKey.value) await refreshPlanUsage()
     markChanged(kind)
     if (kind === 'counterparties') clearNuxtData('org:counterparties')
     if (kind === 'tags') clearNuxtData('org:tags')
@@ -103,7 +107,15 @@ async function createCounterparty() {
   const organizationId = currentId.value
   if (!organizationId) return
   await run('counterparties', async () => {
-    const { error } = await supabase.from('counterparties').insert({ organization_id: organizationId, name: counterpartyForm.name, type: counterpartyForm.type as Database['public']['Enums']['counterparty_type'], email: counterpartyForm.email || null, phone: counterpartyForm.phone || null, tax_identifier: counterpartyForm.taxIdentifier || null, notes: counterpartyForm.notes || null, created_by: (await supabase.auth.getUser()).data.user?.id ?? null })
+    const { error } = await supabase.rpc('create_counterparty', {
+      p_organization_id: organizationId,
+      p_name: counterpartyForm.name,
+      p_type: counterpartyForm.type as Database['public']['Enums']['counterparty_type'],
+      p_email: counterpartyForm.email || undefined,
+      p_phone: counterpartyForm.phone || undefined,
+      p_tax_identifier: counterpartyForm.taxIdentifier || undefined,
+      p_notes: counterpartyForm.notes || undefined,
+    })
     if (error) throw error
     Object.assign(counterpartyForm, { name: '', email: '', phone: '', taxIdentifier: '', notes: '' })
   })
@@ -131,6 +143,7 @@ async function createTag() {
           </header>
           <main class="min-h-0 flex-1 overflow-y-auto p-6">
             <p v-if="errorMessage" class="ls-error mb-4" role="alert">{{ errorMessage }}</p>
+            <QuotaUsageMeter v-if="quotaKey" :quota-key="quotaKey" compact class="mb-4" />
 
             <form v-if="tab === 'commitments' && can('commitments.create')" class="grid gap-3 md:grid-cols-2" @submit.prevent="createCommitment">
               <FloatingField :label="t('operations.name')"><input v-model="commitmentForm.title" class="ls-input" :placeholder="t('operations.name')" required></FloatingField>

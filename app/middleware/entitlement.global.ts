@@ -1,9 +1,9 @@
 const PUBLIC_PATHS = new Set(['/', '/login', '/signup', '/verify-email', '/accept-invitation'])
 
 /**
- * Keep unpaid workspaces out of the product shell entirely. Database write
- * gates remain the authority; this route gate prevents accidental UI exposure
- * through direct links and bookmarked finance pages.
+ * Keep a workspace with no subscription in the checkout journey. Lapsed
+ * subscriptions remain in the product shell so members can read accounting
+ * history; database capabilities stay authoritative for every mutation.
  */
 export default defineNuxtRouteMiddleware(async (to) => {
   if (PUBLIC_PATHS.has(to.path)) return

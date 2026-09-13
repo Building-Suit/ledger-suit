@@ -15,7 +15,9 @@ const NAV_GROUPS = computed(() => [
   {
     key: 'transactions',
     links: [
-      ...(can('transactions.read') ? [{ to: '/transactions', label: 'nav.allTransactions' }, ...TRANSACTION_LINKS] : []),
+      ...(can('transactions.read') ? [{ to: '/transactions', label: 'nav.allTransactions' }] : []),
+      ...(can('imports.create') ? [{ to: '/imports', label: 'nav.importTransactions' }] : []),
+      ...(can('transactions.create') ? TRANSACTION_LINKS : []),
     ],
   },
   {
@@ -38,7 +40,10 @@ const NAV_GROUPS = computed(() => [
   },
   {
     key: 'workspace',
-    links: can('members.read') ? [{ to: '/team', label: 'nav.teamInvitations' }] : [],
+    links: [
+      ...(can('members.read') ? [{ to: '/team', label: 'nav.teamInvitations' }] : []),
+      ...(can('audit.read') ? [{ to: '/audit', label: 'nav.auditHistory' }] : []),
+    ],
   },
   {
     key: 'insights',

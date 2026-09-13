@@ -99,6 +99,32 @@ test('owner can review members, role permissions and invitations', async ({ page
   await expect(page.getByRole('button', { name: 'Invite', exact: true })).toHaveCount(1)
 })
 
+test('team page explains the custom-role plan limit', async ({ page }) => {
+  await page.route('**/rest/v1/rpc/create_organization_role', route => route.fulfill({
+    status: 400,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      code: 'P0001',
+      details: null,
+      hint: null,
+      message: 'PLAN_CUSTOM_ROLE_LIMIT_REACHED: usage 0, requested 1, limit 0',
+    }),
+  }))
+
+  await page.getByRole('link', { name: 'Access & permissions' }).click()
+  await page.getByRole('tab', { name: 'Roles & permissions' }).click()
+  await page.getByRole('button', { name: 'New role' }).click()
+
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Name (English)').fill('Approver')
+  await dialog.getByLabel('Name (Arabic)').fill('معتمد')
+  await dialog.getByRole('button', { name: 'Save role' }).click()
+
+  await expect(dialog.getByRole('alert')).toHaveText(
+    'Your plan’s custom-role limit has been reached. Remove an unused custom role or upgrade your plan to create another role.',
+  )
+})
+
 test('financial system map explains the path from setup to reports', async ({ page }) => {
   await page.getByRole('button', { name: 'Open the financial system map' }).click()
 

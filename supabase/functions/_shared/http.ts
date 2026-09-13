@@ -1,4 +1,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import { requiredEnv } from './env.ts'
+
+export { requiredEnv } from './env.ts'
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,12 +18,6 @@ export function json(body: unknown, status = 200): Response {
 
 export function handleOptions(request: Request): Response | null {
   return request.method === 'OPTIONS' ? new Response('ok', { headers: corsHeaders }) : null
-}
-
-export function requiredEnv(name: string): string {
-  const value = Deno.env.get(name)
-  if (!value) throw new Error(`Missing server secret: ${name}`)
-  return value
 }
 
 export function adminClient(): SupabaseClient {

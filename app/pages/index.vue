@@ -4,8 +4,12 @@ definePageMeta({ layout: false })
 const { t } = useI18n()
 const user = useSupabaseUser()
 const { restore } = useTheme()
+const hydrated = ref(false)
 
-onMounted(restore)
+onMounted(() => {
+  restore()
+  hydrated.value = true
+})
 useHead({ title: () => `${t('landing.title')} · ${t('app.name')}` })
 
 const features = [
@@ -19,7 +23,7 @@ const features = [
 </script>
 
 <template>
-  <div class="min-h-dvh bg-background text-fg">
+  <div class="min-h-dvh bg-background text-fg" :data-hydrated="hydrated">
     <header class="sticky top-0 z-30 border-b-2 border-brand-gold bg-background/90 backdrop-blur-xl">
       <div class="mx-auto flex min-h-16 max-w-7xl items-center gap-4 px-4 lg:px-8">
         <NuxtLink to="/" class="inline-flex" aria-label="Ledger Suit home">
@@ -96,14 +100,11 @@ const features = [
         </div>
       </section>
 
-      <section id="pricing" class="mx-auto max-w-5xl px-4 py-16 text-center lg:px-8">
+      <section id="pricing" class="mx-auto max-w-7xl px-4 py-16 text-center lg:px-8">
         <p class="text-xs font-bold uppercase tracking-[.2em] text-fg-muted">{{ t('landing.pricingEyebrow') }}</p>
         <h2 class="mt-3 text-3xl font-black tracking-[-.04em]">{{ t('landing.pricingTitle') }}</h2>
-        <div class="mx-auto mt-8 grid max-w-3xl gap-4 sm:grid-cols-2">
-          <div class="ls-card p-8 text-start"><p class="font-bold">{{ t('billing.monthly') }}</p><p class="mt-3 text-3xl font-black">{{ t('billing.monthlyPrice') }}</p><p class="mt-3 text-sm text-fg-muted">{{ t('landing.priceMonthlyBody') }}</p></div>
-          <div class="ls-card relative p-8 text-start"><span class="absolute end-4 top-4 rounded-full bg-brand-gold px-3 py-1 text-xs font-bold text-brand-navy-deep">{{ t('landing.bestValue') }}</span><p class="font-bold">{{ t('billing.yearly') }}</p><p class="mt-3 text-3xl font-black">{{ t('billing.yearlyPrice') }}</p><p class="mt-3 text-sm text-fg-muted">{{ t('landing.priceYearlyBody') }}</p></div>
-        </div>
-        <NuxtLink to="/signup" class="ls-btn ls-btn-primary mt-8">{{ t('landing.startTrial') }}</NuxtLink>
+        <p class="mx-auto mt-4 max-w-2xl text-fg-muted">{{ t('landing.pricingBody') }}</p>
+        <BillingCheckout class="mt-8" surface="public" />
       </section>
     </main>
 

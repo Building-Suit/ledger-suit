@@ -42,14 +42,14 @@ export function useErrorMessage() {
   const { t, te } = useI18n()
 
   return function describeError(err: unknown): string {
-    const message
-      = typeof err === 'object' && err !== null && 'message' in err
-        ? String((err as { message: unknown }).message)
-        : String(err)
+    const details = typeof err === 'object' && err !== null ? err as Record<string, unknown> : {}
+    const sources = [details.message, details.details, details.hint, details.code, err]
+      .filter(value => value !== null && value !== undefined)
+      .map(String)
+    const codes = sources.flatMap(source => [...source.matchAll(/\b[A-Z][A-Z0-9_]{3,}\b/g)].map(match => match[0]))
+    const code = codes.find(candidate => te(`errors.${candidate}`))
 
-    const code = message.match(/\b([A-Z][A-Z_]{3,})\s*:/)?.[1]
-
-    if (code && te(`errors.${code}`)) return t(`errors.${code}`)
+    if (code) return t(`errors.${code}`)
 
     // Unrecognised: log the detail for developers, show the safe message.
     if (import.meta.dev) console.error(err)
