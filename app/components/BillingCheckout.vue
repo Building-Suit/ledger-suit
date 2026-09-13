@@ -34,9 +34,29 @@ function object(value: Json | undefined): JsonObject {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : {}
 }
 
-function amount(plan: CatalogPlan): number | null {
-  const price = object(object(plan.prices)[interval.value])
+function priceAmount(plan: CatalogPlan, billingInterval: 'monthly' | 'yearly'): number | null {
+  const price = object(object(plan.prices)[billingInterval])
   return typeof price.amount_minor === 'number' ? price.amount_minor : null
+}
+
+function amount(plan: CatalogPlan): number | null {
+  return priceAmount(plan, interval.value)
+}
+
+function yearlyOriginalAmount(plan: CatalogPlan): number | null {
+  const monthly = priceAmount(plan, 'monthly')
+  return monthly === null ? null : monthly * 12
+}
+
+function yearlyMonthlyAmount(plan: CatalogPlan): number | null {
+  const yearly = priceAmount(plan, 'yearly')
+  return yearly === null ? null : yearly / 12
+}
+
+function yearlyDiscount(plan: CatalogPlan): number | null {
+  const original = yearlyOriginalAmount(plan)
+  const yearly = priceAmount(plan, 'yearly')
+  return original && yearly !== null ? Math.round((1 - yearly / original) * 100) : null
 }
 
 function formatAmount(amountMinor: number): string {
@@ -88,13 +108,15 @@ async function checkout(planKey: LaunchPlanKey) {
   <div :class="compact ? 'space-y-5' : 'space-y-8'" data-testid="plan-pricing">
     <fieldset class="mx-auto max-w-sm">
       <legend class="ls-label text-center">{{ t('billing.billingCycle') }}</legend>
-      <div class="grid grid-cols-2 gap-2" dir="ltr">
-        <button type="button" class="ls-card-flat cursor-pointer p-3 text-center font-semibold" :aria-pressed="interval === 'monthly'" :class="{ 'border-primary': interval === 'monthly' }" @click="interval = 'monthly'">
-          {{ t('billing.monthly') }}
-        </button>
-        <button type="button" class="ls-card-flat cursor-pointer p-3 text-center font-semibold" :aria-pressed="interval === 'yearly'" :class="{ 'border-primary': interval === 'yearly' }" @click="interval = 'yearly'">
-          {{ t('billing.yearly') }}
-        </button>
+      <div class="mx-auto grid max-w-xs grid-cols-2 rounded-full border border-[var(--bs-border)] bg-surface-muted p-1 shadow-inner" dir="ltr">
+        <label class="relative cursor-pointer">
+          <input v-model="interval" class="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" type="radio" name="billing-cycle" value="monthly">
+          <span class="block rounded-full px-6 py-2 text-center text-sm font-semibold transition" :class="interval === 'monthly' ? 'bg-surface text-fg shadow-sm' : 'text-fg-muted'">{{ t('billing.monthly') }}</span>
+        </label>
+        <label class="relative cursor-pointer">
+          <input v-model="interval" class="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" type="radio" name="billing-cycle" value="yearly">
+          <span class="block rounded-full px-6 py-2 text-center text-sm font-semibold transition" :class="interval === 'yearly' ? 'bg-surface text-fg shadow-sm' : 'text-fg-muted'">{{ t('billing.yearly') }}</span>
+        </label>
       </div>
       <p class="mt-2 text-center text-xs text-fg-muted">{{ t('billing.plans.annualDiscount') }}</p>
     </fieldset>
@@ -118,8 +140,21 @@ async function checkout(planKey: LaunchPlanKey) {
         <p class="mt-2 min-h-12 text-sm text-fg-muted">{{ t(`billing.plans.${plan.plan_key}.description`) }}</p>
 
         <div v-if="amount(plan) !== null" class="mt-5">
-          <p class="text-3xl font-black" dir="ltr">{{ t('billing.plans.price', { amount: formatAmount(amount(plan) ?? 0) }) }}</p>
-          <p class="text-xs text-fg-muted">{{ interval === 'monthly' ? t('billing.plans.perMonth') : t('billing.plans.perYear') }}</p>
+          <template v-if="interval === 'yearly'">
+            <div class="flex flex-wrap items-center gap-2 text-sm text-fg-muted" dir="ltr">
+              <s>{{ t('billing.plans.price', { amount: formatAmount(yearlyOriginalAmount(plan) ?? 0) }) }}</s>
+              <span class="rounded-full bg-[var(--bs-status-success-bg)] px-2 py-0.5 text-xs font-bold text-[var(--bs-status-success)]">{{ t('billing.plans.discount', { percent: yearlyDiscount(plan) }) }}</span>
+            </div>
+            <p class="mt-1 text-3xl font-black" dir="ltr">{{ t('billing.plans.price', { amount: formatAmount(amount(plan) ?? 0) }) }}</p>
+            <p class="text-xs text-fg-muted">{{ t('billing.plans.yearlyEquivalent', {
+              monthlyPrice: t('billing.plans.price', { amount: formatAmount(yearlyMonthlyAmount(plan) ?? 0) }),
+              yearlyPrice: t('billing.plans.price', { amount: formatAmount(amount(plan) ?? 0) }),
+            }) }}</p>
+          </template>
+          <template v-else>
+            <p class="text-3xl font-black" dir="ltr">{{ t('billing.plans.price', { amount: formatAmount(amount(plan) ?? 0) }) }}</p>
+            <p class="text-xs text-fg-muted">{{ t('billing.plans.perMonth') }}</p>
+          </template>
         </div>
         <p v-else class="mt-5 text-lg font-bold">{{ t('billing.plans.pricingComingSoon') }}</p>
 

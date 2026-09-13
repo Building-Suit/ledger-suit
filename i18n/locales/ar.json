@@ -833,6 +833,8 @@
       "price": "{amount} ج.م",
       "perMonth": "شهريًا",
       "perYear": "سنويًا",
+      "discount": "خصم {percent}٪",
+      "yearlyEquivalent": "{monthlyPrice} شهريًا · تُدفع {yearlyPrice} سنويًا",
       "customPricing": "سعر مخصص",
       "pricingComingSoon": "سيُعلن السعر قريبًا",
       "mostPopular": "الأكثر شيوعًا",
