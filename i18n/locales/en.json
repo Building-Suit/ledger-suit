@@ -26,7 +26,8 @@
     "themeDark": "Dark",
     "themeSystem": "System",
     "back": "Back",
-    "continue": "Continue"
+    "continue": "Continue",
+    "retry": "Retry"
   },
   "financialMap": {
     "open": "Open the financial system map",
@@ -833,6 +834,7 @@
       "perMonth": "per month",
       "perYear": "per year",
       "customPricing": "Custom pricing",
+      "pricingComingSoon": "Pricing coming soon",
       "mostPopular": "Most Popular",
       "comingSoon": "Coming Soon",
       "included": "Included",

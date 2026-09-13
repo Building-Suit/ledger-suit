@@ -121,7 +121,7 @@ async function checkout(planKey: LaunchPlanKey) {
           <p class="text-3xl font-black" dir="ltr">{{ t('billing.plans.price', { amount: formatAmount(amount(plan) ?? 0) }) }}</p>
           <p class="text-xs text-fg-muted">{{ interval === 'monthly' ? t('billing.plans.perMonth') : t('billing.plans.perYear') }}</p>
         </div>
-        <p v-else class="mt-5 text-lg font-bold">{{ t('billing.plans.customPricing') }}</p>
+        <p v-else class="mt-5 text-lg font-bold">{{ t('billing.plans.pricingComingSoon') }}</p>
 
         <ul v-if="featureRows(plan).length" class="mt-5 flex-1 space-y-2 text-sm">
           <li v-for="feature in featureRows(plan)" :key="feature.key" class="flex items-start gap-2">

@@ -18,8 +18,11 @@ test('launch pricing is responsive, accurate, and distinguishes included from fu
   await expect(pricing.locator('[data-plan="solo"]')).toContainText('EGP 3,255.84')
   await expect(pricing.locator('[data-plan="starter"]')).toContainText('EGP 4,887.84')
   await expect(pricing.locator('[data-plan="business"]')).toContainText('EGP 8,967.84')
-  await expect(pricing.locator('[data-plan="scale"]')).toContainText('Coming Soon')
-  await expect(pricing.locator('[data-plan="scale"]').getByRole('button')).toBeDisabled()
+  const scale = pricing.locator('[data-plan="scale"]')
+  await expect(scale).toContainText('Coming Soon')
+  await expect(scale).toContainText('Pricing coming soon')
+  await expect(scale).not.toContainText('Custom pricing')
+  await expect(scale.getByRole('button')).toBeDisabled()
   await expect(pricing.getByText('Enterprise')).toBeVisible()
   await expect(pricing.getByText('Contact us')).toBeVisible()
   await expect(pricing.getByText('Multi-branch accounting — Coming Soon')).toBeVisible()
@@ -41,6 +44,8 @@ test('Arabic pricing remains localized and usable under RTL', async ({ page, con
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   const pricing = page.getByTestId('plan-pricing')
   await expect(pricing.locator('[data-plan="starter"]')).toContainText('الأكثر شيوعًا')
+  await expect(pricing.locator('[data-plan="solo"]')).toContainText('عضو واحد في مساحة العمل')
+  await expect(pricing.locator('[data-plan="solo"]')).not.toContainText('١ أعضاء')
   await pricing.getByRole('button', { name: 'سنوي', exact: true }).click()
   await expect(pricing.locator('[data-plan="starter"]')).toContainText('٤٬٨٨٧٫٨٤ ج.م')
   await expect(pricing.locator('[data-plan="business"]')).toContainText('المحاسبة متعددة العملات')
@@ -75,4 +80,26 @@ test('checkout submits the selected plan and interval from the pricing card', as
   await pricing.locator('[data-plan="business"]').getByRole('button', { name: 'Choose Business' }).click()
 
   await expect.poll(() => checkoutBody).toMatchObject({ planKey: 'business', interval: 'yearly' })
+})
+
+test('grace-period billing shows plans without checkout actions', async ({ page }) => {
+  await page.route('**/rest/v1/rpc/subscription_access_state', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify('grace_period'),
+  }))
+
+  await page.goto('/login')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await page.getByLabel('Email').fill('owner@alpha.test')
+  await page.getByLabel('Password').fill('ledgersuit')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page).toHaveURL('/dashboard')
+
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Subscription' }).click()
+  await expect(page).toHaveURL('/billing')
+  await expect(page.getByText('Payment due')).toBeVisible()
+  await expect(page.getByTestId('plan-pricing')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Choose / })).toHaveCount(0)
 })
