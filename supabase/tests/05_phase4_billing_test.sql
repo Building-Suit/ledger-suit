@@ -67,8 +67,8 @@ select lives_ok(
 
 select lives_ok(
   format(
-    'select * from public.billing_checkout_context(%L, %L)',
-    (select value from billing_ids where key = 'org'), 'monthly'
+    'select * from public.billing_checkout_context(%L, %L, %L)',
+    (select value from billing_ids where key = 'org'), 'starter', 'monthly'
   ),
   'an owner can request an authorized checkout context'
 );
@@ -128,7 +128,7 @@ select is(
   public.apply_paymob_subscription_event(
     'txn_phase4_test', 'transaction.succeeded', '{"test":true}',
     (select value::uuid from billing_ids where key = 'org'),
-    'subscription_phase4_test', 'active', 'monthly',
+    'subscription_phase4_test', 'active', 'monthly', 'starter',
     now(), now() + interval '1 month',
     null, null
   ),
@@ -140,7 +140,7 @@ select is(
   public.apply_paymob_subscription_event(
     'txn_phase4_test', 'transaction.succeeded', '{"test":true}',
     (select value::uuid from billing_ids where key = 'org'),
-    'subscription_phase4_test', 'active', 'monthly',
+    'subscription_phase4_test', 'active', 'monthly', 'starter',
     now(), now() + interval '1 month',
     null, null
   ),
