@@ -137,11 +137,13 @@ also avoids preempting the separately approved Step 21 `ledger_suit` migration.
 The RPC rejects `ledger_suit`, `legacy_*`, and other compatibility plans with
 `LEGACY_PLAN_TRANSITION_NOT_APPROVED`; their Billing view remains informational.
 
-The central quota engine is also dormant with respect to product writes until
-each resource-specific enforcement migration connects its lowest shared write
-boundary. It requires no environment variables or provider configuration. The
-public usage functions are safe for organization members; raw plan resolution,
-assertions, and advisory-lock helpers remain private to trusted database code.
+The central quota and feature engines are enforced at the implemented shared
+resource-write boundaries. Organization-scoped advisory locks serialize quota-
+and feature-gated writes with physical plan transitions, so a concurrent
+downgrade cannot leave forbidden post-transition state. The engines require no
+environment variables or provider configuration. Public usage functions are
+safe for organization members; raw plan resolution, assertions, and lock
+helpers remain private to trusted database code.
 
 After migration, a smoke check can confirm the seven-row usage contract for an
 organization while signed in as one of its members:
@@ -151,18 +153,13 @@ select *
 from public.subscription_usage_summary('<organization-id>');
 ```
 
-Rollback is achieved by reverting the migration before dependent enforcement
-steps are deployed. Once later migrations call these helpers, roll them back in
-reverse order first. This migration changes no subscriptions, plan prices,
-provider identifiers, or accounting rows.
-
-If the dormant catalog must be withdrawn before checkout activation, set
-`is_purchasable = false` and `is_public = false` for `solo`, `starter`,
-`business`, and `scale`. Leave their rows and the renamed `legacy_*` rows in
-place; deleting or renaming catalog records is unnecessary and makes later
-forward migration harder. The private active `ledger_suit` plan remains the
-runtime fallback throughout, so this rollback does not change subscriptions,
-provider IDs, trials, or accounting access.
+Deployed migrations are forward-only. Correct a deployed schema or enforcement
+problem with a new reviewed migration; never revert migration history. To stop
+new sales safely, disable acquisition and mark launch plans non-purchasable
+without deleting catalog or subscription history. Restore a backup only to
+recover from confirmed data corruption, then rerun the accounting-integrity and
+provider-event idempotency checks before reopening writes. The complete rollback
+sequence is maintained in the final launch checklist.
 
 These identifiers are sandbox-only. Create a separate live catalog and webhook
 when production billing is approved; never reuse test-mode identifiers in live

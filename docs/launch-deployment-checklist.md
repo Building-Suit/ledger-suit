@@ -5,6 +5,13 @@ The database is currently disposable test data, and the Step 21 compatibility
 subscription migration was intentionally skipped. Do not map `ledger_suit` or
 `legacy_*` subscriptions as part of this checklist.
 
+> **Launch blocker — new-trial policy is unresolved.** Current signup creates a
+> cardless 14-day trial on the private `ledger_suit` plan and offers no
+> Solo/Starter/Business trial selection. Production signup and launch are NO-GO
+> until the product owner explicitly approves the commercial policy for new
+> trials. Skipping Step 21 applies only to migration of existing compatibility
+> subscriptions; it does not decide which plan a brand-new trial should use.
+
 ## Ownership and evidence
 
 Tareq is the accountable owner for this pre-launch deployment. Record the
@@ -30,6 +37,10 @@ role key belongs in the evidence.
   E2E.
 - [ ] Confirm the application origin and Supabase project reference identify the
   same target environment.
+- [ ] Record the product owner's explicit approval of the new-trial commercial
+  policy and its implemented acquisition behavior. **Until both exist,
+  production signup and launch remain NO-GO.** Do not infer that `ledger_suit`
+  means Solo, Starter, or Business.
 - [ ] Confirm this is still a pre-launch/test-data deployment. If real customer
   data now exists, stop and add a reviewed data-preservation plan before any
   reset, restore, or catalog correction.
@@ -162,9 +173,8 @@ real financial history to manufacture a result.
 |---|---|---|
 | Public Pricing, English and Arabic/RTL | Solo/Starter/Business exact prices; yearly switch and 32% presentation correct | [ ] |
 | Scale and Enterprise | No checkout route; disabled Coming Soon / Contact us presentation | [ ] |
-| Solo trial | Core posting/reports/export work; one member; imports and FX reject with localized stable errors | [ ] |
-| Starter trial | CSV validation/confirmation works; three members; FX rejects | [ ] |
-| Business trial | Imports, multi-currency, priority-support presentation, and higher limits work | [ ] |
+| Current signup behavior (pre-decision) | A new cardless 14-day trial is assigned private `ledger_suit`; no launch-plan trial selection is shown. This verifies current behavior but does **not** clear the launch blocker | [ ] |
+| New-trial acquisition (post-decision, required before GO) | After explicit product-owner approval and a separate implementation, signup assigns/offers exactly the approved trial plan policy; verify its quota and feature behavior without treating `ledger_suit` as a launch plan | [ ] |
 | Checkout success | Correct signed price snapshot creates/activates one subscription and returns to Billing | [ ] |
 | Initial checkout failure | Trial plan/status/end date remain unchanged; failure is recorded | [ ] |
 | Renewal failure and recovery | Grace/read-only lifecycle follows the existing provider callback contract | [ ] |

@@ -2,6 +2,11 @@
 -- production migration deploy. Every row in the first result set must pass.
 begin transaction read only;
 
+-- This operator-only script must exercise the same public diagnostic contract
+-- used by authorized customers for every organization without depending on one
+-- particular member session.
+set local app.bypass_authz = 'on';
+
 with expected_prices(plan_key, interval, amount_minor) as (
   values
     ('solo', 'monthly'::public.billing_interval, 39900::bigint),
@@ -83,6 +88,19 @@ with expected_prices(plan_key, interval, amount_minor) as (
   from public.subscription_plans
   where key in ('solo', 'starter', 'business')
   union all
+  select 'only launch plans are purchasable',
+    not exists (
+      select 1 from public.subscription_plans
+      where is_purchasable and key not in ('solo', 'starter', 'business')
+    ), 'no compatibility, preview, or future plan may be purchasable'
+  union all
+  select 'public commercial catalog is exact',
+    not exists (
+      select 1 from public.subscription_plans
+      where is_public and is_active
+        and key not in ('solo', 'starter', 'business', 'scale')
+    ), 'active public plans are limited to launch plans and the Scale preview'
+  union all
   select 'six exact EGP prices',
     count(*) = 6 and bool_and(
       actual.amount_minor = expected.amount_minor
@@ -124,11 +142,11 @@ with expected_prices(plan_key, interval, amount_minor) as (
     ), 'Scale must have no active price or entitlement rows'
   from public.subscription_plans plan where plan.key = 'scale'
   union all
-  select 'Enterprise is not purchasable',
+  select 'Enterprise remains presentation-only',
     not exists (
       select 1 from public.subscription_plans plan
-      where plan.key = 'enterprise' and plan.is_purchasable
-    ), 'Enterprise may be absent or non-purchasable only'
+      where plan.key = 'enterprise'
+    ), 'no fabricated Enterprise subscription-plan row exists'
   union all
   select 'ledger_suit remains private compatibility',
     count(*) = 1 and bool_and(not is_public and is_active and not is_purchasable),
@@ -147,8 +165,13 @@ with expected_prices(plan_key, interval, amount_minor) as (
     'attachments: private, 25 MiB object limit'
   from storage.buckets where id = 'attachments'
   union all
-  select 'scheduled jobs exist',
-    count(*) = 2,
+  select 'scheduled jobs are active on exact schedules',
+    count(*) = 2 and bool_and(
+      active and schedule = case jobname
+        when 'ledger-suit-notification-email' then '*/5 * * * *'
+        when 'ledger-suit-storage-cleanup' then '*/10 * * * *'
+      end
+    ),
     string_agg(jobname || '=' || schedule, ', ' order by jobname)
   from cron.job
   where jobname in ('ledger-suit-notification-email', 'ledger-suit-storage-cleanup')
@@ -158,6 +181,13 @@ with expected_prices(plan_key, interval, amount_minor) as (
     format('%s required Vault entries found; values intentionally hidden', count(*))
   from vault.secrets
   where name in ('ledger_suit_project_url', 'ledger_suit_service_role_key')
+  union all
+  select 'balance-sheet integrity contract passes',
+    coalesce(bool_and(
+      (public.check_balance_sheet_integrity(organization.id) ->> 'balanced')::boolean
+    ), true),
+    format('%s organizations checked through public.check_balance_sheet_integrity', count(*))
+  from public.organizations organization
 )
 select check_name, passed, details
 from checks
@@ -184,7 +214,8 @@ select organization.id, organization.name,
        count(journal.transaction_id) as journals,
        count(journal.transaction_id) filter (
          where journal.debits <> journal.credits
-       ) as unbalanced_journals
+       ) as unbalanced_journals,
+       public.check_balance_sheet_integrity(organization.id) as balance_sheet_integrity
 from public.organizations organization
 left join journals journal on journal.organization_id = organization.id
 group by organization.id, organization.name, organization.created_at
