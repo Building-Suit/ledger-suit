@@ -816,7 +816,7 @@
   "billing": {
     "title": "Subscription",
     "subtitle": "Manage the Ledger Suit subscription for this organization.",
-    "singlePlan": "Ledger Suit subscription",
+    "singlePlan": "Ledger Suit plans",
     "unlock": "Activate {organization}",
     "gateDescription": "Your 14-day free trial has ended. Choose a plan and pay securely with Paymob to continue using this workspace.",
     "featureAccounting": "Double-entry accounting and complete reports",
@@ -825,8 +825,41 @@
     "billingCycle": "Billing cycle",
     "monthly": "Monthly",
     "yearly": "Yearly",
-    "monthlyPrice": "EGP 600 / month",
-    "yearlyPrice": "EGP 4,800 / year",
+    "plans": {
+      "annualDiscount": "Annual billing includes a 32% discount.",
+      "loading": "Loading plans…",
+      "loadFailed": "Plans could not be loaded.",
+      "price": "EGP {amount}",
+      "perMonth": "per month",
+      "perYear": "per year",
+      "customPricing": "Custom pricing",
+      "mostPopular": "Most Popular",
+      "comingSoon": "Coming Soon",
+      "included": "Included",
+      "notIncluded": "Not included",
+      "choose": "Choose {plan}",
+      "contactUs": "Contact us",
+      "solo": { "name": "Solo", "description": "Reliable core accounting for owner-managed businesses." },
+      "starter": { "name": "Starter", "description": "More capacity and CSV imports for small teams." },
+      "business": { "name": "Business", "description": "Higher limits, multi-currency, and priority support for growing teams." },
+      "scale": { "name": "Scale", "description": "A future plan for high-volume and multi-location businesses.", "preview": "Pricing and availability will be announced before launch." },
+      "enterprise": { "name": "Enterprise", "description": "Tailored deployment and support options are coming later." },
+      "features": {
+        "members": "{count} workspace member | {count} workspace members",
+        "transactions": "{count} transactions per month",
+        "reports": "Core financial reports",
+        "imports": "CSV imports",
+        "multiCurrency": "Multi-currency accounting",
+        "prioritySupport": "Priority support"
+      },
+      "futureTitle": "Future functionality",
+      "futureBody": "These capabilities are not included in any paid launch plan yet.",
+      "future": {
+        "branches": "Multi-branch accounting — Coming Soon",
+        "analytics": "Advanced Analytics & Reporting — Coming Soon",
+        "api": "Developer API — Coming Soon"
+      }
+    },
     "priceAtCheckout": "Paymob confirms the price and currency before payment.",
     "startTrial": "Choose plan and continue to payment",
     "openingCheckout": "Opening secure checkout…",
@@ -888,11 +921,9 @@
       "2": { "title": "Configure the business", "body": "Choose the legal details, currency, timezone, and fiscal year." },
       "3": { "title": "Start your free trial", "body": "Open your ready-to-use ledger for 14 days—no credit card required." }
     },
-    "pricingEyebrow": "One complete subscription",
-    "pricingTitle": "Simple pricing, all core features included",
-    "priceMonthlyBody": "Flexible monthly billing after the 14-day free trial.",
-    "priceYearlyBody": "Save two months compared with paying monthly.",
-    "bestValue": "Best value",
+    "pricingEyebrow": "Plans that grow with you",
+    "pricingTitle": "Choose the capacity your business needs",
+    "pricingBody": "Every launch plan includes reliable core accounting and reports. Switch to annual billing to save 32%.",
     "footer": "Ledger Suit by Building Suit"
   },
   "onboarding": {

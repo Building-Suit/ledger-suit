@@ -23,7 +23,7 @@ const renewalDate = computed(() => accessState.value === 'trialing'
       <p class="mt-1 text-sm text-fg-muted">{{ t('billing.subtitle') }}</p>
     </header>
 
-    <div class="ls-card max-w-2xl space-y-6 p-6">
+    <div class="ls-card space-y-6 p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p class="text-lg font-bold">{{ t('billing.singlePlan') }}</p>
@@ -40,7 +40,7 @@ const renewalDate = computed(() => accessState.value === 'trialing'
       <p v-if="subscription?.provider_status" class="text-sm text-fg-muted">
         {{ t('billing.managedByPaymob') }}
       </p>
-      <BillingCheckout v-else compact />
+      <BillingCheckout :surface="accessState === 'active' ? 'display' : 'checkout'" compact />
     </div>
   </div>
 </template>
