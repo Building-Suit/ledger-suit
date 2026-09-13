@@ -833,6 +833,8 @@
       "price": "EGP {amount}",
       "perMonth": "per month",
       "perYear": "per year",
+      "discount": "{percent}% off",
+      "yearlyEquivalent": "{monthlyPrice}/month · billed {yearlyPrice} yearly",
       "customPricing": "Custom pricing",
       "pricingComingSoon": "Pricing coming soon",
       "mostPopular": "Most Popular",
