@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(33);
 
 create temp table plan_change_ids (key text primary key, value uuid not null);
 grant all on plan_change_ids to authenticated, service_role;
@@ -28,10 +28,28 @@ insert into plan_change_ids values (
   public.create_organization('Plan Change Safety Co', 'EGP')
 );
 
+select throws_ok(
+  format(
+    $$select * from public.plan_change_impact(%L, 'solo', 'monthly')$$,
+    (select value from plan_change_ids where key = 'organization')
+  ),
+  'P0001', 'LEGACY_PLAN_TRANSITION_NOT_APPROVED',
+  'the grandfathered ledger_suit plan cannot enter Step 20 transition handling'
+);
+
 reset role;
 select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000000000","role":"service_role"}', true);
 set local role service_role;
+
+select is(
+  (select plan.key from public.subscriptions subscription
+   join public.subscription_plans plan on plan.id = subscription.plan_id
+   where subscription.organization_id =
+     (select value from plan_change_ids where key = 'organization')),
+  'ledger_suit',
+  'a rejected legacy preflight leaves the compatibility subscription unchanged'
+);
 
 update public.subscriptions
 set plan_id = (select id from public.subscription_plans where key = 'business'),
@@ -278,6 +296,69 @@ select is(
    where organization_id = (select value from plan_change_ids where key = 'organization')),
   1,
   'rollback requires no accounting or resource restoration'
+);
+
+update public.subscriptions
+set plan_id = (select id from public.subscription_plans where key = 'solo')
+where organization_id = (select value from plan_change_ids where key = 'organization');
+
+reset role;
+select set_config('request.jwt.claims',
+  '{"sub":"d0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+set local role authenticated;
+
+create temp table plan_upgrade_impact_snapshot as
+select * from public.plan_change_impact(
+  (select value from plan_change_ids where key = 'organization'),
+  'business', 'monthly'
+);
+
+select is(
+  (select change_direction from plan_upgrade_impact_snapshot),
+  'upgrade',
+  'Solo to Business is classified as an upgrade'
+);
+
+select ok(
+  (select bool_and(
+      (impact->>'target_limit_value')::bigint
+        > (impact->>'current_limit_value')::bigint
+    )
+   from plan_upgrade_impact_snapshot,
+        jsonb_array_elements(quota_impacts) impact),
+  'Business has a higher target allowance for every enforced quota'
+);
+
+select is(
+  (select string_agg(impact->>'feature_key', ',' order by impact->>'feature_key')
+   from plan_upgrade_impact_snapshot,
+        jsonb_array_elements(feature_impacts) impact
+   where (impact->>'will_gain')::boolean),
+  'imports,multi_currency,priority_support',
+  'Solo to Business identifies imports, multi-currency, and priority support as gains'
+);
+
+select ok(
+  (select audit_history_current_days = 90
+      and audit_history_target_days = 1095
+      and not audit_history_reduced
+   from plan_upgrade_impact_snapshot),
+  'Solo to Business reports increased audit-history visibility'
+);
+
+reset role;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000000000","role":"service_role"}', true);
+set local role service_role;
+
+select is(
+  (select plan.key || ':' || subscription.provider_subscription_id
+   from public.subscriptions subscription
+   join public.subscription_plans plan on plan.id = subscription.plan_id
+   where subscription.organization_id =
+     (select value from plan_change_ids where key = 'organization')),
+  'solo:step20-existing-subscription',
+  'upgrade preflight does not mutate the subscription or provider identity'
 );
 
 select ok(

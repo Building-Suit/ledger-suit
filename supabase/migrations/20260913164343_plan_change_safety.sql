@@ -2,7 +2,7 @@
 -- the checked-in Paymob contract supports initial checkout and verified
 -- lifecycle callbacks, but does not establish a safe plan-change API.
 
-create function public.plan_change_impact(
+create or replace function public.plan_change_impact(
   p_organization_id uuid,
   p_target_plan_key text,
   p_target_interval public.billing_interval
@@ -52,6 +52,16 @@ begin
 
   if not found then
     raise exception 'PLAN_SUBSCRIPTION_NOT_FOUND' using errcode = 'P0001';
+  end if;
+
+  -- Migration away from the private compatibility catalog needs the explicit
+  -- per-customer policy approved in Step 21. Step 20 must not create a path
+  -- that looks like an ordinary launch-plan change.
+  if v_current.key = 'ledger_suit'
+     or v_current.key like 'legacy\_%' escape '\'
+     or v_current.key not in ('solo', 'starter', 'business') then
+    raise exception 'LEGACY_PLAN_TRANSITION_NOT_APPROVED'
+      using errcode = 'P0001';
   end if;
 
   select resolved.plan_id, resolved.amount_minor, plan.sort_order
@@ -146,6 +156,7 @@ begin
         'feature_key', key,
         'current_enabled', current_enabled,
         'target_enabled', target_enabled,
+        'will_gain', not current_enabled and target_enabled,
         'will_lose', current_enabled and not target_enabled
       ) order by ordinal
     ),
@@ -155,7 +166,6 @@ begin
   from impacts;
 
   v_direction := case
-    when v_current.key not in ('solo', 'starter', 'business') then 'legacy_transition'
     when v_current.sort_order < v_target.sort_order then 'upgrade'
     when v_current.sort_order > v_target.sort_order then 'downgrade'
     when v_current.billing_interval is distinct from p_target_interval then 'billing_cycle_change'

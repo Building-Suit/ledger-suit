@@ -8,6 +8,7 @@ const { compact = false, surface = 'checkout' } = defineProps<{
 }>()
 const supabase = useSupabaseClient<Database>()
 const { currentId } = useTenant()
+const { rows: usageRows } = usePlanUsage()
 const { createCheckoutSession } = useBilling()
 const { t, locale } = useI18n()
 const interval = ref<'monthly' | 'yearly'>('monthly')
@@ -46,10 +47,15 @@ interface FeatureImpact {
   feature_key: string
   current_enabled: boolean
   target_enabled: boolean
+  will_gain: boolean
   will_lose: boolean
 }
 
 const planImpact = ref<PlanChangeImpact | null>(null)
+const currentPlanKey = computed(() => usageRows.value[0]?.plan_key ?? null)
+const launchPlanCurrent = computed(() => currentPlanKey.value !== null
+  && ['solo', 'starter', 'business'].includes(currentPlanKey.value))
+const legacyPlanCurrent = computed(() => currentPlanKey.value !== null && !launchPlanCurrent.value)
 
 const { data: catalog, pending: catalogPending, error: catalogError, refresh } = await useAsyncData(
   'launch-plan-catalog',
@@ -130,6 +136,13 @@ const lostFeatures = computed<FeatureImpact[]>(() => {
   const value: unknown = planImpact.value?.feature_impacts
   return Array.isArray(value) ? (value as FeatureImpact[]).filter(feature => feature.will_lose) : []
 })
+const gainedFeatures = computed<FeatureImpact[]>(() => {
+  const value: unknown = planImpact.value?.feature_impacts
+  return Array.isArray(value) ? (value as FeatureImpact[]).filter(feature => feature.will_gain) : []
+})
+const auditHistoryIncreased = computed(() => planImpact.value?.audit_history_current_days !== null
+  && planImpact.value?.audit_history_current_days !== undefined
+  && planImpact.value.audit_history_target_days > planImpact.value.audit_history_current_days)
 
 function featureName(key: string): string {
   const translationKey = key === 'multi_currency' ? 'multiCurrency' : key === 'priority_support' ? 'prioritySupport' : key
@@ -260,7 +273,7 @@ async function reviewChange(planKey: LaunchPlanKey) {
         <button v-if="surface === 'checkout' && plan.is_purchasable" type="button" class="ls-btn ls-btn-primary mt-6 w-full" :disabled="Boolean(pendingPlan)" @click="checkout(plan.plan_key as LaunchPlanKey)">
           {{ pendingPlan === plan.plan_key ? t('billing.openingCheckout') : t('billing.plans.choose', { plan: t(`billing.plans.${plan.plan_key}.name`) }) }}
         </button>
-        <button v-else-if="surface === 'manage' && plan.is_purchasable" type="button" class="ls-btn mt-6 w-full" :disabled="Boolean(reviewingPlan)" @click="reviewChange(plan.plan_key as LaunchPlanKey)">
+        <button v-else-if="surface === 'manage' && plan.is_purchasable && launchPlanCurrent" type="button" class="ls-btn mt-6 w-full" :disabled="Boolean(reviewingPlan)" @click="reviewChange(plan.plan_key as LaunchPlanKey)">
           {{ reviewingPlan === plan.plan_key ? t('billing.planChange.reviewing') : t('billing.planChange.review', { plan: t(`billing.plans.${plan.plan_key}.name`) }) }}
         </button>
         <NuxtLink v-else-if="surface === 'public' && plan.is_purchasable" to="/signup" class="ls-btn ls-btn-primary mt-6 w-full">{{ t('landing.startTrial') }}</NuxtLink>
@@ -287,6 +300,7 @@ async function reviewChange(planKey: LaunchPlanKey) {
     </section>
 
     <p v-if="surface === 'checkout'" class="text-center text-xs text-fg-muted">{{ t('billing.paymentRequired') }}</p>
+    <p v-if="surface === 'manage' && legacyPlanCurrent" class="rounded-card border border-[var(--bs-border-strong)] p-4 text-sm text-fg-muted" role="note">{{ t('billing.planChange.legacyGrandfathered') }}</p>
     <p v-if="errorMessage" class="ls-error" role="alert">{{ errorMessage }}</p>
 
     <Teleport to="body">
@@ -326,11 +340,19 @@ async function reviewChange(planKey: LaunchPlanKey) {
             </li>
           </ul>
 
+          <div v-if="gainedFeatures.length || auditHistoryIncreased" class="mt-6">
+            <h3 class="font-bold">{{ t('billing.planChange.gainedTitle') }}</h3>
+            <ul class="mt-2 list-disc space-y-1 ps-5 text-sm text-[var(--bs-status-success)]">
+              <li v-for="feature in gainedFeatures" :key="feature.feature_key">{{ featureName(feature.feature_key) }}</li>
+              <li v-if="auditHistoryIncreased">{{ t('billing.planChange.auditHistoryIncreased', { days: formatNumber(planImpact.audit_history_target_days) }) }}</li>
+            </ul>
+          </div>
+
           <div v-if="lostFeatures.length || planImpact.audit_history_reduced" class="mt-6">
-            <h3 class="font-bold">{{ t('billing.planChange.featureTitle') }}</h3>
+            <h3 class="font-bold">{{ t('billing.planChange.lostTitle') }}</h3>
             <ul class="mt-2 list-disc space-y-1 ps-5 text-sm text-fg-muted">
               <li v-for="feature in lostFeatures" :key="feature.feature_key">{{ featureName(feature.feature_key) }}</li>
-              <li v-if="planImpact.audit_history_reduced">{{ t('billing.planChange.auditHistory', { days: formatNumber(planImpact.audit_history_target_days) }) }}</li>
+              <li v-if="planImpact.audit_history_reduced">{{ t('billing.planChange.auditHistoryReduced', { days: formatNumber(planImpact.audit_history_target_days) }) }}</li>
             </ul>
           </div>
 
