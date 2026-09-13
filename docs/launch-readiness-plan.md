@@ -404,9 +404,11 @@ moving existing subscriptions and enabling multi-plan checkout in production.
    or select a plan before continuing. The recommended least-disruptive option
    is to keep current trials on the legacy plan and require plan selection at
    checkout.
-3. **New trial experience:** choose whether a new workspace selects an intended
-   plan at signup or receives a Business-feature trial and selects at checkout.
-   This affects when plan limits and Business-only multi-currency apply.
+3. **New trial experience — RESOLVED:** every new workspace receives a dedicated
+   private 14-day cardless trial with no paid-plan selection at signup. It has
+   Business-level product capabilities and limits except Priority Support. At
+   expiry it becomes read-only, and the owner must successfully purchase Solo,
+   Starter, or Business to resume product writes.
 4. **Already over-limit organizations:** approve grandfathering or ordinary
    downgrade behavior per organization. In either case no data is deleted. An
    ordinary mapping immediately blocks only usage-increasing actions.

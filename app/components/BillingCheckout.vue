@@ -9,7 +9,7 @@ const { compact = false, surface = 'checkout' } = defineProps<{
 const supabase = useSupabaseClient<Database>()
 const { currentId } = useTenant()
 const { rows: usageRows } = usePlanUsage()
-const { createCheckoutSession } = useBilling()
+const { createCheckoutSession, accessState, subscription } = useBilling()
 const { t, locale } = useI18n()
 const interval = ref<'monthly' | 'yearly'>('monthly')
 const pendingPlan = ref<LaunchPlanKey | null>(null)
@@ -53,9 +53,16 @@ interface FeatureImpact {
 
 const planImpact = ref<PlanChangeImpact | null>(null)
 const currentPlanKey = computed(() => usageRows.value[0]?.plan_key ?? null)
-const launchPlanCurrent = computed(() => currentPlanKey.value !== null
-  && ['solo', 'starter', 'business'].includes(currentPlanKey.value))
-const legacyPlanCurrent = computed(() => currentPlanKey.value !== null && !launchPlanCurrent.value)
+const currentPlanKind = computed(() => {
+  if (currentPlanKey.value === null) return null
+  if (currentPlanKey.value === 'trial') return 'trial'
+  if (['solo', 'starter', 'business'].includes(currentPlanKey.value)) return 'launch'
+  if (currentPlanKey.value === 'ledger_suit' || currentPlanKey.value.startsWith('legacy_')) return 'compatibility'
+  return 'unknown'
+})
+const trialPlanCurrent = computed(() => currentPlanKind.value === 'trial')
+const launchPlanCurrent = computed(() => currentPlanKind.value === 'launch')
+const compatibilityPlanCurrent = computed(() => currentPlanKind.value === 'compatibility')
 
 const { data: catalog, pending: catalogPending, error: catalogError, refresh } = await useAsyncData(
   'launch-plan-catalog',
@@ -104,6 +111,12 @@ function formatAmount(amountMinor: number): string {
     minimumFractionDigits: amountMinor % 100 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(amountMinor / 100)
+}
+
+function formatDate(value: string | null | undefined): string {
+  return value
+    ? new Intl.DateTimeFormat(locale.value, { dateStyle: 'long' }).format(new Date(value))
+    : '—'
 }
 
 function formatNumber(value: number): string {
@@ -210,6 +223,24 @@ async function reviewChange(planKey: LaunchPlanKey) {
 
 <template>
   <div :class="compact ? 'space-y-5' : 'space-y-8'" data-testid="plan-pricing">
+    <section
+      v-if="trialPlanCurrent && surface === 'checkout'"
+      class="rounded-card border border-primary/40 bg-primary/5 p-5 text-start"
+      data-testid="trial-summary"
+    >
+      <template v-if="accessState === 'trialing'">
+        <h2 class="text-lg font-black">{{ t('billing.trial.activeTitle') }}</h2>
+        <p class="mt-2 text-sm">{{ t('billing.trial.activeBenefits') }}</p>
+        <p class="mt-2 text-sm text-fg-muted">{{ t('billing.trial.endsOn', { date: formatDate(subscription?.trial_ends_at) }) }}</p>
+        <p class="mt-2 text-sm text-fg-muted">{{ t('billing.trial.optionalConversion') }}</p>
+      </template>
+      <template v-else-if="accessState === 'read_only'">
+        <h2 class="text-lg font-black">{{ t('billing.trial.expiredTitle') }}</h2>
+        <p class="mt-2 text-sm">{{ t('billing.trial.expiredBody', { date: formatDate(subscription?.trial_ends_at) }) }}</p>
+        <p class="mt-2 text-sm font-semibold">{{ t('billing.trial.resumeWrites') }}</p>
+      </template>
+    </section>
+
     <fieldset class="mx-auto max-w-sm">
       <legend class="ls-label text-center">{{ t('billing.billingCycle') }}</legend>
       <div class="mx-auto grid max-w-xs grid-cols-2 rounded-full border border-[var(--bs-border)] bg-surface-muted p-1 shadow-inner" dir="ltr">
@@ -300,7 +331,7 @@ async function reviewChange(planKey: LaunchPlanKey) {
     </section>
 
     <p v-if="surface === 'checkout'" class="text-center text-xs text-fg-muted">{{ t('billing.paymentRequired') }}</p>
-    <p v-if="surface === 'manage' && legacyPlanCurrent" class="rounded-card border border-[var(--bs-border-strong)] p-4 text-sm text-fg-muted" role="note">{{ t('billing.planChange.legacyGrandfathered') }}</p>
+    <p v-if="surface === 'manage' && compatibilityPlanCurrent" class="rounded-card border border-[var(--bs-border-strong)] p-4 text-sm text-fg-muted" role="note">{{ t('billing.planChange.legacyGrandfathered') }}</p>
     <p v-if="errorMessage" class="ls-error" role="alert">{{ errorMessage }}</p>
 
     <Teleport to="body">

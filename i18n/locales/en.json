@@ -818,6 +818,7 @@
     "title": "Subscription",
     "subtitle": "Manage the Ledger Suit subscription for this organization.",
     "singlePlan": "Ledger Suit plans",
+    "currentPlan": "Current plan",
     "unlock": "Activate {organization}",
     "gateDescription": "Your 14-day free trial has ended. Choose a plan and pay securely with Paymob to continue using this workspace.",
     "featureAccounting": "Double-entry accounting and complete reports",
@@ -885,6 +886,15 @@
       "handoffBody": "Paymob plan changes are not applied automatically. Send this target plan and billing-cycle request to your Ledger Suit administrator. Your current subscription remains unchanged until the provider change is verified.",
       "noChange": "This matches your current plan and billing cycle. No change is required.",
       "legacyGrandfathered": "Your Ledger Suit compatibility plan remains grandfathered. Launch-plan transitions are unavailable until the separate migration policy is approved."
+    },
+    "trial": {
+      "activeTitle": "14-Day Free Trial",
+      "activeBenefits": "No card was required. You have Business-level product features and limits during the trial, but you are on Free Trial—not the Business plan—and Priority Support is excluded.",
+      "endsOn": "Your free trial ends on {date}.",
+      "optionalConversion": "You may choose Solo, Starter, or Business now, but purchasing early is optional and is not required to keep using your active trial.",
+      "expiredTitle": "Free Trial ended",
+      "expiredBody": "Your trial ended on {date}. Existing financial history remains readable and Billing remains available, but product changes are blocked.",
+      "resumeWrites": "Choose and successfully purchase Solo, Starter, or Business to resume product changes."
     },
     "priceAtCheckout": "Paymob confirms the price and currency before payment.",
     "startTrial": "Choose plan and continue to payment",
@@ -1046,6 +1056,7 @@
     "FEATURE_NOT_AVAILABLE_ON_PLAN": "This feature is not available on your current plan. View the available plans to upgrade.",
     "MULTI_CURRENCY_REQUIRES_BUSINESS": "Foreign-currency activity requires the Business plan. Existing foreign-currency history remains available after a downgrade.",
     "LEGACY_PLAN_TRANSITION_NOT_APPROVED": "Your compatibility plan remains unchanged. Moving it to a launch plan is not available until the separate migration policy is approved.",
+    "TRIAL_PLAN_CHANGE_REQUIRES_CHECKOUT": "Choose Solo, Starter, or Business through secure checkout to convert your free trial.",
     "TENANT_ACCESS_DENIED": "That record belongs to a different organization.",
     "INSUFFICIENT_PERMISSION": "Your role does not allow this action.",
     "UNBALANCED_JOURNAL": "The journal does not balance. Debits must equal credits.",

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-const { t, locale } = useI18n()
+const { t, te, locale } = useI18n()
 const { accessState, subscription } = useBilling()
+const { rows: usageRows } = usePlanUsage()
 
 useHead({ title: () => `${t('billing.title')} · ${t('app.name')}` })
 
@@ -17,6 +18,13 @@ const pricingSurface = computed(() => checkoutEnabled.value
   : ['active', 'grace_period'].includes(accessState.value)
     ? 'manage' as const
     : 'display' as const)
+const currentPlanKey = computed(() => usageRows.value[0]?.plan_key ?? null)
+const currentPlanName = computed(() => {
+  const key = currentPlanKey.value
+  if (!key) return t('billing.singlePlan')
+  const translation = `billing.plans.${key}.name`
+  return te(translation) ? t(translation) : t('billing.singlePlan')
+})
 
 // The global entitlement middleware owns the initial load. Loading again from
 // onMounted made the layout remove and remount this page on every request.
@@ -32,7 +40,8 @@ const pricingSurface = computed(() => checkoutEnabled.value
     <div class="ls-card space-y-6 p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p class="text-lg font-bold">{{ t('billing.singlePlan') }}</p>
+          <p class="text-xs text-fg-muted">{{ t('billing.currentPlan') }}</p>
+          <p class="text-lg font-bold">{{ currentPlanName }}</p>
           <p class="text-sm text-fg-muted">{{ t(`billing.states.${accessState}`) }}</p>
         </div>
         <StatusBadge :status="accessState" />

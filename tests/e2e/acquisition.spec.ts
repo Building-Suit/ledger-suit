@@ -122,6 +122,11 @@ test('signup verifies email by OTP before provisioning the free trial', async ({
 
   await expect(page).toHaveURL('/dashboard')
   await expect(page.getByText(/Trial: (13d 23h|14d 0h)/)).toBeVisible()
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Subscription' }).click()
+  await expect(page.getByTestId('trial-summary')).toContainText('14-Day Free Trial')
+  await expect(page.getByTestId('trial-summary')).toContainText('No card was required')
+  await expect(page.locator('#usage [data-quota="max_monthly_transactions"]')).toContainText('0 / 10,000')
 })
 
 test('signup continues to its saved organization after the OTP tab is closed', async ({ page }) => {
