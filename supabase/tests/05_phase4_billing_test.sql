@@ -130,7 +130,11 @@ select is(
     (select value::uuid from billing_ids where key = 'org'),
     'subscription_phase4_test', 'active', 'monthly', 'starter',
     now(), now() + interval '1 month',
-    null, null
+    null, null,
+    (select price.id from public.subscription_plan_prices price
+     join public.subscription_plans plan on plan.id = price.plan_id
+     where plan.key = 'starter' and price.interval = 'monthly' and price.is_active),
+    59900
   ),
   true,
   'a verified Paymob event activates the paid plan'
@@ -142,7 +146,11 @@ select is(
     (select value::uuid from billing_ids where key = 'org'),
     'subscription_phase4_test', 'active', 'monthly', 'starter',
     now(), now() + interval '1 month',
-    null, null
+    null, null,
+    (select price.id from public.subscription_plan_prices price
+     join public.subscription_plans plan on plan.id = price.plan_id
+     where plan.key = 'starter' and price.interval = 'monthly' and price.is_active),
+    59900
   ),
   false,
   'replayed Paymob events are idempotent'

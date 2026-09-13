@@ -66,6 +66,13 @@ Deno.test("signed metadata detects plan and amount tampering", async () => {
     await verifyCheckoutMetadata({ ...extras, amount_minor: "1" }, secret),
     null,
   );
+  assertEquals(
+    await verifyCheckoutMetadata({
+      ...extras,
+      price_id: "30000000-0000-4000-8000-000000000001",
+    }, secret),
+    null,
+  );
   await assertRejects(
     () => signCheckoutMetadata(metadata, ""),
     Error,

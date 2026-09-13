@@ -90,7 +90,7 @@ async function processSubscriptionCallback(
     : null;
   if (
     hasSignedMetadata &&
-    (!metadata || metadata.organizationId !== initialEvent.organization_id)
+    (!metadata || metadata.organizationId !== initialEvent?.organization_id)
   ) {
     throw new Error("Stored checkout metadata is invalid");
   }
@@ -132,7 +132,7 @@ async function processSubscriptionCallback(
       p_subscription_id: subscriptionId,
       p_provider_status: providerStatus,
       p_interval: interval,
-      p_plan_key: metadata?.planKey ?? null,
+      p_plan_key: null,
       p_period_start: null,
       p_period_end: text(subscription.next_billing),
       p_last_payment_at: normalizedTrigger === "successful transaction"
@@ -216,6 +216,8 @@ Deno.serve(async (request) => {
           : null,
         p_last_payment_at: succeeded ? occurredAt : null,
         p_payment_failed_at: succeeded ? null : occurredAt,
+        p_price_id: metadata.priceId,
+        p_amount_minor: metadata.amountMinor,
       },
     );
     if (error) throw error;

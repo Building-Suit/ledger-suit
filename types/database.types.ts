@@ -2678,6 +2678,7 @@ export type Database = {
         Args: {
           p_event_id: string
           p_event_type: string
+          p_amount_minor?: number
           p_interval: Database["public"]["Enums"]["billing_interval"]
           p_plan_key?: string
           p_last_payment_at?: string
@@ -2686,6 +2687,7 @@ export type Database = {
           p_payment_failed_at?: string
           p_period_end?: string
           p_period_start?: string
+          p_price_id?: string
           p_provider_status: string
           p_subscription_id: string
         }
