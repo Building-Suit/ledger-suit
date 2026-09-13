@@ -79,11 +79,15 @@ cardless trial. When it expires, a signed Paymob callback restores paid access.
 
 ### Phase 4 services
 
-The repository contains four Supabase Edge Functions under
+The repository contains five Supabase Edge Functions under
 `supabase/functions/`: Paymob checkout, the Paymob webhook, scheduled Resend
-delivery, and team invitation email. Deploy them
+delivery, team invitation email, and orphaned-storage cleanup. Deploy them
 through the repository's connected Supabase workflow; do not paste function
 code or database DDL into the dashboard.
+
+The final operator sequence, six-plan comparison, rollback gate, verification
+queries, and production smoke matrix are in
+[launch-deployment-checklist.md](launch-deployment-checklist.md).
 
 External provider configuration is necessarily separate from database schema:
 
