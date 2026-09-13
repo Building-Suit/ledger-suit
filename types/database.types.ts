@@ -2691,9 +2691,12 @@ export type Database = {
         Returns: boolean
       }
       archive_account: { Args: { p_account_id: string }; Returns: string }
-      audit_history_window_days: {
+      audit_history_window: {
         Args: { p_organization_id: string }
-        Returns: number
+        Returns: {
+          days: number
+          is_unlimited: boolean
+        }[]
       }
       begin_attachment_delete: {
         Args: { p_attachment_id: string }

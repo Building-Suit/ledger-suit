@@ -1,41 +1,31 @@
 -- Plan-aware visibility over the append-only audit trail. Historical rows stay
 -- stored; only this tenant-safe read boundary applies the current plan window.
 
-create or replace function app.audit_history_days(p_organization_id uuid)
-returns bigint
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select entitlement.limit_value
-  from public.subscriptions subscription
-  join public.subscription_entitlements entitlement
-    on entitlement.plan_id = subscription.plan_id
-  where subscription.organization_id = p_organization_id
-    and entitlement.feature_key = 'audit_log_retention_days'
-    and entitlement.is_enabled
-$$;
+drop function if exists public.audit_history_window_days(uuid);
 
-create or replace function public.audit_history_window_days(p_organization_id uuid)
-returns bigint
+create or replace function public.audit_history_window(p_organization_id uuid)
+returns table (days bigint, is_unlimited boolean)
 language plpgsql
 stable
 security definer
 set search_path = ''
 as $$
 declare
-  v_days bigint;
+  v_entitlement record;
 begin
   perform app.require_capability(p_organization_id, 'audit.read');
-  v_days := app.audit_history_days(p_organization_id);
+  select * into strict v_entitlement
+  from app.resolve_plan_entitlement(p_organization_id, 'audit_log_retention_days');
 
-  if v_days is null or v_days <= 0 then
+  if not v_entitlement.is_enabled
+     or (v_entitlement.limit_value is not null and v_entitlement.limit_value <= 0) then
     raise exception 'AUDIT_HISTORY_WINDOW_NOT_CONFIGURED'
       using errcode = '55000';
   end if;
 
-  return v_days;
+  return query select
+    v_entitlement.limit_value,
+    v_entitlement.limit_value is null;
 end;
 $$;
 
@@ -63,7 +53,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_days bigint;
+  v_entitlement record;
 begin
   perform app.require_capability(p_organization_id, 'audit.read');
 
@@ -72,8 +62,10 @@ begin
       using errcode = '22023';
   end if;
 
-  v_days := app.audit_history_days(p_organization_id);
-  if v_days is null or v_days <= 0 then
+  select * into strict v_entitlement
+  from app.resolve_plan_entitlement(p_organization_id, 'audit_log_retention_days');
+  if not v_entitlement.is_enabled
+     or (v_entitlement.limit_value is not null and v_entitlement.limit_value <= 0) then
     raise exception 'AUDIT_HISTORY_WINDOW_NOT_CONFIGURED'
       using errcode = '55000';
   end if;
@@ -84,7 +76,11 @@ begin
          audit.after_state, audit.metadata, audit.created_at
   from public.audit_logs audit
   where audit.organization_id = p_organization_id
-    and audit.created_at >= transaction_timestamp() - make_interval(days => v_days::integer)
+    and (
+      v_entitlement.limit_value is null
+      or audit.created_at >= transaction_timestamp()
+        - make_interval(days => v_entitlement.limit_value::integer)
+    )
     and (
       p_before_created_at is null
       or (audit.created_at, audit.id) < (
@@ -97,17 +93,16 @@ begin
 end;
 $$;
 
-comment on function public.audit_history_window_days(uuid) is
-  'Returns the current plan audit-history visibility window after tenant and capability checks.';
+comment on function public.audit_history_window(uuid) is
+  'Returns finite days or an explicit unlimited flag using the compatibility-aware plan entitlement resolver.';
 comment on function public.list_audit_history(uuid, integer, timestamptz, bigint) is
   'Lists tenant audit events inside the current plan window without deleting older append-only records.';
 
 -- Direct table reads would bypass the plan window; all client reads use the RPC.
 revoke select on public.audit_logs from authenticated;
 
-revoke all on function app.audit_history_days(uuid) from public, anon, authenticated;
-revoke all on function public.audit_history_window_days(uuid),
+revoke all on function public.audit_history_window(uuid),
   public.list_audit_history(uuid, integer, timestamptz, bigint) from public, anon;
-grant execute on function public.audit_history_window_days(uuid),
+grant execute on function public.audit_history_window(uuid),
   public.list_audit_history(uuid, integer, timestamptz, bigint)
   to authenticated, service_role;

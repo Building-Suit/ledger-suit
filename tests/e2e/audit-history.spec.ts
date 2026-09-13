@@ -8,10 +8,10 @@ test('authorized user sees the localized plan-aware audit history', async ({ pag
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page).toHaveURL('/dashboard')
 
-  await page.route('**/rest/v1/rpc/audit_history_window_days', route => route.fulfill({
+  await page.route('**/rest/v1/rpc/audit_history_window', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: '90',
+    body: JSON.stringify([{ days: null, is_unlimited: true }]),
   }))
   await page.route('**/rest/v1/rpc/list_audit_history', route => route.fulfill({
     status: 200,
@@ -32,7 +32,7 @@ test('authorized user sees the localized plan-aware audit history', async ({ pag
 
   await page.goto('/audit')
   await expect(page.getByRole('heading', { name: 'Audit history' })).toBeVisible()
-  await expect(page.getByText('Your current plan shows the last 90 days of audit history.')).toBeVisible()
+  await expect(page.getByText('Your current plan includes all available audit history.')).toBeVisible()
   await expect(page.getByText('Updated', { exact: true })).toBeVisible()
   await expect(page.getByRole('cell', { name: 'owner@alpha.test' })).toBeVisible()
 
@@ -40,6 +40,6 @@ test('authorized user sees the localized plan-aware audit history', async ({ pag
   await page.getByRole('button', { name: 'العربية' }).click()
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   await expect(page.getByRole('heading', { name: 'سجل التدقيق' })).toBeVisible()
-  await expect(page.getByText('تعرض خطتك الحالية آخر 90 يومًا من سجل التدقيق.')).toBeVisible()
+  await expect(page.getByText('تتضمن خطتك الحالية كل سجل التدقيق المتاح.')).toBeVisible()
   await expect(page.getByText('تحديث', { exact: true })).toBeVisible()
 })

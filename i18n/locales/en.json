@@ -531,6 +531,7 @@
     "title": "Audit history",
     "subtitle": "Review security and activity events for this workspace.",
     "window": "Your current plan shows the last {days} days of audit history.",
+    "windowUnlimited": "Your current plan includes all available audit history.",
     "stored": "Older append-only security records remain stored; changing plans only changes what is visible here.",
     "date": "Date and time",
     "actor": "Actor",

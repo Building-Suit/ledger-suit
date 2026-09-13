@@ -67,6 +67,7 @@ select is(
   'the creation RPC persists normalized counterparty input'
 );
 
+reset role;
 select is(
   (select count(*) from public.audit_logs
    where organization_id = (select value from counterparty_quota_ids where key = 'alpha_org')
@@ -88,6 +89,7 @@ select is(
   'a0000000-0000-4000-8000-000000000001'::uuid,
   'the audit entry attributes creation to the authenticated actor'
 );
+set local role authenticated;
 
 select is(
   public.get_usage(

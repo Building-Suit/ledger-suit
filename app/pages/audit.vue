@@ -17,8 +17,8 @@ interface AuditRow {
 }
 
 interface AuditRpcClient {
-  rpc(name: 'audit_history_window_days', args: { p_organization_id: string }): PromiseLike<{
-    data: number | null
+  rpc(name: 'audit_history_window', args: { p_organization_id: string }): PromiseLike<{
+    data: Array<{ days: number | null, is_unlimited: boolean }> | null
     error: unknown | null
   }>
   rpc(name: 'list_audit_history', args: {
@@ -38,7 +38,8 @@ const { t, te, locale } = useI18n()
 useHead({ title: () => `${t('audit.title')} · ${t('app.name')}` })
 
 const rows = shallowRef<AuditRow[]>([])
-const windowDays = ref(0)
+const windowDays = ref<number | null>(null)
+const windowUnlimited = ref(false)
 const loading = ref(true)
 const loadingMore = ref(false)
 const errorMessage = ref('')
@@ -72,7 +73,8 @@ function jsonText(value: Json | null) {
 async function fetchRows(append = false) {
   if (!currentId.value || !can('audit.read')) {
     rows.value = []
-    windowDays.value = 0
+    windowDays.value = null
+    windowUnlimited.value = false
     loading.value = false
     return
   }
@@ -80,18 +82,21 @@ async function fetchRows(append = false) {
   if (append) loadingMore.value = true
   else {
     rows.value = []
-    windowDays.value = 0
+    windowDays.value = null
+    windowUnlimited.value = false
     loading.value = true
   }
   errorMessage.value = ''
   try {
     const last = append ? rows.value.at(-1) : null
     if (!append) {
-      const windowResult = await auditRpc.rpc('audit_history_window_days', {
+      const windowResult = await auditRpc.rpc('audit_history_window', {
         p_organization_id: currentId.value,
       })
       if (windowResult.error) throw windowResult.error
-      windowDays.value = Number(windowResult.data ?? 0)
+      const window = windowResult.data?.[0]
+      windowUnlimited.value = window?.is_unlimited ?? false
+      windowDays.value = window?.days ?? null
     }
 
     const historyResult = await auditRpc.rpc('list_audit_history', {
@@ -125,8 +130,8 @@ watch(currentId, () => fetchRows(), { immediate: true })
       <p class="mt-1 text-sm text-fg-muted">{{ t('audit.subtitle') }}</p>
     </header>
 
-    <section v-if="windowDays" class="ls-card space-y-1 p-4" role="status">
-      <p class="font-semibold">{{ t('audit.window', { days: windowDays }) }}</p>
+    <section v-if="windowUnlimited || windowDays" class="ls-card space-y-1 p-4" role="status">
+      <p class="font-semibold">{{ windowUnlimited ? t('audit.windowUnlimited') : t('audit.window', { days: windowDays }) }}</p>
       <p class="text-sm text-fg-muted">{{ t('audit.stored') }}</p>
     </section>
 

@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(20);
 
 create temp table audit_test_ids (key text primary key, value uuid not null);
 grant all on audit_test_ids to authenticated, service_role;
@@ -27,6 +27,8 @@ values
    'audit.starter_old', 'test_record', gen_random_uuid(), '{"step16":true}', transaction_timestamp() - interval '365 days 1 microsecond'),
   ((select value from audit_test_ids where key = 'alpha_org'), null, 'business-boundary@example.test',
    'audit.business_boundary', 'test_record', gen_random_uuid(), '{"step16":true}', transaction_timestamp() - interval '1095 days'),
+  ((select value from audit_test_ids where key = 'alpha_org'), null, 'compatibility-old@example.test',
+   'audit.compatibility_old', 'test_record', gen_random_uuid(), '{"step16":true}', transaction_timestamp() - interval '2000 days'),
   ((select value from audit_test_ids where key = 'beta_org'), null, 'beta-only@example.test',
    'audit.recent', 'test_record', gen_random_uuid(), '{"step16":true}', transaction_timestamp() - interval '1 day');
 
@@ -41,7 +43,8 @@ select set_config(
 set local role authenticated;
 
 select is(
-  public.audit_history_window_days((select value from audit_test_ids where key = 'alpha_org')),
+  (select days from public.audit_history_window(
+    (select value from audit_test_ids where key = 'alpha_org'))),
   90::bigint,
   'Solo exposes a 90-day audit-history window');
 select is(
@@ -80,7 +83,8 @@ where organization_id = (select value from audit_test_ids where key = 'alpha_org
 set local role authenticated;
 
 select is(
-  public.audit_history_window_days((select value from audit_test_ids where key = 'alpha_org')),
+  (select days from public.audit_history_window(
+    (select value from audit_test_ids where key = 'alpha_org'))),
   365::bigint,
   'Starter exposes a 365-day audit-history window');
 select is(
@@ -103,7 +107,8 @@ where organization_id = (select value from audit_test_ids where key = 'alpha_org
 set local role authenticated;
 
 select is(
-  public.audit_history_window_days((select value from audit_test_ids where key = 'alpha_org')),
+  (select days from public.audit_history_window(
+    (select value from audit_test_ids where key = 'alpha_org'))),
   1095::bigint,
   'Business exposes a 1095-day audit-history window');
 select is(
@@ -112,6 +117,28 @@ select is(
   ) where action = 'audit.business_boundary'),
   1::bigint,
   'the exact Business boundary timestamp remains visible');
+select is(
+  (select count(*) from public.list_audit_history(
+    (select value from audit_test_ids where key = 'alpha_org'), 100
+  ) where action = 'audit.compatibility_old'),
+  0::bigint,
+  'Business hides records older than its 1095-day window');
+
+reset role;
+update public.subscriptions
+set plan_id = (select id from public.subscription_plans where key = 'ledger_suit')
+where organization_id = (select value from audit_test_ids where key = 'alpha_org');
+set local role authenticated;
+select ok(
+  (select days is null and is_unlimited from public.audit_history_window(
+    (select value from audit_test_ids where key = 'alpha_org'))),
+  'the compatibility plan exposes an explicit unlimited window');
+select is(
+  (select count(*) from public.list_audit_history(
+    (select value from audit_test_ids where key = 'alpha_org'), 100
+  ) where action = 'audit.compatibility_old'),
+  1::bigint,
+  'the compatibility plan returns audit history older than 1095 days');
 
 reset role;
 select set_config(
@@ -158,7 +185,7 @@ select is(
   (select count(*) from public.audit_logs
    where organization_id = (select value from audit_test_ids where key = 'alpha_org')
      and metadata ->> 'step16' = 'true'),
-  6::bigint,
+  7::bigint,
   'all underlying audit records remain stored after downgrade');
 select throws_ok(
   $$update public.audit_logs set actor_email = 'changed@example.test' where metadata ->> 'step16' = 'true'$$,
