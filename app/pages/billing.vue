@@ -12,6 +12,11 @@ const renewalDate = computed(() => accessState.value === 'trialing'
   ? subscription.value?.trial_ends_at
   : subscription.value?.current_period_end)
 const checkoutEnabled = computed(() => ['trialing', 'checkout_required', 'read_only'].includes(accessState.value))
+const pricingSurface = computed(() => checkoutEnabled.value
+  ? 'checkout' as const
+  : ['active', 'grace_period'].includes(accessState.value)
+    ? 'manage' as const
+    : 'display' as const)
 
 // The global entitlement middleware owns the initial load. Loading again from
 // onMounted made the layout remove and remount this page on every request.
@@ -41,7 +46,7 @@ const checkoutEnabled = computed(() => ['trialing', 'checkout_required', 'read_o
       <p v-if="subscription?.provider_status" class="text-sm text-fg-muted">
         {{ t('billing.managedByPaymob') }}
       </p>
-      <div id="plans"><BillingCheckout :surface="checkoutEnabled ? 'checkout' : 'display'" compact /></div>
+      <div id="plans"><BillingCheckout :surface="pricingSurface" compact /></div>
     </div>
     <UsageMeters />
   </div>
