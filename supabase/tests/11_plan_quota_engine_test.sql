@@ -37,6 +37,10 @@ select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000000000","role":"service_role"}', true);
 set local role service_role;
 
+update public.subscriptions
+set plan_id = (select id from public.subscription_plans where key = 'ledger_suit')
+where organization_id = (select value from quota_test_ids where key = 'legacy_org');
+
 insert into public.organization_invitations (
   organization_id, email, token_hash, expires_at
 ) values

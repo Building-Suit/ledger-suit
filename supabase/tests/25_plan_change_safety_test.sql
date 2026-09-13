@@ -2,7 +2,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(33);
+select plan(34);
 
 create temp table plan_change_ids (key text primary key, value uuid not null);
 grant all on plan_change_ids to authenticated, service_role;
@@ -33,13 +33,36 @@ select throws_ok(
     $$select * from public.plan_change_impact(%L, 'solo', 'monthly')$$,
     (select value from plan_change_ids where key = 'organization')
   ),
-  'P0001', 'LEGACY_PLAN_TRANSITION_NOT_APPROVED',
-  'the grandfathered ledger_suit plan cannot enter Step 20 transition handling'
+  'P0001', 'TRIAL_PLAN_CHANGE_REQUIRES_CHECKOUT',
+  'the dedicated trial converts only through signed checkout'
 );
 
 reset role;
 select set_config('request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000000000","role":"service_role"}', true);
+set local role service_role;
+
+update public.subscriptions
+set plan_id = (select id from public.subscription_plans where key = 'ledger_suit')
+where organization_id = (select value from plan_change_ids where key = 'organization');
+
+reset role;
+select set_config('request.jwt.claims',
+  '{"sub":"d0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+set local role authenticated;
+
+select throws_ok(
+  format(
+    $$select * from public.plan_change_impact(%L, 'solo', 'monthly')$$,
+    (select value from plan_change_ids where key = 'organization')
+  ),
+  'P0001', 'LEGACY_PLAN_TRANSITION_NOT_APPROVED',
+  'a real ledger_suit fixture cannot enter Step 20 transition handling'
+);
+
+reset role;
+select set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000000","role":"service_role"}', true);
 set local role service_role;
 
 select is(

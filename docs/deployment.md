@@ -75,7 +75,10 @@ Public acquisition routes are `/` and `/signup`; the authenticated product
 starts at `/dashboard`. Before publishing signup, configure the hosted Supabase
 Auth confirmation template and Resend SMTP described in the environment guide.
 Signup verifies the six-digit OTP, creates the tenant atomically, and starts a
-cardless trial. When it expires, a signed Paymob callback restores paid access.
+cardless 14-day subscription on the private `trial` plan. The trial grants the
+Business product limits and capabilities except Priority Support, requires no
+paid-plan selection, and becomes read-only at expiry. A verified Paymob
+checkout for Solo, Starter, or Business restores write access.
 
 ### Phase 4 services
 
@@ -121,8 +124,9 @@ The production checkout catalog is:
 Annual prices are monthly price × 12 × 0.68. Before enabling checkout, confirm
 all six Paymob plan IDs are configured as Edge Function secrets, each provider
 amount matches this table, and both Test and Live environments use identifiers
-from their own Paymob mode. Existing `ledger_suit` subscriptions are not migrated
-by this deployment and continue to be updated through their provider subscription IDs.
+from their own Paymob mode. The private `trial` plan has no price or provider
+mapping. Existing `ledger_suit` and `legacy_*` subscriptions are not migrated
+by this deployment and continue through their existing compatibility contracts.
 
 In-app plan changes are intentionally preflight-only. Billing managers on Solo,
 Starter, or Business can use
