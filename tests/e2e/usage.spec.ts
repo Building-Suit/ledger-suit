@@ -21,11 +21,11 @@ const usageRows = [
   is_over_limit: Number(used_value) > Number(limit_value),
 }))
 
-async function mockUsage(page: Page) {
+async function mockUsage(page: Page, rows: () => typeof usageRows = () => usageRows) {
   await page.route('**/rest/v1/rpc/subscription_usage_summary', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify(usageRows),
+    body: JSON.stringify(rows()),
   }))
 }
 
@@ -108,4 +108,23 @@ test('creation dialogs show the relevant current usage and upgrade action', asyn
   await page.getByRole('button', { name: 'Add Counterparty' }).first().click()
   dialog = page.getByRole('dialog')
   await expect(dialog.locator('[data-quota="max_counterparties"]')).toContainText('671 / 1,000')
+})
+
+test('reopening a creation surface refreshes usage for the same organization', async ({ page }) => {
+  let transactionUsage = 2000
+  await mockUsage(page, () => usageRows.map(row => row.quota_key === 'max_monthly_transactions'
+    ? { ...row, used_value: transactionUsage, remaining_value: 2500 - transactionUsage }
+    : row))
+  await signIn(page)
+
+  await page.getByRole('link', { name: 'Expense', exact: true }).click()
+  await page.getByRole('button', { name: 'Add Expense' }).first().click()
+  let dialog = page.getByRole('dialog')
+  await expect(dialog.locator('[data-quota="max_monthly_transactions"]')).toContainText('2,000 / 2,500')
+  await dialog.getByRole('button', { name: 'Close' }).click()
+
+  transactionUsage = 2400
+  await page.getByRole('button', { name: 'Add Expense' }).first().click()
+  dialog = page.getByRole('dialog')
+  await expect(dialog.locator('[data-quota="max_monthly_transactions"]')).toContainText('2,400 / 2,500')
 })

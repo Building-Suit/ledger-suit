@@ -8,6 +8,7 @@ export type UsageRow = Omit<RawUsageRow, 'limit_value' | 'remaining_value'> & {
 }
 type CatalogPlan = Database['public']['Functions']['subscription_plan_catalog']['Returns'][number]
 type JsonObject = Record<string, Json | undefined>
+const USAGE_TTL_MS = 30_000
 
 const pendingLoads = new WeakMap<object, Map<string, Promise<void>>>()
 
@@ -22,13 +23,14 @@ export function usePlanUsage() {
   const rows = useState<UsageRow[]>('plan-usage:rows', () => [])
   const catalog = useState<CatalogPlan[]>('plan-usage:catalog', () => [])
   const loadedOrganizationId = useState<string | null>('plan-usage:organization', () => null)
+  const loadedAt = useState('plan-usage:loaded-at', () => 0)
   const loading = useState('plan-usage:loading', () => false)
   const loadError = useState('plan-usage:error', () => false)
 
   async function load(force = false) {
     const organizationId = currentId.value
     if (!organizationId) return
-    if (!force && loadedOrganizationId.value === organizationId) return
+    if (!force && loadedOrganizationId.value === organizationId && Date.now() - loadedAt.value < USAGE_TTL_MS) return
     let appLoads = pendingLoads.get(nuxtApp)
     if (!appLoads) {
       appLoads = new Map()
@@ -36,7 +38,10 @@ export function usePlanUsage() {
     }
     const existing = appLoads.get(organizationId)
     if (existing) return existing
-    if (loadedOrganizationId.value !== organizationId) rows.value = []
+    if (loadedOrganizationId.value !== organizationId) {
+      rows.value = []
+      loadedAt.value = 0
+    }
 
     const request = (async () => {
       loading.value = true
@@ -52,6 +57,7 @@ export function usePlanUsage() {
         rows.value = (usageResult.data ?? []) as UsageRow[]
         catalog.value = catalogResult.data ?? []
         loadedOrganizationId.value = organizationId
+        loadedAt.value = Date.now()
       }
       catch (error) {
         loadError.value = true

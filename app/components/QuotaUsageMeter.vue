@@ -3,7 +3,7 @@ import type { QuotaKey } from '~/composables/usePlanUsage'
 
 const props = defineProps<{ quotaKey: QuotaKey, compact?: boolean }>()
 const { t, te, locale } = useI18n()
-const { rowFor, nextPlanFor } = usePlanUsage()
+const { rowFor, nextPlanFor, refresh } = usePlanUsage()
 const row = computed(() => rowFor(props.quotaKey))
 const nextPlan = computed(() => nextPlanFor(props.quotaKey))
 const percentage = computed(() => {
@@ -39,6 +39,8 @@ function money(amountMinor: number) {
     style: 'currency', currency: 'EGP', minimumFractionDigits: 0, maximumFractionDigits: 2,
   }).format(amountMinor / 100)
 }
+
+onMounted(() => void refresh())
 </script>
 
 <template>

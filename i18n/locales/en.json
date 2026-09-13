@@ -846,6 +846,7 @@
       "solo": { "name": "Solo", "description": "Reliable core accounting for owner-managed businesses." },
       "starter": { "name": "Starter", "description": "More capacity and CSV imports for small teams." },
       "business": { "name": "Business", "description": "Higher limits, multi-currency, and priority support for growing teams." },
+      "ledger_suit": { "name": "Ledger Suit" },
       "scale": { "name": "Scale", "description": "A future plan for high-volume and multi-location businesses.", "preview": "Pricing and availability will be announced before launch." },
       "enterprise": { "name": "Enterprise", "description": "Tailored deployment and support options are coming later." },
       "features": {

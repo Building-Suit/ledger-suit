@@ -8,6 +8,7 @@ const supabase = useSupabaseClient<Database>()
 const { currentId, can } = useTenant()
 const { t, te } = useI18n()
 const describeError = useErrorMessage()
+const { refresh: refreshPlanUsage } = usePlanUsage()
 const { data: importsEnabled, pending: featurePending } = usePlanFeature('imports')
 
 useHead({ title: () => `${t('imports.title')} · ${t('app.name')}` })
@@ -107,14 +108,17 @@ function reset() {
 }
 
 function readableError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error)
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message: unknown }).message)
+      : String(error)
   if (message.includes('CSV_NO_DATA')) return t('imports.errors.noData')
   if (message.includes('CSV_HEADERS_INVALID')) return t('imports.errors.headers')
   if (message.includes('CSV_ROW_WIDTH_INVALID')) return t('imports.errors.rowWidth')
   if (message.includes('CSV_UNCLOSED_QUOTE')) return t('imports.errors.quote')
   if (message.includes('CSV_FILE_INVALID')) return t('imports.errors.file')
-  if (message.includes('FEATURE_NOT_AVAILABLE_ON_PLAN')) return describeError(error)
-  return t('imports.errors.generic')
+  return describeError(error)
 }
 
 async function onFileSelected(event: Event) {
@@ -191,6 +195,7 @@ async function confirmImport() {
   try {
     const { error } = await supabase.rpc('confirm_csv_import_batch', { p_batch_id: batch.value.id })
     if (error) throw error
+    await refreshPlanUsage()
     await loadBatch(batch.value.id)
     phase.value = 'results'
   }
@@ -299,6 +304,7 @@ async function confirmImport() {
                 <dd class="mt-1 text-xl font-bold">{{ batch[metric] }}</dd>
               </div>
             </dl>
+            <QuotaUsageMeter v-if="phase === 'validated'" quota-key="max_monthly_transactions" compact class="mt-5" />
             <div class="mt-5 flex flex-wrap justify-end gap-2">
               <button v-if="phase === 'results'" type="button" class="ls-btn" @click="reset">{{ t('imports.importAnother') }}</button>
               <button v-else type="button" class="ls-btn" :disabled="!!busy" @click="reset">{{ t('imports.startOver') }}</button>

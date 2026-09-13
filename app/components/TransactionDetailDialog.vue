@@ -175,6 +175,7 @@ async function reverse() {
     confirming.value = false
     reason.value = ''
     await refresh()
+    await refreshPlanUsage()
     emit('changed')
   }
   catch (err) {
