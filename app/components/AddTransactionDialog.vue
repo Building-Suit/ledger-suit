@@ -16,6 +16,7 @@ const { open, flow, close, markChanged } = useAddTransaction()
 const toasts = useToasts()
 const { t } = useI18n()
 const describeError = useErrorMessage()
+const { refresh: refreshPlanUsage } = usePlanUsage()
 
 const { data: accounts } = useOrgAccounts()
 const { data: categories } = useOrgCategories()
@@ -388,6 +389,7 @@ async function submit() {
     const { error } = await supabase.rpc(rpc.fn as never, rpc.args as never)
     if (error) throw error
 
+    await refreshPlanUsage()
     markChanged()
     clearNuxtData(key => key.startsWith('org:') && !key.startsWith('org:record-page:'))
     toasts.success(t('add.savedTitle'), t('add.savedBody'))
@@ -434,6 +436,7 @@ async function submit() {
         </div>
 
         <form class="min-h-0 flex-1 overflow-y-auto px-6 py-4" @submit.prevent="submit">
+          <QuotaUsageMeter quota-key="max_monthly_transactions" compact class="mb-4" />
           <div class="grid gap-4 sm:grid-cols-2">
             <!-- Amount: every flow except the split ones -->
             <div v-if="!['liability_payment', 'adjustment'].includes(flow)">

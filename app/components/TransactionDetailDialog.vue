@@ -18,6 +18,7 @@ const { can, currentId } = useTenant()
 const toasts = useToasts()
 const { t, locale } = useI18n()
 const describeError = useErrorMessage()
+const { refresh: refreshPlanUsage } = usePlanUsage()
 
 const reversing = ref(false)
 const reason = ref('')
@@ -99,7 +100,7 @@ async function uploadAttachment(event: Event) {
       await supabase.rpc('abort_attachment_upload', { p_reservation_id: reservationId })
       throw commitError
     }
-    await refreshAttachments(); emit('changed')
+    await refreshAttachments(); await refreshPlanUsage(); emit('changed')
   }
   catch (error) { errorMessage.value = describeError(error) }
   finally { uploading.value = false; (event.target as HTMLInputElement).value = '' }
@@ -116,7 +117,7 @@ async function deleteAttachment(item: NonNullable<typeof attachments.value>[numb
   if (error) return (errorMessage.value = describeError(error))
   const cleanup = data?.[0]
   if (cleanup) await supabase.storage.from(cleanup.storage_bucket).remove([cleanup.storage_key])
-  await refreshAttachments(); emit('changed')
+  await refreshAttachments(); await refreshPlanUsage(); emit('changed')
 }
 
 const { data: detail, refresh } = useLazyAsyncData(
@@ -174,6 +175,7 @@ async function reverse() {
     confirming.value = false
     reason.value = ''
     await refresh()
+    await refreshPlanUsage()
     emit('changed')
   }
   catch (err) {
@@ -280,6 +282,7 @@ async function reverse() {
 
           <section aria-labelledby="attachments-heading">
             <div class="mb-2 flex items-center justify-between"><h3 id="attachments-heading" class="text-sm font-bold">{{ t('operations.attachments') }}</h3><label v-if="can('attachments.create')" class="ls-btn ls-btn-sm cursor-pointer">{{ uploading ? t('common.saving') : t('operations.upload') }}<input type="file" class="sr-only" accept="application/pdf,image/png,image/jpeg,image/webp" :disabled="uploading" @change="uploadAttachment"></label></div>
+            <QuotaUsageMeter v-if="can('attachments.create')" quota-key="max_storage_bytes" compact class="mb-3" />
             <div v-if="attachments.length" class="space-y-2"><div v-for="item in attachments" :key="item.id" class="flex items-center justify-between rounded-control bg-surface-muted px-3 py-2 text-sm"><button class="truncate text-link" @click="downloadAttachment(item)">{{ item.file_name }}</button><button v-if="can('attachments.delete')" class="ls-btn ls-btn-sm" :aria-label="t('common.delete')" @click="deleteAttachment(item)"><AppIcon name="delete" :size="18" /></button></div></div><p v-else class="text-sm text-fg-muted">{{ t('operations.noAttachments') }}</p>
           </section>
 

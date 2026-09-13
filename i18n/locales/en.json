@@ -846,6 +846,7 @@
       "solo": { "name": "Solo", "description": "Reliable core accounting for owner-managed businesses." },
       "starter": { "name": "Starter", "description": "More capacity and CSV imports for small teams." },
       "business": { "name": "Business", "description": "Higher limits, multi-currency, and priority support for growing teams." },
+      "ledger_suit": { "name": "Ledger Suit" },
       "scale": { "name": "Scale", "description": "A future plan for high-volume and multi-location businesses.", "preview": "Pricing and availability will be announced before launch." },
       "enterprise": { "name": "Enterprise", "description": "Tailored deployment and support options are coming later." },
       "features": {
@@ -888,6 +889,29 @@
       "grace_period": "Payment needs attention. Writes remain available briefly.",
       "read_only": "Billing is inactive; records remain available read-only."
     }
+  },
+  "usage": {
+    "title": "Workspace usage",
+    "subtitle": "Live plan usage from the same limits that protect new activity.",
+    "loading": "Loading usage…",
+    "loadFailed": "Usage could not be loaded.",
+    "currentPlan": "Current plan: {plan}",
+    "value": "{used} / {limit}",
+    "unlimited": "Unlimited",
+    "nextAllowance": "{plan} allowance: {allowance}",
+    "nextPrice": "From {price} per month",
+    "viewPlans": "View upgrade options",
+    "states": { "normal": "Available", "warning": "Approaching limit", "critical": "Almost reached", "reached": "Limit reached" },
+    "quotas": {
+      "max_members": "Workspace members",
+      "max_monthly_transactions": "Transactions this month",
+      "max_storage_bytes": "Attachment storage",
+      "max_accounts": "Accounts",
+      "max_counterparties": "Counterparties",
+      "max_recurring_rules": "Active recurring rules",
+      "max_custom_roles": "Custom roles"
+    },
+    "units": { "B": "B", "KB": "KB", "MB": "MB", "GB": "GB", "TB": "TB" }
   },
   "landing": {
     "title": "Business finance, clearly managed",
@@ -998,6 +1022,7 @@
     "PLAN_STORAGE_LIMIT_REACHED": "Your plan’s attachment storage limit has been reached. Existing files remain available; delete files or upgrade your plan to upload more.",
     "PLAN_RECURRING_LIMIT_REACHED": "Your plan’s recurring-rule limit has been reached. Complete an existing rule or upgrade your plan to activate another recurring rule.",
     "PLAN_CUSTOM_ROLE_LIMIT_REACHED": "Your plan’s custom-role limit has been reached. Remove an unused custom role or upgrade your plan to create another role.",
+    "FEATURE_NOT_AVAILABLE_ON_PLAN": "This feature is not available on your current plan. View the available plans to upgrade.",
     "MULTI_CURRENCY_REQUIRES_BUSINESS": "Foreign-currency activity requires the Business plan. Existing foreign-currency history remains available after a downgrade.",
     "TENANT_ACCESS_DENIED": "That record belongs to a different organization.",
     "INSUFFICIENT_PERMISSION": "Your role does not allow this action.",

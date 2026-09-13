@@ -76,8 +76,27 @@ async function mockImportApi(page: Page, scenario: Scenario) {
   return state
 }
 
+async function mockTransactionUsage(page: Page, usedValue = 2400) {
+  const state = { calls: 0 }
+  await page.route('**/rest/v1/rpc/subscription_usage_summary', async (route) => {
+    state.calls++
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([{
+        plan_key: 'starter', subscription_status: 'active', writes_allowed: true,
+        quota_key: 'max_monthly_transactions', used_value: usedValue, limit_value: 2500,
+        remaining_value: Math.max(2500 - usedValue, 0), is_unlimited: false,
+        is_at_limit: usedValue >= 2500, is_over_limit: usedValue > 2500,
+      }]),
+    })
+  })
+  return state
+}
+
 test('CSV workflow localizes invalid and duplicate issues, then posts valid rows', async ({ page }) => {
   await mockImportApi(page, 'mixed')
+  const usage = await mockTransactionUsage(page)
   await openImport(page)
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
   await selectCsv(page, 'income,2026-09-01,100,Cash,Sales\nexpense,bad-date,20,Cash,Supplies\nincome,2026-09-01,100,Cash,Sales')
@@ -85,9 +104,33 @@ test('CSV workflow localizes invalid and duplicate issues, then posts valid rows
   await expect(page.getByRole('row').filter({ hasText: 'bad-date' })).toContainText('Use a valid calendar date in YYYY-MM-DD format.')
   await expect(page.getByRole('row').filter({ hasText: '2026-09-01' }).last()).toContainText('An identical transaction already exists.')
   await expect(page.getByText('raw backend detail', { exact: false })).toHaveCount(0)
+  const usageCallsBeforeConfirm = usage.calls
   await page.getByRole('button', { name: 'Confirm and post valid rows' }).click()
   await expect(page.getByRole('heading', { name: 'Import results' })).toBeVisible()
   await expect(page.getByRole('row').filter({ hasText: '2026-09-01' }).first()).toContainText('Posted')
+  await expect.poll(() => usage.calls).toBeGreaterThan(usageCallsBeforeConfirm)
+})
+
+test('import confirmation shows usage and localizes a transaction quota failure', async ({ page }) => {
+  await mockImportApi(page, 'mixed')
+  await mockTransactionUsage(page, 2500)
+  await page.route('**/rest/v1/rpc/confirm_csv_import_batch', route => route.fulfill({
+    status: 400,
+    contentType: 'application/json',
+    body: JSON.stringify({ code: 'P0001', message: 'PLAN_TRANSACTION_LIMIT_REACHED: usage 2500, limit 2500' }),
+  }))
+  await openImport(page)
+  await selectCsv(page, 'income,2026-09-01,100,Cash,Sales')
+
+  const meter = page.locator('[data-quota="max_monthly_transactions"]')
+  await expect(meter).toContainText('2,500 / 2,500')
+  await expect(meter).toContainText('Current plan: Starter')
+  await expect(meter).toContainText('Business allowance: 10,000')
+  await expect(meter).toContainText(/From EGP\s*1,099 per month/)
+  await expect(meter.getByRole('link', { name: 'View upgrade options' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Confirm and post valid rows' }).click()
+  await expect(page.getByRole('alert')).toHaveText('Your plan’s monthly transaction limit has been reached. Existing history remains available; upgrade your plan to post more transactions this month.')
 })
 
 test('all-invalid validation offers recovery and shows a localized issue under RTL', async ({ page }) => {
