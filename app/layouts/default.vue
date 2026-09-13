@@ -40,7 +40,10 @@ const NAV_GROUPS = computed(() => [
   },
   {
     key: 'workspace',
-    links: can('members.read') ? [{ to: '/team', label: 'nav.teamInvitations' }] : [],
+    links: [
+      ...(can('members.read') ? [{ to: '/team', label: 'nav.teamInvitations' }] : []),
+      ...(can('audit.read') ? [{ to: '/audit', label: 'nav.auditHistory' }] : []),
+    ],
   },
   {
     key: 'insights',

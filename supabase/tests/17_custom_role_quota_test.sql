@@ -134,6 +134,7 @@ select throws_ok(
   'Starter rejects its fourth custom role'
 );
 
+reset role;
 select is(
   (select count(*) from public.audit_logs
    where organization_id = (select value from custom_role_quota_ids where key = 'alpha_org')
@@ -147,7 +148,6 @@ select is(
   'successful custom-role creation remains audited'
 );
 
-reset role;
 update public.subscriptions
 set plan_id = (select id from public.subscription_plans where key = 'ledger_suit')
 where organization_id = (select value from custom_role_quota_ids where key = 'alpha_org');

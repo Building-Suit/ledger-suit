@@ -143,11 +143,11 @@ select is(
   'a user cannot read another organization''s profile'
 );
 
-select is(
-  (select count(*) from public.audit_logs
-   where organization_id = (select id from ids where key = 'org_a')),
-  0::bigint,
-  'a user cannot read another organization''s audit log'
+select throws_ok(
+  format($sql$select public.list_audit_history(%L, 50)$sql$,
+    (select id from ids where key = 'org_a')),
+  '42501', 'TENANT_ACCESS_DENIED: not a member of this organization',
+  'a user cannot read another organization''s audit history'
 );
 
 select is(

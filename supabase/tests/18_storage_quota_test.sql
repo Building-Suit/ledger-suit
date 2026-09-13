@@ -129,10 +129,12 @@ select is(public.commit_attachment_upload(
 select is((select count(*) from public.attachments
   where id = (select value from storage_quota_ids where key = 'attachment')),
   1::bigint, 'commit creates one authoritative metadata row');
+reset role;
 select is((select count(*) from public.audit_logs
   where action = 'attachment.upload'
     and entity_id = (select value from storage_quota_ids where key = 'attachment')),
   1::bigint, 'commit audits the upload once');
+set local role authenticated;
 select is(public.get_usage(
   (select value from storage_quota_ids where key = 'alpha'), 'max_storage_bytes'),
   50::bigint, 'committed metadata replaces rather than duplicates reserved usage');

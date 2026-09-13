@@ -169,9 +169,11 @@ select is((select count(*) from public.import_rows where batch_id =
   (select value from import_test_ids where key = 'mixed_batch')
   and status = 'invalid' and transaction_id is null), 3::bigint,
   'invalid rows never reach the ledger');
+reset role;
 select is((select count(*) from public.audit_logs where entity_id =
   (select value from import_test_ids where key = 'mixed_batch') and action = 'import.confirmed'),
   1::bigint, 'confirmation writes a tenant audit event');
+set local role authenticated;
 select is((select posted_rows from public.import_batches where id =
   (select value from import_test_ids where key = 'mixed_batch')),
   1, 'confirmed batch counters reflect durable outcomes');
