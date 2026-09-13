@@ -3415,6 +3415,29 @@ export type Database = {
           sort_order: number
         }[]
       }
+      plan_change_impact: {
+        Args: {
+          p_organization_id: string
+          p_target_interval: Database["public"]["Enums"]["billing_interval"]
+          p_target_plan_key: string
+        }
+        Returns: {
+          audit_history_current_days: number | null
+          audit_history_reduced: boolean
+          audit_history_target_days: number
+          change_direction: string
+          current_interval: Database["public"]["Enums"]["billing_interval"] | null
+          current_plan_key: string
+          feature_impacts: Json
+          provider_change_supported: boolean
+          quota_impacts: Json
+          requires_manual_handoff: boolean
+          target_amount_minor: number
+          target_interval: Database["public"]["Enums"]["billing_interval"]
+          target_plan_key: string
+          would_block_new_activity: boolean
+        }[]
+      }
       subscription_usage_summary: {
         Args: { p_organization_id: string }
         Returns: {

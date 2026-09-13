@@ -865,6 +865,23 @@
         "api": "Developer API — Coming Soon"
       }
     },
+    "planChange": {
+      "review": "Review change to {plan}",
+      "reviewing": "Checking plan impact…",
+      "title": "Plan change review",
+      "summary": "{current} → {target}",
+      "noDeletion": "Changing plans will not delete financial history or workspace resources.",
+      "targetPrice": "Target price: {price} · {interval}",
+      "capacityTitle": "Capacity after the change",
+      "usageLimit": "Current usage {used} · target allowance {limit}",
+      "blocked": "New activity blocked",
+      "available": "Within allowance",
+      "featureTitle": "Features affected",
+      "auditHistory": "Audit-history visibility changes to {days} days",
+      "handoffTitle": "Administrator confirmation required",
+      "handoffBody": "Paymob plan changes are not applied automatically. Send this target plan and billing-cycle request to your Ledger Suit administrator. Your current subscription remains unchanged until the provider change is verified.",
+      "noChange": "This matches your current plan and billing cycle. No change is required."
+    },
     "priceAtCheckout": "Paymob confirms the price and currency before payment.",
     "startTrial": "Choose plan and continue to payment",
     "openingCheckout": "Opening secure checkout…",

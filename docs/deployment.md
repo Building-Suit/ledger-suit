@@ -120,6 +120,16 @@ amount matches this table, and both Test and Live environments use identifiers
 from their own Paymob mode. Existing `ledger_suit` subscriptions are not migrated
 by this deployment and continue to be updated through their provider subscription IDs.
 
+In-app plan changes are intentionally preflight-only. Billing managers can use
+`plan_change_impact(organization_id, target_plan_key, target_interval)` to see
+all quota, feature, and audit-window consequences without mutating the
+subscription. The checked-in Paymob contract does not establish a verified
+plan-change operation, so the Billing page hands the request to an
+administrator and keeps the current plan active. Do not update the database or
+claim a completed change until Paymob confirms a supported production process
+and a matching verified fulfillment boundary is implemented. This restriction
+also avoids preempting the separately approved Step 21 `ledger_suit` migration.
+
 The central quota engine is also dormant with respect to product writes until
 each resource-specific enforcement migration connects its lowest shared write
 boundary. It requires no environment variables or provider configuration. The

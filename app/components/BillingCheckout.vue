@@ -4,7 +4,7 @@ import type { LaunchPlanKey } from '~/composables/useBilling'
 
 const { compact = false, surface = 'checkout' } = defineProps<{
   compact?: boolean
-  surface?: 'checkout' | 'public' | 'display'
+  surface?: 'checkout' | 'public' | 'display' | 'manage'
 }>()
 const supabase = useSupabaseClient<Database>()
 const { currentId } = useTenant()
@@ -12,10 +12,44 @@ const { createCheckoutSession } = useBilling()
 const { t, locale } = useI18n()
 const interval = ref<'monthly' | 'yearly'>('monthly')
 const pendingPlan = ref<LaunchPlanKey | null>(null)
+const reviewingPlan = ref<LaunchPlanKey | null>(null)
 const errorMessage = ref('')
+const describeError = useErrorMessage()
 
 type CatalogPlan = Database['public']['Functions']['subscription_plan_catalog']['Returns'][number]
 type JsonObject = Record<string, Json | undefined>
+interface PlanChangeImpact {
+  current_plan_key: string
+  current_interval: Database['public']['Enums']['billing_interval'] | null
+  target_plan_key: string
+  target_interval: Database['public']['Enums']['billing_interval']
+  target_amount_minor: number
+  change_direction: string
+  provider_change_supported: boolean
+  requires_manual_handoff: boolean
+  would_block_new_activity: boolean
+  audit_history_current_days: number | null
+  audit_history_target_days: number
+  audit_history_reduced: boolean
+  quota_impacts: unknown
+  feature_impacts: unknown
+}
+interface QuotaImpact {
+  quota_key: string
+  used_value: number
+  current_limit_value: number | null
+  target_limit_value: number | null
+  is_over_target: boolean
+  will_block_new_activity: boolean
+}
+interface FeatureImpact {
+  feature_key: string
+  current_enabled: boolean
+  target_enabled: boolean
+  will_lose: boolean
+}
+
+const planImpact = ref<PlanChangeImpact | null>(null)
 
 const { data: catalog, pending: catalogPending, error: catalogError, refresh } = await useAsyncData(
   'launch-plan-catalog',
@@ -66,6 +100,42 @@ function formatAmount(amountMinor: number): string {
   }).format(amountMinor / 100)
 }
 
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat(locale.value === 'ar' ? 'ar-EG' : 'en-US', {
+    maximumFractionDigits: 1,
+  }).format(value)
+}
+
+function formatBytes(value: number): string {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'] as const
+  let amount = value
+  let index = 0
+  while (amount >= 1024 && index < units.length - 1) {
+    amount /= 1024
+    index++
+  }
+  return `${formatNumber(amount)} ${t(`usage.units.${units[index]}`)}`
+}
+
+function formatQuota(quotaKey: string, value: number | null): string {
+  if (value === null) return t('usage.unlimited')
+  return quotaKey === 'max_storage_bytes' ? formatBytes(value) : formatNumber(value)
+}
+
+const quotaImpacts = computed<QuotaImpact[]>(() => {
+  const value: unknown = planImpact.value?.quota_impacts
+  return Array.isArray(value) ? value as QuotaImpact[] : []
+})
+const lostFeatures = computed<FeatureImpact[]>(() => {
+  const value: unknown = planImpact.value?.feature_impacts
+  return Array.isArray(value) ? (value as FeatureImpact[]).filter(feature => feature.will_lose) : []
+})
+
+function featureName(key: string): string {
+  const translationKey = key === 'multi_currency' ? 'multiCurrency' : key === 'priority_support' ? 'prioritySupport' : key
+  return t(`billing.plans.features.${translationKey}`)
+}
+
 function limit(plan: CatalogPlan, key: string): number | null {
   const entitlement = object(object(plan.entitlements)[key])
   return typeof entitlement.limit_value === 'number' ? entitlement.limit_value : null
@@ -100,6 +170,27 @@ async function checkout(planKey: LaunchPlanKey) {
   }
   finally {
     pendingPlan.value = null
+  }
+}
+
+async function reviewChange(planKey: LaunchPlanKey) {
+  if (!currentId.value || reviewingPlan.value) return
+  reviewingPlan.value = planKey
+  errorMessage.value = ''
+  try {
+    const { data, error } = await supabase.rpc('plan_change_impact', {
+      p_organization_id: currentId.value,
+      p_target_plan_key: planKey,
+      p_target_interval: interval.value,
+    }).single()
+    if (error) throw error
+    planImpact.value = data as PlanChangeImpact
+  }
+  catch (error) {
+    errorMessage.value = describeError(error)
+  }
+  finally {
+    reviewingPlan.value = null
   }
 }
 </script>
@@ -169,6 +260,9 @@ async function checkout(planKey: LaunchPlanKey) {
         <button v-if="surface === 'checkout' && plan.is_purchasable" type="button" class="ls-btn ls-btn-primary mt-6 w-full" :disabled="Boolean(pendingPlan)" @click="checkout(plan.plan_key as LaunchPlanKey)">
           {{ pendingPlan === plan.plan_key ? t('billing.openingCheckout') : t('billing.plans.choose', { plan: t(`billing.plans.${plan.plan_key}.name`) }) }}
         </button>
+        <button v-else-if="surface === 'manage' && plan.is_purchasable" type="button" class="ls-btn mt-6 w-full" :disabled="Boolean(reviewingPlan)" @click="reviewChange(plan.plan_key as LaunchPlanKey)">
+          {{ reviewingPlan === plan.plan_key ? t('billing.planChange.reviewing') : t('billing.planChange.review', { plan: t(`billing.plans.${plan.plan_key}.name`) }) }}
+        </button>
         <NuxtLink v-else-if="surface === 'public' && plan.is_purchasable" to="/signup" class="ls-btn ls-btn-primary mt-6 w-full">{{ t('landing.startTrial') }}</NuxtLink>
         <button v-else-if="!plan.is_purchasable" type="button" class="ls-btn mt-6 w-full" disabled>{{ t('billing.plans.comingSoon') }}</button>
       </article>
@@ -194,5 +288,63 @@ async function checkout(planKey: LaunchPlanKey) {
 
     <p v-if="surface === 'checkout'" class="text-center text-xs text-fg-muted">{{ t('billing.paymentRequired') }}</p>
     <p v-if="errorMessage" class="ls-error" role="alert">{{ errorMessage }}</p>
+
+    <Teleport to="body">
+      <div v-if="planImpact" class="fixed inset-0 z-[80] grid place-items-center ls-scrim p-4" role="dialog" aria-modal="true" :aria-labelledby="'plan-change-title'" @click.self="planImpact = null">
+        <section class="ls-card max-h-[90vh] w-full max-w-3xl overflow-y-auto p-6" data-testid="plan-change-impact">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h2 id="plan-change-title" class="text-xl font-black">{{ t('billing.planChange.title') }}</h2>
+              <p class="mt-1 text-sm text-fg-muted">{{ t('billing.planChange.summary', {
+                current: t(`billing.plans.${planImpact.current_plan_key}.name`),
+                target: t(`billing.plans.${planImpact.target_plan_key}.name`),
+              }) }}</p>
+            </div>
+            <button type="button" class="ls-btn-icon" :aria-label="t('common.close')" @click="planImpact = null"><AppIcon name="close" :size="20" /></button>
+          </div>
+
+          <div class="mt-5 rounded-card bg-surface-muted p-4 text-sm">
+            <p class="font-bold">{{ t('billing.planChange.noDeletion') }}</p>
+            <p class="mt-1 text-fg-muted">{{ t('billing.planChange.targetPrice', {
+              price: t('billing.plans.price', { amount: formatAmount(planImpact.target_amount_minor) }),
+              interval: t(`billing.${planImpact.target_interval}`),
+            }) }}</p>
+          </div>
+
+          <h3 class="mt-6 font-bold">{{ t('billing.planChange.capacityTitle') }}</h3>
+          <ul class="mt-3 grid gap-2 sm:grid-cols-2">
+            <li v-for="quota in quotaImpacts" :key="quota.quota_key" class="rounded-card border border-[var(--bs-border)] p-3 text-sm" :data-impact-quota="quota.quota_key">
+              <div class="flex items-start justify-between gap-3">
+                <span class="font-semibold">{{ t(`usage.quotas.${quota.quota_key}`) }}</span>
+                <span v-if="quota.will_block_new_activity" class="text-xs font-bold text-[var(--bs-status-danger)]">{{ t('billing.planChange.blocked') }}</span>
+                <span v-else class="text-xs font-bold text-[var(--bs-status-success)]">{{ t('billing.planChange.available') }}</span>
+              </div>
+              <p class="mt-1 text-fg-muted">{{ t('billing.planChange.usageLimit', {
+                used: formatQuota(quota.quota_key, quota.used_value),
+                limit: formatQuota(quota.quota_key, quota.target_limit_value),
+              }) }}</p>
+            </li>
+          </ul>
+
+          <div v-if="lostFeatures.length || planImpact.audit_history_reduced" class="mt-6">
+            <h3 class="font-bold">{{ t('billing.planChange.featureTitle') }}</h3>
+            <ul class="mt-2 list-disc space-y-1 ps-5 text-sm text-fg-muted">
+              <li v-for="feature in lostFeatures" :key="feature.feature_key">{{ featureName(feature.feature_key) }}</li>
+              <li v-if="planImpact.audit_history_reduced">{{ t('billing.planChange.auditHistory', { days: formatNumber(planImpact.audit_history_target_days) }) }}</li>
+            </ul>
+          </div>
+
+          <div v-if="planImpact.requires_manual_handoff" class="mt-6 rounded-card border border-[var(--bs-border-strong)] p-4 text-sm" role="note">
+            <p class="font-bold">{{ t('billing.planChange.handoffTitle') }}</p>
+            <p class="mt-1 text-fg-muted">{{ t('billing.planChange.handoffBody') }}</p>
+          </div>
+          <p v-else class="mt-6 text-sm text-fg-muted">{{ t('billing.planChange.noChange') }}</p>
+
+          <div class="mt-6 flex justify-end">
+            <button type="button" class="ls-btn ls-btn-primary" @click="planImpact = null">{{ t('common.close') }}</button>
+          </div>
+        </section>
+      </div>
+    </Teleport>
   </div>
 </template>
