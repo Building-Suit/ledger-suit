@@ -2676,17 +2676,17 @@ export type Database = {
       }
       apply_paymob_subscription_event: {
         Args: {
+          p_amount_minor?: number
           p_event_id: string
           p_event_type: string
-          p_amount_minor?: number
           p_interval: Database["public"]["Enums"]["billing_interval"]
-          p_plan_key?: string
           p_last_payment_at?: string
           p_organization_id: string
           p_payload: Json
           p_payment_failed_at?: string
           p_period_end?: string
           p_period_start?: string
+          p_plan_key?: string
           p_price_id?: string
           p_provider_status: string
           p_subscription_id: string
@@ -2717,11 +2717,11 @@ export type Database = {
         }
         Returns: {
           access_state: string
+          amount_minor: number
           billing_email: string
           billing_interval: Database["public"]["Enums"]["billing_interval"]
           billing_name: string
           billing_phone: string
-          amount_minor: number
           currency_code: string
           organization_id: string
           organization_name: string
@@ -3027,6 +3027,29 @@ export type Database = {
       notify_due_commitments: {
         Args: { p_organization_id: string }
         Returns: number
+      }
+      plan_change_impact: {
+        Args: {
+          p_organization_id: string
+          p_target_interval: Database["public"]["Enums"]["billing_interval"]
+          p_target_plan_key: string
+        }
+        Returns: {
+          audit_history_current_days: number
+          audit_history_reduced: boolean
+          audit_history_target_days: number
+          change_direction: string
+          current_interval: Database["public"]["Enums"]["billing_interval"]
+          current_plan_key: string
+          feature_impacts: Json
+          provider_change_supported: boolean
+          quota_impacts: Json
+          requires_manual_handoff: boolean
+          target_amount_minor: number
+          target_interval: Database["public"]["Enums"]["billing_interval"]
+          target_plan_key: string
+          would_block_new_activity: boolean
+        }[]
       }
       post_opening_balance: {
         Args: {
@@ -3413,29 +3436,6 @@ export type Database = {
           plan_key: string
           prices: Json
           sort_order: number
-        }[]
-      }
-      plan_change_impact: {
-        Args: {
-          p_organization_id: string
-          p_target_interval: Database["public"]["Enums"]["billing_interval"]
-          p_target_plan_key: string
-        }
-        Returns: {
-          audit_history_current_days: number | null
-          audit_history_reduced: boolean
-          audit_history_target_days: number
-          change_direction: string
-          current_interval: Database["public"]["Enums"]["billing_interval"] | null
-          current_plan_key: string
-          feature_impacts: Json
-          provider_change_supported: boolean
-          quota_impacts: Json
-          requires_manual_handoff: boolean
-          target_amount_minor: number
-          target_interval: Database["public"]["Enums"]["billing_interval"]
-          target_plan_key: string
-          would_block_new_activity: boolean
         }[]
       }
       subscription_usage_summary: {
@@ -3907,3 +3907,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -8,6 +8,7 @@ import {
 } from "../_shared/http.ts";
 import { paymobCheckoutUrl, paymobRequest } from "../_shared/paymob.ts";
 import {
+  assertCheckoutAccessState,
   parseCheckoutRequest,
   paymobPlanId,
   signCheckoutMetadata,
@@ -58,13 +59,7 @@ Deno.serve(async (request) => {
     if (error) throw error;
     const context = (data as CheckoutContext[] | null)?.[0];
     if (!context) throw new Error("Organization not found");
-    if (
-      !["trialing", "checkout_required", "read_only"].includes(
-        context.access_state,
-      )
-    ) {
-      throw new Error("Subscription is already active");
-    }
+    assertCheckoutAccessState(context.access_state);
     if (!context.billing_phone) {
       throw new Error("A billing phone number is required before checkout.");
     }

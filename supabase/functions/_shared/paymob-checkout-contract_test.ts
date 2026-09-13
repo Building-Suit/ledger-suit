@@ -1,5 +1,6 @@
 import { assertEquals, assertRejects, assertThrows } from "jsr:@std/assert@1";
 import {
+  assertCheckoutAccessState,
   parseCheckoutRequest,
   paymobPlanId,
   signCheckoutMetadata,
@@ -31,6 +32,19 @@ Deno.test("checkout request accepts only launch plan identity and interval", () 
       () => parseCheckoutRequest(body),
       Error,
       "Invalid checkout request",
+    );
+  }
+});
+
+Deno.test("stale clients cannot bypass checkout access-state restrictions", () => {
+  for (const state of ["trialing", "checkout_required", "read_only"]) {
+    assertCheckoutAccessState(state);
+  }
+  for (const state of ["active", "grace_period", "loading", "unknown"]) {
+    assertThrows(
+      () => assertCheckoutAccessState(state),
+      Error,
+      "Subscription is already active",
     );
   }
 });

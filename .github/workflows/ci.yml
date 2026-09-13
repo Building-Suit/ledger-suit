@@ -27,11 +27,15 @@ jobs:
         with: { version: 11.5.0 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: pnpm }
+      - uses: denoland/setup-deno@v2
+        with: { deno-version: v2.x }
       - run: pnpm install --frozen-lockfile
+      - run: deno test --no-lock --allow-env supabase/functions/_shared/*_test.ts
       - run: pnpm db:start
       - run: pnpm db:reset
       - run: pnpm db:test
       - run: pnpm db:lint
+      - run: pnpm db:types && git diff --exit-code -- types/database.types.ts
       # ubuntu-latest already includes Chrome's Linux runtime libraries. Using
       # --with-deps runs apt-get against every configured third-party source;
       # an unrelated Google Chrome mirror race can then fail this job before
