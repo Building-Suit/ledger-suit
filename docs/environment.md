@@ -93,7 +93,8 @@ automatic deductions.
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are supplied
 to deployed Supabase Edge Functions by the platform. The service role key is
-used only by the verified Paymob webhook and scheduled email worker.
+used by the verified Paymob webhook, scheduled notification worker, and
+storage-cleanup worker. It must never be exposed to browser code.
 
 The Paymob account needs monthly and yearly subscription plans for Solo,
 Starter, and Business, with `use_transaction_amount` enabled. Their amounts must
@@ -121,7 +122,8 @@ one workspace on the purchased database plan.
 
 ## Supabase Vault scheduler secrets
 
-The email Cron job reads two values from Supabase Vault:
+The notification-email and storage-cleanup Cron jobs read two values from
+Supabase Vault:
 
 - `ledger_suit_project_url` — the Supabase project URL, without a trailing slash
 - `ledger_suit_service_role_key` — the server-only service role key
