@@ -160,5 +160,5 @@ test('plan-change consequences and provider handoff are localized under RTL', as
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   await expect(dialog).toContainText('لن يؤدي تغيير الخطة إلى حذف السجل المالي أو موارد مساحة العمل.')
   await expect(dialog.locator('[data-impact-quota="max_members"]')).toContainText('ستُحظر الأنشطة الجديدة')
-  await expect(dialog).toContainText('لا تُطبَّق تغييرات خطط باي موب تلقائيًا.')
+  await expect(dialog).toContainText('لا تُطبَّق تغييرات خطط Paymob تلقائيًا.')
 })

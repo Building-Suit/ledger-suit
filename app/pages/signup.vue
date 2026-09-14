@@ -20,6 +20,7 @@ const otpExpiresAt = ref(0)
 const resendAvailableAt = ref(0)
 const now = ref(Date.now())
 const hydrated = ref(false)
+const consentAccepted = ref(false)
 const provisionedOrganizationId = ref<string | null>(null)
 const existingAccountOnboarding = ref(false)
 const ONBOARDING_STORAGE_KEY = 'ledger-suit.pending-onboarding'
@@ -264,6 +265,11 @@ async function createAccount() {
 }
 
 async function finishOnboarding() {
+  if (!consentAccepted.value) {
+    errorMessage.value = t('onboarding.consentRequired')
+    return
+  }
+
   if (existingAccountOnboarding.value) {
     pending.value = true
     errorMessage.value = ''
@@ -387,7 +393,7 @@ async function restoreAuthenticatedOnboarding() {
 <template>
   <main class="min-h-dvh bg-background px-4 py-6 lg:px-8">
     <div class="mx-auto max-w-6xl">
-      <header class="flex items-center justify-between gap-4"><NuxtLink to="/" class="inline-flex" aria-label="Ledger Suit home">
+      <header class="flex items-center justify-between gap-4"><NuxtLink to="/" class="inline-flex" :aria-label="t('marketing.home')">
         <AppLogo class="h-14 w-auto max-w-52" />
       </NuxtLink>
       <div class="flex items-center gap-2"><SettingsMenu /><NuxtLink to="/login" class="ls-btn ls-btn-sm">{{ t('auth.signIn') }}</NuxtLink></div></header>
@@ -425,8 +431,22 @@ async function restoreAuthenticatedOnboarding() {
             <div><FloatingField :label="t('onboarding.taxIdentifier')"><input id="org-tax" v-model="form.taxIdentifier" class="ls-input"></FloatingField><p class="ls-hint">{{ t('onboarding.optional') }}</p></div>
           </div>
 
+          <div v-if="step === 2" class="mt-6 flex items-start gap-3 rounded-control border border-[var(--bs-border)] bg-surface-muted p-4 text-sm leading-6">
+            <input id="signup-consent" v-model="consentAccepted" type="checkbox" required class="mt-1 size-4 shrink-0 accent-[var(--bs-primary)]">
+            <label for="signup-consent">
+              <i18n-t keypath="onboarding.consent" tag="span" scope="global">
+                <template #terms>
+                  <NuxtLink to="/terms" target="_blank" rel="noopener" class="font-semibold text-link underline underline-offset-4">{{ t('marketing.terms') }}</NuxtLink>
+                </template>
+                <template #privacy>
+                  <NuxtLink to="/privacy" target="_blank" rel="noopener" class="font-semibold text-link underline underline-offset-4">{{ t('marketing.privacy') }}</NuxtLink>
+                </template>
+              </i18n-t>
+            </label>
+          </div>
+
           <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
-          <button class="ls-btn ls-btn-primary mt-8 w-full" :disabled="pending">{{ submitButtonText }}</button>
+          <button type="submit" class="ls-btn ls-btn-primary mt-8 w-full" :disabled="pending || (step === 2 && !consentAccepted)">{{ submitButtonText }}</button>
           <p v-if="step === 2" class="mt-3 text-center text-xs text-fg-muted">{{ t('onboarding.noCardRequired') }}</p>
         </form>
 
@@ -467,6 +487,10 @@ async function restoreAuthenticatedOnboarding() {
             </div>
           </div>
         </form>
+
+        <p class="text-center text-xs text-fg-muted lg:col-start-2">
+          <NuxtLink to="/contact" class="font-semibold hover:text-fg">{{ t('marketing.contact') }}</NuxtLink>
+        </p>
       </div>
     </div>
   </main>

@@ -172,6 +172,7 @@
     "signUp": "Create account",
     "signupSubtitle": "Create your secure Ledger Suit account.",
     "needAccount": "Need an account? Create one",
+    "legalNavigation": "Privacy and support links",
     "haveAccount": "Already have an account? Sign in",
     "checkEmail": "Check your email to confirm your account, then sign in.",
     "welcomeEyebrow": "Your financial operating system",
@@ -835,7 +836,7 @@
       "perMonth": "per month",
       "perYear": "per year",
       "discount": "{percent}% off",
-      "yearlyEquivalent": "{monthlyPrice}/month · billed {yearlyPrice} yearly",
+      "yearlyEquivalent": "{monthlyPrice}/month · billed {yearlyPrice} per year",
       "customPricing": "Custom pricing",
       "pricingComingSoon": "Pricing coming soon",
       "mostPopular": "Most Popular",
@@ -860,7 +861,7 @@
         "prioritySupport": "Priority support"
       },
       "futureTitle": "Future functionality",
-      "futureBody": "These capabilities are not included in any paid launch plan yet.",
+      "futureBody": "These capabilities are not yet included in any paid launch plan.",
       "future": {
         "branches": "Multi-branch accounting — Coming Soon",
         "analytics": "Advanced Analytics & Reporting — Coming Soon",
@@ -945,7 +946,8 @@
     "units": { "B": "B", "KB": "KB", "MB": "MB", "GB": "GB", "TB": "TB" }
   },
   "landing": {
-    "title": "Business finance, clearly managed",
+    "title": "Business finances, clearly managed",
+    "metaDescription": "Manage business accounting, cash flow, commitments, recurring activity, and financial reports in one secure workspace.",
     "navigation": "Landing page navigation",
     "navFeatures": "Features",
     "navWorkflow": "How it works",
@@ -953,7 +955,7 @@
     "openApp": "Open workspace",
     "startTrial": "Start 14-day trial",
     "eyebrow": "Financial clarity for growing businesses",
-    "heroTitle": "Run your finances from one calm, accurate workspace.",
+    "heroTitle": "Run your finances from one clear, accurate workspace.",
     "heroBody": "Ledger Suit turns daily money activity into a reliable double-entry ledger, live cash visibility, commitments, automation, and decision-ready reports.",
     "createWorkspace": "Create your workspace",
     "explore": "Explore the system",
@@ -964,20 +966,20 @@
     "months": "months",
     "featuresEyebrow": "Everything connected",
     "featuresTitle": "From a receipt to the full financial picture",
-    "featuresBody": "Every workflow shares the same secure organization ledger, so figures remain traceable and consistent.",
+    "featuresBody": "Every workflow uses the same secure business ledger, so figures remain traceable and consistent.",
     "features": {
       "cashflow": { "title": "Cash visibility", "body": "See balances, inflows, outflows, and upcoming obligations in one view." },
-      "ledger": { "title": "Controlled accounting", "body": "Atomic double-entry posting keeps every journal balanced and auditable." },
+      "ledger": { "title": "Controlled accounting", "body": "Reliable double-entry posting keeps every journal balanced and auditable." },
       "commitments": { "title": "Commitments", "body": "Track receivables, payables, due dates, partial settlements, and overdue items." },
       "automation": { "title": "Recurring automation", "body": "Schedule repeat activity while keeping review and posting controls." },
       "reports": { "title": "Decision-ready reports", "body": "Use profit and loss, balance sheet, trial balance, and cash-flow views." },
-      "team": { "title": "Secure collaboration", "body": "Invite a team with precise roles and strict organization isolation." }
+      "team": { "title": "Secure collaboration", "body": "Invite your team with precise roles and securely separated workspaces." }
     },
     "workflowEyebrow": "Ready from day one",
     "workflowTitle": "Set up once, then start recording",
     "workflow": {
       "1": { "title": "Create the owner account", "body": "Provide the identity and contact information needed for a secure workspace." },
-      "2": { "title": "Configure the business", "body": "Choose the legal details, currency, timezone, and fiscal year." },
+      "2": { "title": "Configure the business", "body": "Add your business details, currency, timezone, and fiscal year." },
       "3": { "title": "Start your free trial", "body": "Open your ready-to-use ledger for 14 days—no credit card required." }
     },
     "pricingEyebrow": "Plans that grow with you",
@@ -985,12 +987,32 @@
     "pricingBody": "Every launch plan includes reliable core accounting and reports. Switch to annual billing to save 32%.",
     "footer": "Ledger Suit by Building Suit"
   },
+  "marketing": {
+    "home": "Ledger Suit home",
+    "about": "About Us",
+    "contact": "Contact Us",
+    "terms": "Terms & Conditions",
+    "privacy": "Privacy Policy",
+    "deliveryShipping": "Delivery & Shipping Policy",
+    "refundCancellation": "Refund & Cancellation Policy",
+    "footerNavigation": "Legal and company information",
+    "lastUpdated": "Last updated:",
+    "contactMetaDescription": "Contact Ledger Suit by Building Suit for product, subscription, billing, or support questions.",
+    "contactIntro": "For product, subscription, billing, or technical support questions, contact us using the details below.",
+    "email": "Email",
+    "phone": "Phone",
+    "businessAddress": "Business address",
+    "businessIdentity": "Business identity",
+    "businessIdentityBody": "{product} is a product of its parent brand, {parent}, whose merchant identity is used to process payments for the product."
+  },
   "onboarding": {
     "eyebrow": "Workspace setup",
     "title": "Create a ready-to-use account",
     "subtitle": "Complete your owner profile and business setup to start your free trial.",
     "noCardTrial": "14-day free trial — no credit card required",
     "noCardRequired": "You won't be asked for a credit card. Choose a paid plan only after your trial.",
+    "consent": "I agree to the {terms} and acknowledge the {privacy}.",
+    "consentRequired": "You must agree to the Terms & Conditions and acknowledge the Privacy Policy before creating an account.",
     "stepCount": "Step {step} of 2",
     "completeRequired": "Complete all required fields before continuing.",
     "confirmEmailFirst": "Confirm your email first, then return to continue setup.",

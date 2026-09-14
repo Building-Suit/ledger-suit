@@ -107,6 +107,7 @@ test('signup verifies email by OTP before provisioning the free trial', async ({
   await expect(page.getByRole('heading', { name: 'Business setup' })).toBeVisible()
   await page.locator('#org-display-name').fill(`OTP Test Books ${unique}`)
   await page.locator('#org-legal-name').fill(`OTP Test Books ${unique} LLC`)
+  await page.getByLabel(/I agree to the Terms & Conditions/).check()
   await page.getByRole('button', { name: 'Create account and start free trial' }).click()
 
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
@@ -144,6 +145,7 @@ test('signup continues to its saved organization after the OTP tab is closed', a
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.locator('#org-display-name').fill('Recovered Books')
   await page.locator('#org-legal-name').fill(`Recovered Books ${uniqueSuffix} LLC`)
+  await page.getByLabel(/I agree to the Terms & Conditions/).check()
   await page.getByRole('button', { name: 'Create account and start free trial' }).click()
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
 
