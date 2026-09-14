@@ -1,14 +1,14 @@
 import { assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
-import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import type { EmailInput } from "./resend.ts";
 import {
+  type PaymentAdminClient,
   type PaymentConfirmation,
   safePaymobPaymentMethod,
   sanitizePaymobPayload,
   sendVerifiedSuccessfulPaymentConfirmation,
 } from "./payment-confirmation.ts";
 
-function fakeAdmin(): SupabaseClient {
+function fakeAdmin(): PaymentAdminClient {
   const records = {
     organizations: { name: "Alpha Trading", created_by: "owner-1" },
     profiles: {
@@ -31,7 +31,7 @@ function fakeAdmin(): SupabaseClient {
         },
       };
     },
-  } as unknown as SupabaseClient;
+  };
 }
 
 const payment: PaymentConfirmation = {

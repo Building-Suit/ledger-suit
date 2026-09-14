@@ -1,4 +1,10 @@
-import { escapeHtml, requiredEnv } from './http.ts'
+import { requiredEnv } from './env.ts'
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>'"]/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+  })[character] ?? character)
+}
 
 export interface EmailInput {
   to: string

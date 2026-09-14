@@ -1,7 +1,21 @@
-import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { sendEmail } from "./resend.ts";
 
 type JsonRecord = Record<string, unknown>;
+
+interface PaymentQueryResult {
+  data: unknown;
+  error: unknown;
+}
+
+export interface PaymentAdminClient {
+  from(table: string): {
+    select(columns: string): {
+      eq(column: string, value: unknown): {
+        single(): PromiseLike<PaymentQueryResult>;
+      };
+    };
+  };
+}
 
 export interface PaymentConfirmation {
   eventId: string;
@@ -106,7 +120,7 @@ function formatDateTime(value: string, arabic: boolean): string {
 }
 
 async function paymentRecipient(
-  admin: SupabaseClient,
+  admin: PaymentAdminClient,
   organizationId: string,
 ): Promise<PaymentRecipient> {
   const { data: organization, error: organizationError } = await admin
@@ -114,7 +128,8 @@ async function paymentRecipient(
     .select("name,created_by")
     .eq("id", organizationId)
     .single();
-  if (organizationError || !organization) {
+  const organizationRecord = record(organization);
+  if (organizationError || !organizationRecord.created_by) {
     throw organizationError ??
       new Error("Payment organization could not be loaded");
   }
@@ -122,22 +137,23 @@ async function paymentRecipient(
   const { data: owner, error: ownerError } = await admin
     .from("profiles")
     .select("email,full_name,locale")
-    .eq("id", organization.created_by)
+    .eq("id", organizationRecord.created_by)
     .single();
-  if (ownerError || !owner?.email) {
+  const ownerRecord = record(owner);
+  if (ownerError || !ownerRecord.email) {
     throw ownerError ?? new Error("Payment recipient could not be loaded");
   }
 
   return {
-    email: String(owner.email),
-    fullName: owner.full_name ? String(owner.full_name) : null,
-    locale: String(owner.locale ?? "en"),
-    organizationName: String(organization.name),
+    email: String(ownerRecord.email),
+    fullName: ownerRecord.full_name ? String(ownerRecord.full_name) : null,
+    locale: String(ownerRecord.locale ?? "en"),
+    organizationName: String(organizationRecord.name ?? "Ledger Suit"),
   };
 }
 
 export async function sendPaymentConfirmation(
-  admin: SupabaseClient,
+  admin: PaymentAdminClient,
   payment: PaymentConfirmation,
   sender: EmailSender = sendEmail,
 ): Promise<string> {
@@ -192,7 +208,7 @@ export async function sendPaymentConfirmation(
 
 /** Called only after the webhook has verified HMAC and checkout metadata. */
 export async function sendVerifiedSuccessfulPaymentConfirmation(
-  admin: SupabaseClient,
+  admin: PaymentAdminClient,
   succeeded: boolean,
   payment: PaymentConfirmation,
   sender: EmailSender = sendEmail,

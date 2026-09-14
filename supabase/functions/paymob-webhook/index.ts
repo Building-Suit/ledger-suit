@@ -13,6 +13,7 @@ import {
   verifyCheckoutMetadata,
 } from "../_shared/paymob-checkout-contract.ts";
 import {
+  type PaymentAdminClient,
   safePaymobPaymentMethod,
   sanitizePaymobPayload,
   sendVerifiedSuccessfulPaymentConfirmation,
@@ -238,16 +239,20 @@ Deno.serve(async (request) => {
         throw new Error(storedEvent.processing_error);
       }
     }
-    await sendVerifiedSuccessfulPaymentConfirmation(admin, succeeded, {
-      eventId,
-      organizationId: metadata.organizationId,
-      planKey: metadata.planKey,
-      interval: metadata.interval,
-      amountMinor: metadata.amountMinor,
-      currency,
-      occurredAt,
-      paymentMethod: safePaymobPaymentMethod(object),
-    });
+    await sendVerifiedSuccessfulPaymentConfirmation(
+      admin as unknown as PaymentAdminClient,
+      succeeded,
+      {
+        eventId,
+        organizationId: metadata.organizationId,
+        planKey: metadata.planKey,
+        interval: metadata.interval,
+        amountMinor: metadata.amountMinor,
+        currency,
+        occurredAt,
+        paymentMethod: safePaymobPaymentMethod(object),
+      },
+    );
     return json({ received: true, processed: Boolean(processed) });
   } catch (error) {
     return json({ error: publicError(error) }, 400);
