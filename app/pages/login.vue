@@ -68,6 +68,10 @@ async function signIn() {
           <button type="submit" :disabled="pending" class="ls-btn ls-btn-primary w-full">{{ pending ? t('auth.signingIn') : t('auth.signIn') }}</button>
           <p class="text-center text-sm text-fg-muted">{{ t('auth.needAccount') }} <NuxtLink to="/signup" class="font-bold text-fg underline underline-offset-4">{{ t('landing.startTrial') }}</NuxtLink></p>
         </form>
+        <nav class="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-fg-muted" :aria-label="t('auth.legalNavigation')">
+          <NuxtLink to="/privacy" class="hover:text-fg">{{ t('marketing.privacy') }}</NuxtLink>
+          <NuxtLink to="/contact" class="hover:text-fg">{{ t('marketing.contact') }}</NuxtLink>
+        </nav>
         <div class="mt-5 flex justify-center"><SettingsMenu /></div>
       </div>
     </section>
