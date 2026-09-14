@@ -312,6 +312,34 @@ async function reviewChange(planKey: LaunchPlanKey) {
       </article>
     </div>
 
+    <section
+      v-if="surface === 'checkout'"
+      class="rounded-card border border-[var(--bs-border)] bg-surface-muted p-4 text-center text-sm leading-6 text-fg-muted"
+      data-testid="checkout-policy-review"
+      role="note"
+    >
+      <i18n-t keypath="billing.policyReview" tag="p" scope="global">
+        <template #terms>
+          <NuxtLink to="/terms" target="_blank" rel="noopener" class="font-semibold text-link underline underline-offset-4">{{ t('marketing.terms') }}</NuxtLink>
+        </template>
+        <template #refund>
+          <NuxtLink to="/refund-cancellation" target="_blank" rel="noopener" class="font-semibold text-link underline underline-offset-4">{{ t('marketing.refundCancellation') }}</NuxtLink>
+        </template>
+        <template #privacy>
+          <NuxtLink to="/privacy" target="_blank" rel="noopener" class="font-semibold text-link underline underline-offset-4">{{ t('marketing.privacy') }}</NuxtLink>
+        </template>
+      </i18n-t>
+    </section>
+
+    <section
+      v-if="surface === 'checkout' || surface === 'public'"
+      class="text-center text-xs font-semibold text-fg-muted"
+      data-testid="payment-method-branding"
+      role="note"
+    >
+      {{ t('billing.securePayments') }}
+    </section>
+
     <section class="ls-card-flat flex flex-col gap-4 p-5 text-start sm:flex-row sm:items-center">
       <div class="flex-1">
         <div class="flex flex-wrap items-center gap-2"><h3 class="text-lg font-black">{{ t('billing.plans.enterprise.name') }}</h3><span class="rounded-full bg-surface-muted px-2.5 py-1 text-xs font-bold">{{ t('billing.plans.comingSoon') }}</span></div>
