@@ -27,7 +27,50 @@ export default defineNuxtConfig({
     },
   },
 
-  modules: ['@nuxtjs/supabase', '@nuxtjs/i18n', '@nuxt/eslint'],
+  modules: ['@nuxtjs/supabase', '@nuxtjs/i18n', '@nuxt/eslint', '@primevue/nuxt-module'],
+
+  // PrimeVue owns component behavior and accessibility; Ledger Suit's
+  // Tailwind classes and Building Suit tokens continue to own presentation.
+  // Components and their composables are auto-imported by the official module.
+  // Toast and confirmation services are registered automatically when their
+  // corresponding components are available through the module.
+  primevue: {
+    options: {
+      unstyled: true,
+    },
+    // Keep auto-imports intentional. Later steps can extend this list when a
+    // product requirement calls for another PrimeVue primitive.
+    components: {
+      include: [
+        'InputText',
+        'InputNumber',
+        'Textarea',
+        'Select',
+        'MultiSelect',
+        'DatePicker',
+        'Checkbox',
+        'RadioButton',
+        'ToggleSwitch',
+        'FloatLabel',
+        'Dialog',
+        'Drawer',
+        'Popover',
+        'Menu',
+        'DataTable',
+        'Column',
+        'Paginator',
+        'FileUpload',
+        'Toast',
+        'ConfirmDialog',
+        'ProgressBar',
+        'Tag',
+        'Badge',
+        'Button',
+        'Tree',
+        'Accordion',
+      ],
+    },
+  },
 
   css: ['~/assets/css/main.css'],
 
