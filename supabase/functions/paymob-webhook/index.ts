@@ -12,6 +12,11 @@ import {
   type CheckoutMetadata,
   verifyCheckoutMetadata,
 } from "../_shared/paymob-checkout-contract.ts";
+import {
+  safePaymobPaymentMethod,
+  sanitizePaymobPayload,
+  sendVerifiedSuccessfulPaymentConfirmation,
+} from "../_shared/payment-confirmation.ts";
 
 type JsonRecord = Record<string, unknown>;
 interface PaymobCallback {
@@ -127,7 +132,7 @@ async function processSubscriptionCallback(
     {
       p_event_id: callback.paymob_request_id,
       p_event_type: `subscription.${normalizedTrigger.replaceAll(" ", "_")}`,
-      p_payload: callback,
+      p_payload: sanitizePaymobPayload(callback),
       p_organization_id: organizationId,
       p_subscription_id: subscriptionId,
       p_provider_status: providerStatus,
@@ -204,7 +209,7 @@ Deno.serve(async (request) => {
         p_event_type: succeeded
           ? "transaction.succeeded"
           : "transaction.failed",
-        p_payload: callback,
+        p_payload: sanitizePaymobPayload(callback),
         p_organization_id: metadata.organizationId,
         p_subscription_id: subscriptionId,
         p_provider_status: succeeded ? "active" : "past_due",
@@ -233,6 +238,16 @@ Deno.serve(async (request) => {
         throw new Error(storedEvent.processing_error);
       }
     }
+    await sendVerifiedSuccessfulPaymentConfirmation(admin, succeeded, {
+      eventId,
+      organizationId: metadata.organizationId,
+      planKey: metadata.planKey,
+      interval: metadata.interval,
+      amountMinor: metadata.amountMinor,
+      currency,
+      occurredAt,
+      paymentMethod: safePaymobPaymentMethod(object),
+    });
     return json({ received: true, processed: Boolean(processed) });
   } catch (error) {
     return json({ error: publicError(error) }, 400);

@@ -84,6 +84,12 @@ test('checkout submits the selected plan and interval from the pricing card', as
   await expect(page).toHaveURL('/subscribe')
 
   const pricing = page.getByTestId('plan-pricing')
+  const policyReview = pricing.getByTestId('checkout-policy-review')
+  await expect(policyReview.getByRole('link', { name: 'Terms & Conditions' })).toHaveAttribute('href', '/terms')
+  await expect(policyReview.getByRole('link', { name: 'Refund & Cancellation Policy' })).toHaveAttribute('href', '/refund-cancellation')
+  await expect(policyReview.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy')
+  await expect(policyReview.locator('input[type="checkbox"]')).toHaveCount(0)
+  await expect(pricing.getByTestId('payment-method-branding')).toHaveText('Secure payments powered by Paymob')
   await pricing.getByRole('radio', { name: 'Yearly', exact: true }).check()
   await pricing.locator('[data-plan="business"]').getByRole('button', { name: 'Choose Business' }).click()
 

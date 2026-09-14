@@ -438,6 +438,9 @@ async function restoreAuthenticatedOnboarding() {
                 <template #terms>
                   <NuxtLink to="/terms" target="_blank" rel="noopener" class="font-semibold text-link underline underline-offset-4">{{ t('marketing.terms') }}</NuxtLink>
                 </template>
+                <template #refund>
+                  <NuxtLink to="/refund-cancellation" target="_blank" rel="noopener" class="font-semibold text-link underline underline-offset-4">{{ t('marketing.refundCancellation') }}</NuxtLink>
+                </template>
                 <template #privacy>
                   <NuxtLink to="/privacy" target="_blank" rel="noopener" class="font-semibold text-link underline underline-offset-4">{{ t('marketing.privacy') }}</NuxtLink>
                 </template>
