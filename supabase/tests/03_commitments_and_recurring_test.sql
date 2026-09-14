@@ -39,7 +39,7 @@ insert into ids (key, id) values ('org', public.create_organization('Phase Three
 
 reset role;
 update public.subscriptions
-set status = 'active', provider = 'stripe', provider_subscription_id = 'sub_test_phase3',
+set status = 'active', provider = 'paymob', provider_subscription_id = 'sub_test_phase3',
     provider_status = 'active', billing_interval = 'monthly', checkout_completed_at = now(),
     current_period_start = now(), current_period_end = now() + interval '30 days'
 where organization_id = (select id from ids where key = 'org');

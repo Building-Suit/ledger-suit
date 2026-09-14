@@ -14,6 +14,7 @@ const supabase = useSupabaseClient<Database>()
 const { currentId, can, baseCurrency } = useTenant()
 const { start } = useAddTransaction()
 const { t, locale } = useI18n()
+const { data: importsEnabled, pending: importsPending } = usePlanFeature('imports')
 
 useHead({ title: () => `${t('transactions.title')} · ${t('app.name')}` })
 
@@ -159,7 +160,16 @@ const TYPES = ['income', 'expense', 'transfer', 'asset_purchase', 'liability_cre
   <div class="space-y-4">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <h1 class="text-h1 font-bold">{{ t('transactions.title') }}</h1>
-      <p class="text-sm text-fg-muted">{{ t('transactions.count', total) }}</p>
+      <div class="flex items-center gap-3">
+        <NuxtLink
+          v-if="can('imports.create') && !importsPending"
+          :to="importsEnabled ? '/imports' : '/billing'"
+          class="ls-btn ls-btn-sm"
+        >
+          {{ t(importsEnabled ? 'imports.entryPoint' : 'imports.upgradeEntryPoint') }}
+        </NuxtLink>
+        <p class="text-sm text-fg-muted">{{ t('transactions.count', total) }}</p>
+      </div>
     </div>
 
     <div class="flex flex-wrap items-center gap-2">

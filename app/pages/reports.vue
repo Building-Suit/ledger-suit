@@ -11,7 +11,7 @@ definePageMeta({ layout: 'default' })
 const supabase = useSupabaseClient<Database>()
 const route = useRoute()
 const router = useRouter()
-const { currentId, baseCurrency } = useTenant()
+const { currentId, baseCurrency, can } = useTenant()
 const { t, locale } = useI18n()
 
 useHead({ title: () => `${t('reports.title')} · ${t('app.name')}` })
@@ -162,15 +162,11 @@ function rowsIn(rows: ReportRow[] | null, section: string) {
   return (rows ?? []).filter(r => r.section === section)
 }
 
-/** Exports what is on screen. The figures came from the database; this only
- *  serialises them. */
-function exportCsv(filename: string, header: string[], lines: (string | number)[][]) {
-  const escape = (value: string | number) => {
-    const text = String(value ?? '')
-    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-  }
-  const csv = [header, ...lines].map(row => row.map(escape).join(',')).join('\n')
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+const exportPending = ref(false)
+const exportError = ref('')
+
+function downloadCsv(filename: string, csv: string) {
+  const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }))
   const link = document.createElement('a')
   link.href = url
   link.download = filename
@@ -178,29 +174,46 @@ function exportCsv(filename: string, header: string[], lines: (string | number)[
   URL.revokeObjectURL(url)
 }
 
-function exportProfitLoss() {
-  exportCsv(
-    `profit-and-loss-${from.value}-to-${to.value}.csv`,
-    ['Section', 'Code', 'Account', `Amount (${baseCurrency.value})`],
-    (profitLoss.value ?? []).map(r => [r.section, r.code ?? '', r.name, formatMoney(r.amount_minor, baseCurrency.value, 'en')]),
-  )
+async function exportReport(report: 'profit_loss' | 'balance_sheet' | 'trial_balance' | 'cash_flow' | 'general_ledger') {
+  if (!currentId.value || exportPending.value) return
+  exportPending.value = true
+  exportError.value = ''
+  try {
+    const { data, error } = await supabase.rpc('export_financial_report_csv', {
+      p_organization_id: currentId.value,
+      p_report: report,
+      p_from_date: ['profit_loss', 'cash_flow', 'general_ledger'].includes(report) ? from.value : undefined,
+      p_to_date: ['profit_loss', 'cash_flow', 'general_ledger'].includes(report) ? to.value : undefined,
+      p_as_of_date: ['balance_sheet', 'trial_balance'].includes(report) ? asOf.value : undefined,
+      p_account_id: report === 'general_ledger' ? ledgerAccountId.value : undefined,
+    })
+    if (error) throw error
+    const filenames = {
+      profit_loss: `profit-and-loss-${from.value}-to-${to.value}.csv`,
+      balance_sheet: `balance-sheet-${asOf.value}.csv`,
+      trial_balance: `trial-balance-${asOf.value}.csv`,
+      cash_flow: `cash-flow-${from.value}-to-${to.value}.csv`,
+      general_ledger: `general-ledger-${from.value}-to-${to.value}.csv`,
+    }
+    downloadCsv(filenames[report], data)
+  }
+  catch {
+    exportError.value = t('reports.exportFailed')
+  }
+  finally {
+    exportPending.value = false
+  }
 }
-
-function exportBalanceSheet() {
-  exportCsv(
-    `balance-sheet-${asOf.value}.csv`,
-    ['Section', 'Code', 'Account', `Amount (${baseCurrency.value})`],
-    (balanceSheet.value ?? []).map(r => [r.section, r.code ?? '', r.name, formatMoney(r.amount_minor, baseCurrency.value, 'en')]),
-  )
-}
-
-// CSV exports stay in the 'en' locale so a downloaded file opens with the same
-// numbers regardless of who exported it.
 </script>
 
 <template>
   <div class="space-y-6">
-    <h1 class="text-h1 font-bold">{{ t('reports.title') }}</h1>
+    <div>
+      <h1 class="text-h1 font-bold">{{ t('reports.title') }}</h1>
+      <p class="mt-1 text-sm text-fg-muted">{{ t('reports.csvExports') }}</p>
+    </div>
+
+    <p v-if="exportError" class="ls-error" role="alert">{{ exportError }}</p>
 
     <div class="flex gap-1 border-b border-[var(--bs-border)]" role="tablist">
       <button
@@ -258,11 +271,14 @@ function exportBalanceSheet() {
 
       <SectionSkeleton v-if="trialBalancePending" variant="table" :rows="7" />
       <section v-else class="ls-card overflow-hidden" aria-labelledby="tb-heading">
-        <div class="flex items-center justify-between px-6 py-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
           <h2 id="tb-heading" class="text-base font-bold">{{ t('reports.trialBalance') }}</h2>
-          <p class="text-sm font-semibold" :class="trialTotals.debit === trialTotals.credit ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'">
-            {{ trialTotals.debit === trialTotals.credit ? t('reports.inBalance') : t('reports.outOfBalance') }}
-          </p>
+          <div class="flex items-center gap-3">
+            <p class="text-sm font-semibold" :class="trialTotals.debit === trialTotals.credit ? 'text-[var(--bs-status-success)]' : 'text-[var(--bs-status-error)]'">
+              {{ trialTotals.debit === trialTotals.credit ? t('reports.inBalance') : t('reports.outOfBalance') }}
+            </p>
+            <button v-if="can('reports.export')" type="button" class="ls-btn ls-btn-sm" :disabled="exportPending" @click="exportReport('trial_balance')">{{ t('common.exportCsv') }}</button>
+          </div>
         </div>
         <div class="overflow-x-auto">
           <table class="ls-table">
@@ -297,7 +313,7 @@ function exportBalanceSheet() {
     <!-- Profit & Loss -->
     <section v-else-if="tab === 'profit-loss'" class="space-y-4" role="tabpanel" :aria-label="t('reports.tabs.profitLoss')">
       <div class="flex justify-end">
-        <button type="button" class="ls-btn" @click="exportProfitLoss">{{ t('common.exportCsv') }}</button>
+        <button v-if="can('reports.export')" type="button" class="ls-btn" :disabled="exportPending" @click="exportReport('profit_loss')">{{ t('common.exportCsv') }}</button>
       </div>
 
       <SectionSkeleton v-if="profitLossPending" variant="table" :rows="7" />
@@ -338,7 +354,7 @@ function exportBalanceSheet() {
     <!-- Balance sheet -->
     <section v-else-if="tab === 'balance-sheet'" class="space-y-4" role="tabpanel" :aria-label="t('reports.tabs.balanceSheet')">
       <div class="flex justify-end">
-        <button type="button" class="ls-btn" @click="exportBalanceSheet">{{ t('common.exportCsv') }}</button>
+        <button v-if="can('reports.export')" type="button" class="ls-btn" :disabled="exportPending" @click="exportReport('balance_sheet')">{{ t('common.exportCsv') }}</button>
       </div>
 
       <SectionSkeleton v-if="balanceSheetPending" variant="table" :rows="7" />
@@ -381,7 +397,10 @@ function exportBalanceSheet() {
     </section>
 
     <!-- Cash flow -->
-    <section v-else-if="tab === 'cash-flow'" role="tabpanel" :aria-label="t('reports.tabs.cashFlow')">
+    <section v-else-if="tab === 'cash-flow'" class="space-y-4" role="tabpanel" :aria-label="t('reports.tabs.cashFlow')">
+      <div class="flex justify-end">
+        <button v-if="can('reports.export')" type="button" class="ls-btn" :disabled="exportPending" @click="exportReport('cash_flow')">{{ t('common.exportCsv') }}</button>
+      </div>
       <SectionSkeleton v-if="cashFlowPending" variant="table" :rows="5" />
 
       <EmptyState
@@ -422,7 +441,10 @@ function exportBalanceSheet() {
     </section>
 
     <!-- General ledger -->
-    <section v-else role="tabpanel" :aria-label="t('reports.tabs.ledger')">
+    <section v-else class="space-y-4" role="tabpanel" :aria-label="t('reports.tabs.ledger')">
+      <div class="flex justify-end">
+        <button v-if="can('reports.export')" type="button" class="ls-btn" :disabled="exportPending || !ledgerAccountId" @click="exportReport('general_ledger')">{{ t('common.exportCsv') }}</button>
+      </div>
       <SectionSkeleton v-if="ledgerPending" variant="table" :rows="8" />
 
       <EmptyState

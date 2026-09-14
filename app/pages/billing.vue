@@ -1,10 +1,7 @@
 <script setup lang="ts">
-const supabase = useSupabaseClient()
-const { t, locale } = useI18n()
-const { currentId } = useTenant()
+const { t, te, locale } = useI18n()
 const { accessState, subscription } = useBilling()
-const pending = ref(false)
-const errorMessage = ref('')
+const { rows: usageRows } = usePlanUsage()
 
 useHead({ title: () => `${t('billing.title')} · ${t('app.name')}` })
 
@@ -12,25 +9,22 @@ function displayDate(value: string | null | undefined) {
   return value ? new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(new Date(value)) : '—'
 }
 
-const renewalDate = computed(() => subscription.value?.trial_ends_at ?? subscription.value?.current_period_end)
-
-async function openPortal() {
-  if (!currentId.value) return
-  pending.value = true
-  errorMessage.value = ''
-  try {
-    const { data, error } = await supabase.functions.invoke('stripe-portal', {
-      body: { organizationId: currentId.value },
-    })
-    if (error) throw new Error(await edgeFunctionErrorMessage(error, t('billing.portalFailed')))
-    if (!data?.url) throw new Error(data?.error ?? t('billing.portalFailed'))
-    window.location.assign(data.url)
-  }
-  catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : t('billing.portalFailed')
-  }
-  finally { pending.value = false }
-}
+const renewalDate = computed(() => accessState.value === 'trialing'
+  ? subscription.value?.trial_ends_at
+  : subscription.value?.current_period_end)
+const checkoutEnabled = computed(() => ['trialing', 'checkout_required', 'read_only'].includes(accessState.value))
+const pricingSurface = computed(() => checkoutEnabled.value
+  ? 'checkout' as const
+  : ['active', 'grace_period'].includes(accessState.value)
+    ? 'manage' as const
+    : 'display' as const)
+const currentPlanKey = computed(() => usageRows.value[0]?.plan_key ?? null)
+const currentPlanName = computed(() => {
+  const key = currentPlanKey.value
+  if (!key) return t('billing.singlePlan')
+  const translation = `billing.plans.${key}.name`
+  return te(translation) ? t(translation) : t('billing.singlePlan')
+})
 
 // The global entitlement middleware owns the initial load. Loading again from
 // onMounted made the layout remove and remount this page on every request.
@@ -43,10 +37,11 @@ async function openPortal() {
       <p class="mt-1 text-sm text-fg-muted">{{ t('billing.subtitle') }}</p>
     </header>
 
-    <div class="ls-card max-w-2xl space-y-6 p-6">
+    <div class="ls-card space-y-6 p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p class="text-lg font-bold">{{ t('billing.singlePlan') }}</p>
+          <p class="text-xs text-fg-muted">{{ t('billing.currentPlan') }}</p>
+          <p class="text-lg font-bold">{{ currentPlanName }}</p>
           <p class="text-sm text-fg-muted">{{ t(`billing.states.${accessState}`) }}</p>
         </div>
         <StatusBadge :status="accessState" />
@@ -57,11 +52,11 @@ async function openPortal() {
         <div><dt class="text-xs text-fg-muted">{{ t('billing.nextDate') }}</dt><dd class="font-semibold">{{ displayDate(renewalDate) }}</dd></div>
       </dl>
 
-      <button v-if="subscription?.provider_status" type="button" class="ls-btn ls-btn-primary" :disabled="pending" @click="openPortal">
-        {{ t('billing.manageStripe') }}
-      </button>
-      <BillingCheckout v-else compact />
-      <p v-if="errorMessage" class="ls-error" role="alert">{{ errorMessage }}</p>
+      <p v-if="subscription?.provider_status" class="text-sm text-fg-muted">
+        {{ t('billing.managedByPaymob') }}
+      </p>
+      <div id="plans"><BillingCheckout :surface="pricingSurface" compact /></div>
     </div>
+    <UsageMeters />
   </div>
 </template>

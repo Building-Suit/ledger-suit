@@ -12,6 +12,9 @@ export interface SubscriptionSummary {
   provider_status: string | null
 }
 
+export type BillingInterval = Database['public']['Enums']['billing_interval']
+export type LaunchPlanKey = 'solo' | 'starter' | 'business'
+
 // Composables are instantiated by middleware, layouts, and pages. Keep the
 // in-flight request on the Nuxt app instance so those callers await the same
 // work without sharing authenticated data between SSR requests.
@@ -29,6 +32,23 @@ export function useBilling() {
   const writesAllowed = computed(() => ['trialing', 'active', 'grace_period'].includes(accessState.value))
   const checkoutRequired = computed(() => accessState.value === 'checkout_required')
   const readOnly = computed(() => accessState.value === 'read_only')
+  // Only a workspace with no subscription is kept out of the product shell.
+  // A lapsed subscription stays inside the shell with read-only capabilities.
+  const paymentRequired = computed(() => checkoutRequired.value)
+
+  async function createCheckoutSession(
+    organizationId: string,
+    planKey: LaunchPlanKey,
+    interval: BillingInterval,
+    fallbackMessage = 'Secure checkout could not be opened.',
+  ): Promise<string> {
+    const { data, error } = await supabase.functions.invoke('paymob-checkout', {
+      body: { organizationId, planKey, interval },
+    })
+    if (error) throw new Error(await edgeFunctionErrorMessage(error, fallbackMessage))
+    if (!data?.url) throw new Error(data?.error ?? fallbackMessage)
+    return data.url as string
+  }
 
   async function load(options: { force?: boolean } = {}) {
     if (!currentId.value) {
@@ -81,5 +101,15 @@ export function useBilling() {
     return request
   }
 
-  return { accessState, subscription, loading, writesAllowed, checkoutRequired, readOnly, load }
+  return {
+    accessState,
+    subscription,
+    loading,
+    writesAllowed,
+    checkoutRequired,
+    readOnly,
+    paymentRequired,
+    createCheckoutSession,
+    load,
+  }
 }

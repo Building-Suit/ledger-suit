@@ -18,6 +18,7 @@ const pending = ref(false)
 const errorMessage = ref('')
 const describeError = useErrorMessage()
 const toasts = useToasts()
+const { refresh: refreshPlanUsage } = usePlanUsage()
 
 watch(open, async (isOpen) => {
   if (!isOpen || !currentId.value) return
@@ -41,6 +42,7 @@ async function invite() {
     if (error) throw new Error(await edgeFunctionErrorMessage(error, t('errors.generic')))
     markChanged()
     if (!data?.sent) throw new Error(data?.warning ?? t('errors.generic'))
+    await refreshPlanUsage()
     email.value = ''
     role.value = 'system:viewer'
     close()
@@ -61,6 +63,7 @@ async function invite() {
             <button type="button" class="ls-btn ls-btn-sm" :aria-label="t('common.close')" @click="close"><AppIcon name="close" /></button>
           </div>
           <p class="text-sm leading-6 text-fg-muted">{{ t('access.inviteDescription') }}</p>
+          <QuotaUsageMeter quota-key="max_members" compact />
           <FloatingField :label="t('auth.email')"><input v-model="email" type="email" class="ls-input" :placeholder="t('auth.email')" autocomplete="email" dir="ltr" required></FloatingField>
           <FloatingField :label="t('team.role')"><select v-model="role" class="ls-input">
             <option v-for="key in ['admin','accountant','data_entry','viewer']" :key="key" :value="`system:${key}`">{{ t(`org.roles.${key}`) }}</option>

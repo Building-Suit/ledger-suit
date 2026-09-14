@@ -18,7 +18,7 @@ Copy `.env.example` to `.env` and fill it in. `.env` is gitignored; only
 
 The guided signup requires email confirmation. Supabase sends a six-digit code,
 the in-app verification screen exchanges it for an authenticated session, and
-only then can the workspace RPC and Stripe Checkout run. The committed local
+only then can the workspace RPC run. The committed local
 configuration uses:
 
 - `enable_confirmations = true`
@@ -60,26 +60,70 @@ and must never be prefixed with `NUXT_PUBLIC_` or exposed to browser code.
 
 | Variable | Purpose |
 |---|---|
-| `STRIPE_SECRET_KEY` | Stripe server API authentication |
-| `STRIPE_WEBHOOK_SECRET` | Verifies the raw Stripe webhook body |
-| `STRIPE_MONTHLY_PRICE_ID` | Monthly price for the one Ledger Suit product |
-| `STRIPE_YEARLY_PRICE_ID` | Yearly price for the same product |
+| `PAYMOB_BASE_URL` | Regional Paymob API origin; Egypt defaults to `https://accept.paymob.com` |
+| `PAYMOB_SECRET_KEY` | Server-side secret key used to create payment Intentions |
+| `PAYMOB_PUBLIC_KEY` | Public key included in the Unified Checkout URL |
+| `PAYMOB_HMAC_SECRET` | Verifies Paymob transaction callbacks with HMAC-SHA512 |
+| `PAYMOB_CARD_INTEGRATION_ID` | Test-mode online 3DS/VPC integration (`5902990` for the current Paymob account) used for the first subscription transaction |
+| `PAYMOB_SOLO_MONTHLY_PLAN_ID` | Paymob plan for Solo monthly (EGP 399) |
+| `PAYMOB_SOLO_YEARLY_PLAN_ID` | Paymob plan for Solo yearly (EGP 3,255.84) |
+| `PAYMOB_STARTER_MONTHLY_PLAN_ID` | Paymob plan for Starter monthly (EGP 599) |
+| `PAYMOB_STARTER_YEARLY_PLAN_ID` | Paymob plan for Starter yearly (EGP 4,887.84) |
+| `PAYMOB_BUSINESS_MONTHLY_PLAN_ID` | Paymob plan for Business monthly (EGP 1,099) |
+| `PAYMOB_BUSINESS_YEARLY_PLAN_ID` | Paymob plan for Business yearly (EGP 8,967.84) |
 | `RESEND_API_KEY` | Sends invitation and operational notification emails |
 | `RESEND_FROM_EMAIL` | Verified sender: `notification@building-suit.com` |
-| `APP_BASE_URL` | Checkout/portal return URL and email-link origin |
+| `APP_BASE_URL` | Checkout return URL and email-link origin |
+
+Secret and public keys are mode-specific. Copy the Test values while the app is
+in Paymob Test mode, and replace them together with the Integration ID when
+moving to Live mode. The Egypt API origin is the same in both modes.
+
+Two additional values are used only while provisioning plans from a trusted
+developer machine; the deployed Edge Functions do not read them:
+
+| Variable | Purpose |
+|---|---|
+| `PAYMOB_API_KEY` | Generates the temporary Bearer token used by Paymob's subscription-plan API; Paymob uses the same API key in Test and Live modes |
+| `PAYMOB_MOTO_INTEGRATION_ID` | MIGS MOTO integration used by Paymob for automatic, customer-not-present renewal deductions |
+
+Do not substitute the online card Integration ID for the MOTO Integration ID.
+The online ID handles the customer's initial 3DS checkout; MOTO handles later
+automatic deductions.
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are supplied
 to deployed Supabase Edge Functions by the platform. The service role key is
-used only by the verified Stripe webhook and scheduled email worker.
+used by the verified Paymob webhook, scheduled notification worker, and
+storage-cleanup worker. It must never be exposed to browser code.
 
-The sandbox Stripe catalog uses one Ledger Suit product with EGP 600 monthly
-and EGP 4,800 yearly recurring prices. Their Stripe Price objects remain the
-authoritative checkout values; the UI displays the configured amounts and
-Checkout confirms them before the customer starts the trial.
+The Paymob account needs monthly and yearly subscription plans for Solo,
+Starter, and Business, with `use_transaction_amount` enabled. Their amounts must
+match the six database prices; the checkout function always takes the charged
+amount from that database catalog.
+
+Once Paymob enables MOTO, put `PAYMOB_API_KEY`,
+`PAYMOB_MOTO_INTEGRATION_ID` in the ignored local
+`.env`, then provision or safely reuse the plans:
+
+```bash
+pnpm paymob:provision-plans -- \
+  --webhook-url=https://<project-ref>.supabase.co/functions/v1/paymob-webhook
+```
+
+The command refuses to duplicate a named plan whose settings differ and prints
+the resulting six plan IDs. Add all six IDs to Supabase Edge Function Secrets.
+`PAYMOB_API_KEY` and
+`PAYMOB_MOTO_INTEGRATION_ID` do not need to remain in the deployed runtime.
+
+The plans are shared, but each organization creates a distinct Paymob
+subscription. Organization, plan, price, interval, and amount identity are
+server-signed in the Intention extras so the verified callback activates exactly
+one workspace on the purchased database plan.
 
 ## Supabase Vault scheduler secrets
 
-The email Cron job reads two values from Supabase Vault:
+The notification-email and storage-cleanup Cron jobs read two values from
+Supabase Vault:
 
 - `ledger_suit_project_url` — the Supabase project URL, without a trailing slash
 - `ledger_suit_service_role_key` — the server-only service role key

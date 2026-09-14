@@ -244,29 +244,85 @@ profile is gone.
 
 ## 8. Subscription access
 
-There is one public product: Ledger Suit, billed monthly or yearly through
-Stripe. Creating an organization inserts a `suspended` subscription and does
-**not** start access. Only a signature-verified Stripe event can attach the
-provider subscription and begin the 14-day trial.
+The database contains a dormant launch catalog for Solo, Starter, Business, and
+the non-purchasable Scale preview. Existing organizations, trials, checkout,
+and Paymob webhooks continue to use the private active `ledger_suit`
+compatibility plan until the later plan-aware checkout and approved customer
+migration steps. Creating an organization starts a cardless 14-day trial. After
+it expires, only a signature-verified Paymob transaction can attach the current
+provider subscription and restore paid access.
+
+`subscription_plans.is_purchasable` is the server-authoritative distinction
+between something that can appear publicly and something checkout may sell.
+`app.resolve_purchasable_plan()` resolves only an active, public, purchasable
+plan plus an active commercial price. Scale, Enterprise, and the compatibility
+plan cannot resolve. Enterprise is intentionally not a plan row.
+
+Raw plan tables are not client-readable because price rows may later carry
+provider mappings. `public.subscription_plan_catalog()` is executable by public
+and authenticated clients and returns only public commercial prices and
+entitlements; provider identifiers are omitted.
 
 The central capability predicate applies subscription state after role and
 member overrides. Read capabilities and `billing.manage` remain available;
 every other mutation requires `trialing`, `active`, or a time-bounded payment
 grace period. A lapsed organization therefore keeps its financial history but
 cannot post, edit, invite, import, export, or run scheduled accounting writes.
-This is a database rule, not a frontend redirect.
+`read_only` is returned for expired trials and periods, exhausted grace,
+suspension, and cancellation. `checkout_required` is reserved for the invalid
+case where an organization has no subscription row. RLS policies and controlled
+RPCs enforce this distinction; the product shell mirrors it with a persistent
+read-only notice and no mutation actions.
 
-Entitlements are evaluated in exactly two places:
+Public UI lookups retain their original signatures:
 
 ```sql
 public.can_use_feature(organization_id, feature_key)
 public.get_limit(organization_id, limit_key)   -- NULL = unlimited, 0 = denied
+public.get_usage(organization_id, quota_key)
+public.subscription_usage_summary(organization_id)
 ```
+
+The usage APIs are tenant checked and use the same counting predicates as
+enforcement. The summary reports subscription write access separately from
+plan capacity, so an expired subscription and an active subscription at quota
+remain distinct states. It also exposes over-limit state without deleting or
+hiding existing resources after a downgrade.
+
+Trusted database write paths use private `app` helpers. Raw entitlement
+resolution deliberately ignores membership and subscription status, then the
+calling path applies access control independently. Missing entitlements on the
+private `ledger_suit` compatibility plan remain unlimited; missing launch-plan
+entitlements fail closed as configuration errors. Feature and quota assertions
+return stable error prefixes for localization and upgrade actions.
+
+Every quota-increasing write must call `app.assert_plan_quota()` in its
+transaction before inserting or reactivating a resource. The assertion derives
+one advisory-lock key from the organization UUID and canonical quota key,
+holds that lock until transaction end, and recounts usage after locking. This
+serializes competing writes for the same organization and resource while
+allowing unrelated tenants and resource types to proceed independently.
+
+Workspace seat usage is the number of active memberships plus unexpired
+pending invitations. Database triggers protect both tables, including
+privileged direct writes. Creating an invitation, renewing an expired one, and
+reactivating a suspended member must acquire `max_members` capacity. Accepting
+a live invitation converts its existing reservation into an active membership
+while holding the same lock, so concurrent requests cannot overbook a plan.
+Expired or revoked invitations and suspended members do not consume capacity.
+Suspension, revocation, and removal remain available while over limit, and a
+downgrade never deletes membership or invitation history.
+
+The current monthly-transaction usage projection uses `posted_at` within the
+organization-timezone calendar month. The transaction-quota step will persist
+immutable month boundaries before it activates enforcement. Storage currently
+reports committed attachment metadata; its enforcement step will add live
+upload reservations to the same usage contract.
 
 `billing_events` is unique on `(provider, provider_event_id)`, which is what
 makes webhook processing idempotent no matter how often a provider retries.
-The webhook verifies Stripe's HMAC over the untouched request body before it
-calls the service-only database transition function.
+The webhook verifies Paymob's fixed-field HMAC-SHA512 signature before it calls
+the service-only database transition function.
 
 Supabase Cron runs recurring transactions, commitment reminders, and automatic
 commitment conversions every 15 minutes. It skips organizations without write
@@ -297,9 +353,10 @@ validation fails, none of the workspace survives. The function resolves the
 caller through `auth.uid()`, refuses replay for an existing active member, fixes
 its `search_path`, and grants execution only to authenticated users.
 
-Stripe Checkout is the final signup step. Until its signed webhook activates
-the trial, the database removes write capabilities. A partially paid or
-client-forged workspace therefore cannot enter normal use.
+Paymob Unified Checkout is required after the cardless trial expires. Until its
+signed webhook activates paid access, the database removes product
+capabilities. A partially paid or client-forged workspace therefore cannot
+re-enter normal use.
 
 The authenticated shell exposes one global floating add control. Its drawer is
 derived from the caller's capabilities and delegates to the existing controlled
@@ -330,8 +387,8 @@ Organization invitations return a one-time token, store only its SHA-256 hash,
 verify the signed-in user's email on acceptance, and create membership in the
 same database transaction.
 
-A suspended or cancelled subscription switches features off but never destroys
-financial history.
+A lapsed, suspended, or cancelled subscription switches feature entitlements
+and product mutations off but never destroys or hides financial history.
 
 ---
 

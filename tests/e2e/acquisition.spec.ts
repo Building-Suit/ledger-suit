@@ -74,43 +74,40 @@ test('an invited user verifies email, creates a password, joins, and can sign in
   await expect(page).toHaveURL('/dashboard')
 })
 
-test('landing page explains the product and leads to paid onboarding', async ({ page }) => {
+test('landing page explains the product and leads to a cardless trial', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Run your finances')
   await expect(page.getByRole('link', { name: 'Start 14-day trial' }).first()).toBeVisible()
-  await expect(page.getByText('EGP 600 / month')).toBeVisible()
-  await expect(page.getByText('EGP 4,800 / year')).toBeVisible()
+  await expect(page.getByText('14 days free · No credit card required')).toBeVisible()
+  await expect(page.locator('[data-plan="solo"]')).toContainText('EGP 399')
+  await expect(page.locator('[data-plan="starter"]')).toContainText('EGP 599')
+  await expect(page.locator('[data-plan="business"]')).toContainText('EGP 1,099')
 
   await page.getByRole('link', { name: 'Start 14-day trial' }).first().click()
   await expect(page).toHaveURL('/signup')
   await expect(page.getByLabel('Full name')).toBeVisible()
   await expect(page.getByLabel('Phone number')).toBeVisible()
   await expect(page.getByLabel('Job title')).toBeVisible()
+  await expect(page.getByText('14-day free trial — no credit card required')).toBeVisible()
 })
 
-test('signup verifies email by OTP before provisioning and checkout', async ({ page }) => {
-  const email = `otp-${Date.now()}@ledgersuit.test`
-  const appOrigin = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT ?? '3210'}`
-  await page.route('**/functions/v1/stripe-checkout', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({ url: `${appOrigin}/billing/ready?session_id=otp-test` }),
-  }))
+test('signup verifies email by OTP before provisioning the free trial', async ({ page }) => {
+  const unique = Date.now()
+  const email = `otp-${unique}@ledgersuit.test`
 
   await page.goto('/signup')
   await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
   await page.getByLabel('Full name').fill('OTP Test Owner')
-  await page.getByLabel('Phone number').fill('+201000000000')
+  await page.getByLabel('Phone number').fill(`+2010${String(unique).slice(-8)}`)
   await page.getByLabel('Job title').fill('Founder')
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill('otp-test-password')
   await page.getByRole('button', { name: 'Continue' }).click()
 
   await expect(page.getByRole('heading', { name: 'Business setup' })).toBeVisible()
-  await page.locator('#org-display-name').fill('OTP Test Books')
-  await page.locator('#org-legal-name').fill('OTP Test Books LLC')
-  await page.getByRole('button', { name: 'Continue' }).click()
-  await page.getByRole('button', { name: 'Create account and continue to Stripe' }).click()
+  await page.locator('#org-display-name').fill(`OTP Test Books ${unique}`)
+  await page.locator('#org-legal-name').fill(`OTP Test Books ${unique} LLC`)
+  await page.getByRole('button', { name: 'Create account and start free trial' }).click()
 
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
   await expect(page.getByText(email)).toBeVisible()
@@ -121,9 +118,60 @@ test('signup verifies email by OTP before provisioning and checkout', async ({ p
   for (let index = 0; index < 6; index++) {
     await page.getByLabel(`Verification code digit ${index + 1}`).fill(otp[index]!)
   }
-  await page.getByRole('button', { name: 'Verify and continue to Stripe' }).click()
+  await page.getByRole('button', { name: 'Verify and start free trial' }).click()
 
-  await expect(page).toHaveURL(/\/billing\/ready\?session_id=otp-test/)
+  await expect(page).toHaveURL('/dashboard')
+  await expect(page.getByText(/Trial: (13d 23h|14d 0h)/)).toBeVisible()
+  await page.getByRole('button', { name: 'Account menu' }).click()
+  await page.getByRole('menuitem', { name: 'Subscription' }).click()
+  await expect(page.getByTestId('trial-summary')).toContainText('14-Day Free Trial')
+  await expect(page.getByTestId('trial-summary')).toContainText('No card was required')
+  await expect(page.locator('#usage [data-quota="max_monthly_transactions"]')).toContainText('0 / 10,000')
+})
+
+test('signup continues to its saved organization after the OTP tab is closed', async ({ page }) => {
+  const uniqueSuffix = String(Date.now())
+  const email = `otp-recovery-${uniqueSuffix}@ledgersuit.test`
+  const password = 'otp-recovery-password'
+
+  await page.goto('/signup')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await page.getByLabel('Full name').fill('Recovery Test Owner')
+  await page.getByLabel('Phone number').fill(`+2011${uniqueSuffix.slice(-8)}`)
+  await page.getByLabel('Job title').fill('Founder')
+  await page.getByLabel('Email').fill(email)
+  await page.getByLabel('Password').fill(password)
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.locator('#org-display-name').fill('Recovered Books')
+  await page.locator('#org-legal-name').fill(`Recovered Books ${uniqueSuffix} LLC`)
+  await page.getByRole('button', { name: 'Create account and start free trial' }).click()
+  await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
+
+  const recoveryPage = await page.context().newPage()
+  await page.close()
+
+  await recoveryPage.goto('/login')
+  await expect(recoveryPage.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await recoveryPage.getByLabel('Email').fill(email)
+  await recoveryPage.getByLabel('Password').fill(password)
+  await recoveryPage.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(recoveryPage).toHaveURL(/\/verify-email\?email=/)
+
+  const otp = await readOtp(email)
+  for (let index = 0; index < 6; index++) {
+    await recoveryPage.getByLabel(`Verification code digit ${index + 1}`).fill(otp[index]!)
+  }
+  const signupNavigations: string[] = []
+  recoveryPage.on('framenavigated', (frame) => {
+    if (frame === recoveryPage.mainFrame() && new URL(frame.url()).pathname === '/signup') {
+      signupNavigations.push(frame.url())
+    }
+  })
+  await recoveryPage.getByRole('button', { name: 'Verify and start free trial' }).click()
+
+  await expect(recoveryPage).toHaveURL('/dashboard')
+  await expect(recoveryPage.getByText(/Trial: (13d 23h|14d 0h)/)).toBeVisible()
+  expect(signupNavigations).toEqual([])
 })
 
 test('the dedicated OTP route presents verification without the product shell', async ({ page }) => {
@@ -131,6 +179,19 @@ test('the dedicated OTP route presents verification without the product shell', 
   await expect(page.getByRole('heading', { name: 'Verify your email' })).toBeVisible()
   await expect(page.getByText('unconfirmed@ledgersuit.test')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
+})
+
+test('a signed-in user can open login to switch accounts', async ({ page }) => {
+  await page.goto('/login')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await page.getByLabel('Email').fill('owner@alpha.test')
+  await page.getByLabel('Password').fill('ledgersuit')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page).toHaveURL('/dashboard')
+
+  await page.goto('/login')
+  await expect(page).toHaveURL('/login')
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
 })
 
 test('an unpaid workspace is sent to payment before the product shell', async ({ page }) => {
@@ -149,6 +210,44 @@ test('an unpaid workspace is sent to payment before the product shell', async ({
   await expect(page).toHaveURL('/subscribe')
   await expect(page.getByRole('heading', { name: 'Activate Alpha Trading' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveCount(0)
+})
+
+test('a lapsed workspace keeps readable history without mutation actions', async ({ page }) => {
+  await page.route('**/rest/v1/rpc/subscription_access_state', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify('read_only'),
+  }))
+  await page.route('**/rest/v1/rpc/my_capabilities', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([
+      'accounts.read',
+      'attachments.read',
+      'billing.manage',
+      'billing.read',
+      'reports.read',
+      'transactions.read',
+    ]),
+  }))
+
+  await page.goto('/login')
+  await expect(page.locator('form')).toHaveAttribute('data-hydrated', 'true')
+  await page.getByLabel('Email').fill('owner@alpha.test')
+  await page.getByLabel('Password').fill('ledgersuit')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+
+  await expect(page).toHaveURL('/dashboard')
+  await expect(page.getByText('This workspace is read-only')).toBeVisible()
+  await expect(page.getByText('You can continue viewing records, attachments, and reports.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Restore subscription' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Transactions' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Reports' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Expense', exact: true })).toHaveCount(0)
+
+  await page.getByRole('link', { name: 'Accounts', exact: true }).first().click()
+  await expect(page.getByRole('tab', { name: 'Assets' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add account' })).toHaveCount(0)
 })
 
 test('billing stays mounted and product navigation remains client-side', async ({ page }) => {

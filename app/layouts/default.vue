@@ -15,7 +15,9 @@ const NAV_GROUPS = computed(() => [
   {
     key: 'transactions',
     links: [
-      ...(can('transactions.read') ? [{ to: '/transactions', label: 'nav.allTransactions' }, ...TRANSACTION_LINKS] : []),
+      ...(can('transactions.read') ? [{ to: '/transactions', label: 'nav.allTransactions' }] : []),
+      ...(can('imports.create') ? [{ to: '/imports', label: 'nav.importTransactions' }] : []),
+      ...(can('transactions.create') ? TRANSACTION_LINKS : []),
     ],
   },
   {
@@ -38,7 +40,10 @@ const NAV_GROUPS = computed(() => [
   },
   {
     key: 'workspace',
-    links: can('members.read') ? [{ to: '/team', label: 'nav.teamInvitations' }] : [],
+    links: [
+      ...(can('members.read') ? [{ to: '/team', label: 'nav.teamInvitations' }] : []),
+      ...(can('audit.read') ? [{ to: '/audit', label: 'nav.auditHistory' }] : []),
+    ],
   },
   {
     key: 'insights',
@@ -52,7 +57,7 @@ const { current, currentId, loadOrganizations, loading } = useTenant()
 const { can } = useTenant()
 const {
   accessState,
-  checkoutRequired,
+  paymentRequired,
   readOnly,
   load: loadBilling,
 } = useBilling()
@@ -79,7 +84,7 @@ function isActive(to: string) {
 </script>
 
 <template>
-  <div v-if="accessState === 'loading' || checkoutRequired" class="min-h-dvh bg-background" aria-busy="true" />
+  <div v-if="accessState === 'loading' || paymentRequired" class="min-h-dvh bg-background" aria-busy="true" />
   <div v-else class="min-h-dvh bg-background lg:grid lg:grid-cols-[17rem_1fr] lg:gap-4 lg:p-4">
     <!-- Shown/hidden rather than slid off-screen with a transform: a translate
          utility that silently fails to apply leaves the drawer sitting on top
@@ -103,7 +108,7 @@ function isActive(to: string) {
           </button>
         </div>
 
-        <OrganizationSwitcher />
+        <hr class="my-2 border-[var(--bs-border)]">
 
         <nav :aria-label="t('nav.primary')" class="min-h-0 flex-1 space-y-5 overflow-y-auto pe-1">
           <NuxtLink
@@ -155,12 +160,12 @@ function isActive(to: string) {
           <AppIcon name="menu" />
         </button>
 
-        <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-semibold">{{ current?.name }}</p>
-        </div>
+        <div class="min-w-0 flex-1" />
 
+        <TrialCountdown />
         <NotificationMenu />
         <AccountMenu />
+        <OrganizationSwitcher class="w-64" />
       </header>
 
       <main class="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 pb-24 lg:px-8 lg:pb-6">

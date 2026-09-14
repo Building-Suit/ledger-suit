@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import type { Database } from '~~/types/database.types'
+
 definePageMeta({ layout: false })
 
-const supabase = useSupabaseClient()
+const supabase = useSupabaseClient<Database>()
 const route = useRoute()
 const { t } = useI18n()
 const { restore } = useTheme()
+const describeError = useErrorMessage()
 
 useHead({ title: () => `${t('onboarding.otpTitle')} · ${t('app.name')}` })
 
@@ -15,6 +18,8 @@ const errorMessage = ref('')
 const expiresAt = ref(Date.now() + 60 * 60 * 1000)
 const resendAvailableAt = ref(Date.now() + 60 * 1000)
 const now = ref(Date.now())
+const verified = ref(false)
+const ONBOARDING_STORAGE_KEY = 'ledger-suit.pending-onboarding'
 const expired = computed(() => now.value >= expiresAt.value)
 const resendIn = computed(() => Math.max(0, Math.ceil((resendAvailableAt.value - now.value) / 1000)))
 
@@ -23,21 +28,38 @@ function formatCountdown(seconds: number) {
 }
 
 async function verify() {
-  if (!email.value || otp.value.length !== 6 || expired.value) return
+  if (!email.value || pending.value) return
   pending.value = true
   errorMessage.value = ''
   try {
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: email.value,
-      token: otp.value,
-      type: 'email',
-    })
-    if (error || !data.session) throw new Error(t('onboarding.otpInvalid'))
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+    if (sessionData.session?.user.email?.toLowerCase() === email.value) verified.value = true
+
+    if (!verified.value) {
+      if (otp.value.length !== 6 || expired.value) return
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email.value,
+        token: otp.value,
+        type: 'email',
+      })
+      if (error || !data.session) throw new Error(t('onboarding.otpInvalid'))
+      verified.value = true
+    }
+
+    const { data: organizationId, error: resumeError } = await supabase.rpc('resume_saved_signup')
+    if (resumeError) throw new Error(describeError(resumeError))
+    if (!organizationId) {
+      await navigateTo('/signup')
+      return
+    }
+
+    sessionStorage.removeItem(ONBOARDING_STORAGE_KEY)
     await navigateTo('/dashboard')
   }
   catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : t('onboarding.otpInvalid')
-    otp.value = ''
+    errorMessage.value = error instanceof Error ? error.message : t('errors.generic')
+    if (!verified.value) otp.value = ''
   }
   finally { pending.value = false }
 }
@@ -79,10 +101,10 @@ onBeforeUnmount(() => clearInterval(timer))
           <p class="mt-1 break-all font-bold" dir="ltr">{{ email }}</p>
         </div>
         <div class="mx-auto mt-8 max-w-md">
-          <OtpInput v-model="otp" :label="t('onboarding.otpLabel')" :disabled="pending || expired" />
+          <OtpInput v-model="otp" :label="t('onboarding.otpLabel')" :disabled="pending || expired || verified" />
           <div class="mt-4 flex items-center justify-between gap-4 text-xs text-fg-muted" aria-live="polite"><span v-if="!expired">{{ t('onboarding.otpExpiresIn', { time: formatCountdown(Math.max(0, Math.ceil((expiresAt - now) / 1000))) }) }}</span><span v-else class="font-semibold text-danger">{{ t('onboarding.otpExpired') }}</span><span>{{ t('onboarding.otpAttemptsHint') }}</span></div>
           <p v-if="errorMessage" class="ls-error mt-6" role="alert">{{ errorMessage }}</p>
-          <button class="ls-btn ls-btn-primary mt-6 w-full" :disabled="pending || otp.length !== 6 || expired">{{ pending ? t('onboarding.otpVerifying') : t('onboarding.otpVerify') }}</button>
+          <button class="ls-btn ls-btn-primary mt-6 w-full" :disabled="pending || (!verified && (otp.length !== 6 || expired))">{{ pending ? t('onboarding.otpVerifying') : (verified ? t('billing.startTrial') : t('onboarding.otpVerify')) }}</button>
           <p class="mt-6 text-center text-sm text-fg-muted"><span>{{ t('onboarding.otpMissing') }}</span><button type="button" class="ms-1 font-bold text-link disabled:text-fg-muted" :disabled="pending || resendIn > 0" @click="resend">{{ resendIn > 0 ? t('onboarding.otpResendIn', { time: formatCountdown(resendIn) }) : t('onboarding.otpResend') }}</button></p>
           <div class="mt-8 rounded-card border border-[var(--bs-border)] bg-surface-muted p-4 text-sm text-fg-muted"><p class="font-bold text-fg">{{ t('onboarding.otpSecurityTitle') }}</p><p class="mt-1">{{ t('onboarding.otpSecurityBody') }}</p></div>
         </div>

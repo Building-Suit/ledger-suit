@@ -18,6 +18,7 @@ const { can, currentId } = useTenant()
 const toasts = useToasts()
 const { t, locale } = useI18n()
 const describeError = useErrorMessage()
+const { refresh: refreshPlanUsage } = usePlanUsage()
 
 const reversing = ref(false)
 const reason = ref('')
@@ -69,12 +70,37 @@ async function uploadAttachment(event: Event) {
   try {
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin'
     const key = `${currentId.value}/transaction/${props.transactionId}/${crypto.randomUUID()}.${ext}`
-    const { error: uploadError } = await supabase.storage.from('attachments').upload(key, file)
-    if (uploadError) throw uploadError
-    const { data: user } = await supabase.auth.getUser()
-    const { error } = await supabase.from('attachments').insert({ organization_id: currentId.value, entity_type: 'transaction', entity_id: props.transactionId, file_name: file.name, mime_type: file.type, size_bytes: file.size, storage_key: key, uploaded_by: user.user?.id })
-    if (error) { await supabase.storage.from('attachments').remove([key]); throw error }
-    await refreshAttachments(); emit('changed')
+    const { data: reservationId, error: reserveError } = await supabase.rpc('reserve_attachment_upload', {
+      p_organization_id: currentId.value,
+      p_entity_type: 'transaction',
+      p_entity_id: props.transactionId,
+      p_file_name: file.name,
+      p_mime_type: file.type,
+      p_size_bytes: file.size,
+      p_storage_key: key,
+    })
+    if (reserveError) throw reserveError
+
+    const { error: uploadError } = await supabase.storage.from('attachments').upload(key, file, {
+      contentType: file.type,
+      upsert: false,
+    })
+    if (uploadError) {
+      await supabase.rpc('abort_attachment_upload', { p_reservation_id: reservationId })
+      throw uploadError
+    }
+
+    let { error: commitError } = await supabase.rpc('commit_attachment_upload', { p_reservation_id: reservationId })
+    if (commitError) {
+      const retry = await supabase.rpc('commit_attachment_upload', { p_reservation_id: reservationId })
+      commitError = retry.error
+    }
+    if (commitError) {
+      await supabase.storage.from('attachments').remove([key])
+      await supabase.rpc('abort_attachment_upload', { p_reservation_id: reservationId })
+      throw commitError
+    }
+    await refreshAttachments(); await refreshPlanUsage(); emit('changed')
   }
   catch (error) { errorMessage.value = describeError(error) }
   finally { uploading.value = false; (event.target as HTMLInputElement).value = '' }
@@ -87,11 +113,11 @@ async function downloadAttachment(item: NonNullable<typeof attachments.value>[nu
 }
 
 async function deleteAttachment(item: NonNullable<typeof attachments.value>[number]) {
-  const { error: storageError } = await supabase.storage.from(item.storage_bucket).remove([item.storage_key])
-  if (storageError) return (errorMessage.value = describeError(storageError))
-  const { error } = await supabase.from('attachments').delete().eq('id', item.id)
+  const { data, error } = await supabase.rpc('begin_attachment_delete', { p_attachment_id: item.id })
   if (error) return (errorMessage.value = describeError(error))
-  await refreshAttachments(); emit('changed')
+  const cleanup = data?.[0]
+  if (cleanup) await supabase.storage.from(cleanup.storage_bucket).remove([cleanup.storage_key])
+  await refreshAttachments(); await refreshPlanUsage(); emit('changed')
 }
 
 const { data: detail, refresh } = useLazyAsyncData(
@@ -149,6 +175,7 @@ async function reverse() {
     confirming.value = false
     reason.value = ''
     await refresh()
+    await refreshPlanUsage()
     emit('changed')
   }
   catch (err) {
@@ -255,6 +282,7 @@ async function reverse() {
 
           <section aria-labelledby="attachments-heading">
             <div class="mb-2 flex items-center justify-between"><h3 id="attachments-heading" class="text-sm font-bold">{{ t('operations.attachments') }}</h3><label v-if="can('attachments.create')" class="ls-btn ls-btn-sm cursor-pointer">{{ uploading ? t('common.saving') : t('operations.upload') }}<input type="file" class="sr-only" accept="application/pdf,image/png,image/jpeg,image/webp" :disabled="uploading" @change="uploadAttachment"></label></div>
+            <QuotaUsageMeter v-if="can('attachments.create')" quota-key="max_storage_bytes" compact class="mb-3" />
             <div v-if="attachments.length" class="space-y-2"><div v-for="item in attachments" :key="item.id" class="flex items-center justify-between rounded-control bg-surface-muted px-3 py-2 text-sm"><button class="truncate text-link" @click="downloadAttachment(item)">{{ item.file_name }}</button><button v-if="can('attachments.delete')" class="ls-btn ls-btn-sm" :aria-label="t('common.delete')" @click="deleteAttachment(item)"><AppIcon name="delete" :size="18" /></button></div></div><p v-else class="text-sm text-fg-muted">{{ t('operations.noAttachments') }}</p>
           </section>
 
