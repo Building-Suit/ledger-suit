@@ -1,16 +1,11 @@
 <script setup lang="ts">
-definePageMeta({ layout: false })
+definePageMeta({ layout: 'marketing' })
 
 const { t } = useI18n()
-const user = useSupabaseUser()
-const { restore } = useTheme()
-const hydrated = ref(false)
-
-onMounted(() => {
-  restore()
-  hydrated.value = true
-})
-useHead({ title: () => `${t('landing.title')} · ${t('app.name')}` })
+useHead(() => ({
+  title: `${t('landing.title')} · ${t('app.name')}`,
+  meta: [{ name: 'description', content: t('landing.metaDescription') }],
+}))
 
 const features = [
   { icon: 'cash', key: 'cashflow' },
@@ -23,24 +18,7 @@ const features = [
 </script>
 
 <template>
-  <div class="min-h-dvh bg-background text-fg" :data-hydrated="hydrated">
-    <header class="sticky top-0 z-30 border-b-2 border-brand-gold bg-background/90 backdrop-blur-xl">
-      <div class="mx-auto flex min-h-16 max-w-7xl items-center gap-4 px-4 lg:px-8">
-        <NuxtLink to="/" class="inline-flex" aria-label="Ledger Suit home">
-          <AppLogo class="h-inhert my-2 w-auto max-w-52" />
-        </NuxtLink>
-        <nav class="ms-auto hidden items-center gap-6 text-sm text-fg-muted md:flex" :aria-label="t('landing.navigation')">
-          <a href="#features" class="hover:text-fg">{{ t('landing.navFeatures') }}</a>
-          <a href="#workflow" class="hover:text-fg">{{ t('landing.navWorkflow') }}</a>
-          <a href="#pricing" class="hover:text-fg">{{ t('landing.navPricing') }}</a>
-        </nav>
-        <SettingsMenu />
-        <NuxtLink :to="user ? '/dashboard' : '/login'" class="ls-btn ls-btn-sm hidden sm:inline-flex">{{ user ? t('landing.openApp') : t('auth.signIn') }}</NuxtLink>
-        <NuxtLink v-if="!user" to="/signup" class="ls-btn ls-btn-primary ls-btn-sm">{{ t('landing.startTrial') }}</NuxtLink>
-      </div>
-    </header>
-
-    <main>
+  <main>
       <section class="ls-landing-hero relative overflow-hidden border-b border-brand-gold">
         <div class="ls-hero-grid absolute inset-0 opacity-40" aria-hidden="true" />
         <div class="relative mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 lg:grid-cols-[1.05fr_.95fr] lg:px-8 lg:py-24">
@@ -106,8 +84,5 @@ const features = [
         <p class="mx-auto mt-4 max-w-2xl text-fg-muted">{{ t('landing.pricingBody') }}</p>
         <BillingCheckout class="mt-8" surface="public" />
       </section>
-    </main>
-
-    <footer class="border-t border-[var(--bs-border)] py-8"><div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 text-xs text-fg-muted lg:px-8"><span dir="ltr">© 2026 Building Suit</span><span>{{ t('landing.footer') }}</span></div></footer>
-  </div>
+  </main>
 </template>

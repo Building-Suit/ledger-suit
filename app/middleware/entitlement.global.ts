@@ -1,4 +1,16 @@
-const PUBLIC_PATHS = new Set(['/', '/login', '/signup', '/verify-email', '/accept-invitation'])
+const PUBLIC_PATHS = new Set([
+  '/',
+  '/login',
+  '/signup',
+  '/verify-email',
+  '/accept-invitation',
+  '/about',
+  '/contact',
+  '/terms',
+  '/privacy',
+  '/delivery-shipping',
+  '/refund-cancellation',
+])
 
 /**
  * Keep a workspace with no subscription in the checkout journey. Lapsed
