@@ -3,6 +3,11 @@
 How Ledger Suit stays correct: what enforces tenancy, what enforces accounting,
 and where the boundaries sit.
 
+Audited intended code at `8de315838b0d6a23e0bf523813a29c9d9e8bd13d` on 2026-09-18;
+these are implementation descriptions, not deployed or accountant acceptance.
+See [current audit](accounting-v2/CURRENT_STATE_AUDIT.md) and
+[current status](launch/CURRENT_STATUS.md) for gaps and verification limits.
+
 ---
 
 ## 1. The tenant boundary
@@ -72,9 +77,11 @@ hide what the user cannot do — while the database independently enforces it.
 
 ### Helper functions
 
-All helpers live in the private `app` schema, which is **not** in PostgREST's
-exposed-schema list, so no client can call them directly. They are
-`SECURITY DEFINER` with `search_path = ''` and fully qualified identifiers.
+Authorization helpers live in the private `app` schema, which is **not** in
+the committed PostgREST exposed-schema list. Selected helpers are granted for
+policy evaluation; public RPC grants and deployed exposure must be reviewed.
+Privileged helpers use `SECURITY DEFINER`; others use invoker semantics. Inspected
+accounting helpers fix `search_path = ''` and qualify identifiers.
 
 One subtlety worth knowing: `app.is_service_context()` deliberately does **not**
 test `current_user`. Inside a `SECURITY DEFINER` function `current_user` is the
@@ -181,7 +188,9 @@ If any line fails, the whole posting rolls back. A partial journal cannot exist.
 
 ### Product-facing flows
 
-The user never picks a debit or a credit. These functions derive the journal:
+Transaction wizards derive the journal below; manual adjustment and opening
+workflows expose accounting choices. Accounting V2 will make resulting lines
+and debit/credit meaning explicit without creating a second ledger:
 
 | RPC | Journal |
 |---|---|
@@ -244,13 +253,23 @@ profile is gone.
 
 ## 8. Subscription access
 
-The database contains a dormant launch catalog for Solo, Starter, Business, and
-the non-purchasable Scale preview. Existing organizations, trials, checkout,
-and Paymob webhooks continue to use the private active `ledger_suit`
-compatibility plan until the later plan-aware checkout and approved customer
-migration steps. Creating an organization starts a cardless 14-day trial. After
-it expires, only a signature-verified Paymob transaction can attach the current
-provider subscription and restore paid access.
+The committed launch catalog sells Solo, Starter and Business; Scale is a
+non-purchasable preview and Enterprise is presentation/contact only. The final
+`app.start_default_subscription` override in
+[20260913225446_business_level_trial.sql](../supabase/migrations/20260913225446_business_level_trial.sql)
+creates a private, non-purchasable 14-day `trial`, with Business product limits
+except Priority Support, without card, price or paid-plan selection. Existing
+`ledger_suit`/`legacy_*` compatibility subscriptions are preserved.
+
+Plan-aware checkout from
+[20260913105458_plan_aware_paymob_checkout.sql](../supabase/migrations/20260913105458_plan_aware_paymob_checkout.sql)
+and the Paymob functions resolves `{ organizationId, planKey, interval }` against
+the database price and server-only provider mapping. Verified signed callbacks
+fulfill the selected plan. The final
+[trial-aware preflight wrapper](../supabase/migrations/20260913231456_distinguish_trial_plan_change.sql)
+requires checkout for trial conversion; paid plan changes remain read-only
+impact analysis/manual handoff. Provider configuration and deployed behavior
+remain separately unverified.
 
 `subscription_plans.is_purchasable` is the server-authoritative distinction
 between something that can appear publicly and something checkout may sell.
@@ -313,11 +332,14 @@ Expired or revoked invitations and suspended members do not consume capacity.
 Suspension, revocation, and removal remain available while over limit, and a
 downgrade never deletes membership or invitation history.
 
-The current monthly-transaction usage projection uses `posted_at` within the
-organization-timezone calendar month. The transaction-quota step will persist
-immutable month boundaries before it activates enforcement. Storage currently
-reports committed attachment metadata; its enforcement step will add live
-upload reservations to the same usage contract.
+Monthly transaction enforcement now persists immutable workspace-timezone
+calendar-month buckets and counts transitions into posted state, including
+reversals ([migration](../supabase/migrations/20260912094117_monthly_posted_transaction_quota.sql)).
+Storage counts committed metadata plus live upload reservations through
+reserve/commit/abort/delete APIs
+([migration](../supabase/migrations/20260911205305_aggregate_attachment_storage_quota.sql)).
+Plan-transition locks were later hardened in
+[20260913171823](../supabase/migrations/20260913171823_launch_plan_concurrency_hardening.sql).
 
 `billing_events` is unique on `(provider, provider_event_id)`, which is what
 makes webhook processing idempotent no matter how often a provider retries.
@@ -336,8 +358,9 @@ credentials read from Supabase Vault; queue rows are claimed with
 
 `/` is public product information, `/signup` is the guided account journey, and
 `/dashboard` is the authenticated application entry. Signup gathers the owner
-profile, legal business details, country, currency, timezone, fiscal-year start,
-and billing interval before creating anything. Supabase Auth then sends a
+profile, legal business details, country, currency, timezone and fiscal-year start
+before creating the workspace; paid-plan and billing-interval selection happen
+at checkout, not at cardless trial signup. Supabase Auth then sends a
 six-digit email OTP. Workspace provisioning cannot run until `verifyOtp`
 returns an authenticated session for that address.
 
@@ -348,15 +371,17 @@ the password and OTP never do.
 
 `complete_account_onboarding(...)` then provisions the profile, organization,
 owner membership, an empty user-managed chart of accounts, an audit entry, and
-checkout-required subscription in one PostgreSQL transaction. If any write or
+private trial subscription in one PostgreSQL transaction, through the final
+organization trigger described above. If any write or
 validation fails, none of the workspace survives. The function resolves the
 caller through `auth.uid()`, refuses replay for an existing active member, fixes
 its `search_path`, and grants execution only to authenticated users.
 
 Paymob Unified Checkout is required after the cardless trial expires. Until its
-signed webhook activates paid access, the database removes product
-capabilities. A partially paid or client-forged workspace therefore cannot
-re-enter normal use.
+signed webhook activates paid access, an expired workspace keeps permitted
+financial-history reads and billing management while mutations are denied.
+A failed first checkout preserves an unexpired trial. See
+[readable-history migration](../supabase/migrations/20260911100000_subscription_readable_history.sql).
 
 The authenticated shell exposes one global floating add control. Its drawer is
 derived from the caller's capabilities and delegates to the existing controlled
@@ -423,5 +448,6 @@ ids.
 - `attachments.entity_type` — reconciliation artefacts later
 - `subscription_entitlements` — new plans are rows, not code
 
-None of these are exposed in Phase 1; they exist so adding them later is not a
-migration of live financial data.
+These are foundations, not evidence of accepted period, approval or dimensions
+workflows. Accounting V2 still needs additive schema and reviewed preservation
+planning; see [domain specification](accounting-v2/ACCOUNTING_DOMAIN_SPEC.md).

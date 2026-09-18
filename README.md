@@ -73,9 +73,10 @@ development rather than only in the test suite.
 
 ## Database workflow — read this before changing the schema
 
-**The Git repository is the source of truth for the database.** Supabase is
-linked to this repository and applies committed migrations through its own
-deployment process.
+**The Git repository records the intended database schema.** The documented
+workflow uses linked deployment; actual target/applied versions must be verified
+separately. Treat remote data as valuable, and run resets only in newly created
+disposable local environments. See [production gates](docs/launch/PRODUCTION_CHECKLIST.md).
 
 Do:
 
@@ -109,9 +110,13 @@ types/database.types.ts Generated from the schema; do not hand-edit
 
 ---
 
-## What Phases 1–4 guarantee
+## Historical Phase 1–4 verification claims
 
-Verified by `pnpm db:test` (107 assertions) and `pnpm test:e2e`:
+The list below records earlier implementation claims and the historical
+107-assertion baseline. It is not Accounting V2, production or accountant
+acceptance. Current code gaps and fresh results are in
+[CURRENT_STATUS](docs/launch/CURRENT_STATUS.md) and
+[the accounting audit](docs/accounting-v2/CURRENT_STATE_AUDIT.md):
 
 - every posting produces balanced ledger entries — `SUM(debits) = SUM(credits)`
 - reversals return the affected accounts to exactly their prior balance
@@ -129,11 +134,11 @@ Verified by `pnpm db:test` (107 assertions) and `pnpm test:e2e`:
 - organization invitations are created and accepted through controlled RPCs
 - direct client mutation cannot bypass financial or notification workflows
 - the Dashboard, Transactions, Accounts and Reports journeys run end-to-end
-- account creation collects the owner and business profile, provisions a full
-  starter ledger atomically, verifies the email with an in-app six-digit OTP,
+- account creation collects the owner and business profile, provisions an empty
+  user-managed chart atomically, verifies the email with an in-app six-digit OTP,
   and starts a cardless 14-day trial
 - the public landing and three-step signup journey run end-to-end in English
-  and share the Building Suit monochrome design system with the application
+  and share the current Building Suit design tokens with the application
 - a permission-aware global add drawer reaches every supported transaction,
   account, operational, tagging, counterparty, and team invitation workflow
 - a new organization starts with a 14-day cardless trial and requires Paymob
@@ -148,6 +153,10 @@ See [docs/architecture.md](docs/architecture.md) for how.
 ---
 
 ## Documentation
+
+- [Current status](docs/launch/CURRENT_STATUS.md) — start here
+- [Launch master plan](docs/launch/MASTER_LAUNCH_PLAN.md)
+- [Accounting V2 master plan](docs/accounting-v2/MASTER_PLAN.md)
 
 - [Architecture](docs/architecture.md) — tenancy, ledger design, posting engine
 - [Environment variables](docs/environment.md)
