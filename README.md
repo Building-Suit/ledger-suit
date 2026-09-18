@@ -115,8 +115,8 @@ types/database.types.ts Generated from the schema; do not hand-edit
 The list below records earlier implementation claims and the historical
 107-assertion baseline. It is not Accounting V2, production or accountant
 acceptance. Current code gaps and fresh results are in
-[CURRENT_STATUS](docs/launch/CURRENT_STATUS.md) and
-[the accounting audit](docs/accounting-v2/CURRENT_STATE_AUDIT.md):
+[the current planning entry point](docs/accountant-system/README.md) and
+[the workbook and code audit](docs/accountant-system/EVIDENCE_AR.md):
 
 - every posting produces balanced ledger entries — `SUM(debits) = SUM(credits)`
 - reversals return the affected accounts to exactly their prior balance
@@ -154,9 +154,10 @@ See [docs/architecture.md](docs/architecture.md) for how.
 
 ## Documentation
 
-- [Current status](docs/launch/CURRENT_STATUS.md) — start here
-- [Launch master plan](docs/launch/MASTER_LAUNCH_PLAN.md)
-- [Accounting V2 master plan](docs/accounting-v2/MASTER_PLAN.md)
+- [Current accountant-first plan](docs/accountant-system/README.md) — start here; replaces previous planning sequences
+- [Master plan in Arabic](docs/accountant-system/MASTER_PLAN_AR.md)
+- [Accountant review in Arabic](docs/accountant-system/ACCOUNTANT_REVIEW_AR.md)
+- [Accounting acceptance scenarios](docs/accountant-system/ACCEPTANCE_AR.md)
 
 - [Architecture](docs/architecture.md) — tenancy, ledger design, posting engine
 - [Environment variables](docs/environment.md)

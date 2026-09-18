@@ -1,22 +1,9 @@
-# Accounting rollback and recovery plan
+# إحالة إلى الخطة الجديدة
 
-No rollback performed in WP00. Accountable owner: Tareq. Execution requires a reviewed target/environment-specific runbook; this document authorizes no production operation.
+أُلغي محتوى هذه الخطة كمرجع تنفيذ في ١٨ سبتمبر ٢٠٢٦ بناءً على طلب المؤسس بإعادة التخطيط انطلاقًا من المحاسبة وملف الإكسيل وطريقة عمل المحاسب.
 
-## Before release
+المرجع الحالي الوحيد هو [خطة النظام المحاسبي للمحاسبين](../accountant-system/README.md)، ويتضمن [الخطة الرئيسية](../accountant-system/MASTER_PLAN_AR.md)، و[وثيقة مراجعة المحاسب](../accountant-system/ACCOUNTANT_REVIEW_AR.md)، و[أدلة الفحص](../accountant-system/EVIDENCE_AR.md)، و[سيناريوهات القبول](../accountant-system/ACCEPTANCE_AR.md).
 
-Record previous app/Edge versions, schema compatibility matrix, backup/PITR reference and retention, storage-object recovery coverage, provider event position, approved RPO/RTO and rollback decision deadline. Restore into an isolated non-production target and measure recovery time. Reconcile independent journal/GL/TB/statement/subledger controls plus attachment existence and Auth ownership. A backup listing is not a restore rehearsal.
+لا يُستأنف ترتيب المراحل أو حزم العمل أو قرارات أولوية الواجهة في النسخة السابقة. تبقى حماية البيانات والسياسات التجارية القائمة والمخاطر المنقولة إلى الخطة الجديدة نافذة. موافقة المحاسب لم تُسجل بعد.
 
-## Trigger and containment
-
-Unbalanced journals, cross-tenant exposure, silently changed history or unexplained report differences stop accounting writes and release promotion. Tareq declares incident and assigns engineer/security/accountant owners. Preserve audit/log evidence without customer payloads. Disable affected acquisition/checkout if needed via reviewed operational mechanism; continue verified callbacks for already initiated payments. Never delete catalog/event history to stop sales.
-
-## Recovery order
-
-1. Determine scope and exact first bad version using redacted aggregate evidence.
-2. Roll app/Edge back only to versions compatible with additive database contracts and payment snapshots. Keep working read-only history.
-3. For schema behavior, prefer reviewed forward repair migration; never rewrite applied migration files.
-4. For erroneous posted accounting, accountant authorizes linked reversal/correcting journals in an open period. An app rollback or reverted schema cannot repair immutable financial history.
-5. Restore only for confirmed corruption with explicit data owner approval and known recovery point. Reconcile post-backup writes, queued imports, provider callbacks and emails before reopening; no duplicate financial/provider events.
-6. Verify balance by journal and tenant, GL/TB/position, counterparty controls, RLS/storage, retries, period locks, expiry reads and current payment state. Accountant and release owner sign the reopen decision.
-
-Stop if backup coverage, target identity, recovery point or old-app compatibility is unproven. For the destructive historical chart migration, use the preflight blocker in [SCHEMA_MIGRATION_PLAN](SCHEMA_MIGRATION_PLAN.md); do not replay it against valuable data. Retain incident record, affected requirements, root cause and regression evidence in OPEN_RISKS and POST_LAUNCH_PLAN.
+للمراجعة التاريخية فقط: النسخة السابقة من `docs/accounting-v2/ROLLBACK_PLAN.md` محفوظة في تاريخ المستودع عند الالتزام `6fb152ee72e2b6b22269230917b2f9237fc2612d`. الإحالة تحافظ على الروابط القديمة دون إبقاء خطتين متنافستين.
