@@ -2,10 +2,14 @@
 
 ## Database
 
-This repository is linked to a Supabase project. **Supabase detects migrations
-committed to this repository and applies them through the linked deployment
-process.** The repository migration history is the authoritative representation
-of the production schema.
+The intended repository workflow uses linked Supabase deployment to apply
+committed migrations. WP00 did not verify the actual target, connection, applied
+versions or deployment automation. Repository migrations describe intended schema,
+not proof of the production schema. Before promotion use
+[PRODUCTION_CHECKLIST](launch/PRODUCTION_CHECKLIST.md) to establish target identity,
+applied history and backup/restore evidence. In particular, historical
+`20260908120000_user_managed_chart_of_accounts.sql` contains destructive TRUNCATE;
+never apply a pending copy to valuable data without a reviewed preservation plan.
 
 ```
 implement
@@ -44,7 +48,7 @@ financial data, which means:
 ### Validating before commit
 
 ```bash
-pnpm db:reset     # full replay from empty, then seed
+pnpm db:reset     # ONLY a newly created disposable LOCAL database, then seed
 pnpm db:test      # pgTAP: accounting integrity + tenant isolation
 pnpm db:lint      # Supabase schema linter, warnings included
 pnpm db:types     # regenerate types/database.types.ts and commit the result
@@ -205,8 +209,9 @@ Files are served through signed URLs only.
 
 ## Backup and recovery
 
-Supabase takes managed backups of the linked project. Two things to know before
-relying on them:
+Managed backup availability, retention and restore access for the actual target
+are NOT VERIFIED in WP00. Record and rehearse them before relying on recovery.
+Two accounting checks to include:
 
 1. **The ledger is the source of truth and nothing is cached from it.** There
    are no derived balance tables to rebuild after a restore.
@@ -218,5 +223,7 @@ relying on them:
    from public.organizations o;
    ```
 
-   Every row must report `"balanced": true`. A `false` after a restore means the
-   restore is incomplete — treat it as a critical failure, not a rounding issue.
+   Every row must report `"balanced": true`. A false result requires investigation
+   and blocks reopening; it does not uniquely diagnose an incomplete restore.
+   Compare independent journal/GL/report controls as well as storage objects,
+   Auth ownership and provider events; aggregate equality alone is insufficient.

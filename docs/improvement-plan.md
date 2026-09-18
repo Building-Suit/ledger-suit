@@ -1,5 +1,7 @@
 # Post-launch improvement program
 
+> **Historical record — not an active plan or current acceptance evidence.** Retained for provenance as of the WP00 audit on 2026-09-18. The canonical [launch master](launch/MASTER_LAUNCH_PLAN.md), [current status](launch/CURRENT_STATUS.md), [consolidated roadmap](launch/ROADMAP.md) and [Accounting V2 plan](accounting-v2/MASTER_PLAN.md) govern current work. Original task ordering, decisions and source text below are preserved; old completion claims and checkboxes do not establish current deployment, UAT or release readiness.
+
 ## Purpose
 
 This program improves Ledger Suit's UI foundations and core workflows without weakening tenant isolation, server-authoritative permissions and quotas, accounting immutability, billing security, or existing launch behavior. PrimeVue is the behavioral and accessibility component foundation; Building Suit tokens, Tailwind classes, themes, typography, responsive behavior, and EN/AR direction remain the visual authority.

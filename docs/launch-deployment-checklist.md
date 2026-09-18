@@ -1,9 +1,13 @@
 # Launch deployment checklist
 
-This is the final operational gate for the Solo, Starter, and Business launch.
-The database is currently disposable test data, and the Step 21 compatibility
-subscription migration was intentionally skipped. Do not map `ledger_suit` or
-`legacy_*` subscriptions as part of this checklist.
+> **Historical record — not an active plan or current acceptance evidence.** Retained for provenance as of the WP00 audit on 2026-09-18. The canonical [launch master](launch/MASTER_LAUNCH_PLAN.md), [current status](launch/CURRENT_STATUS.md), [consolidated roadmap](launch/ROADMAP.md) and [Accounting V2 plan](accounting-v2/MASTER_PLAN.md) govern current work. Original task ordering, decisions and source text below are preserved; old completion claims and checkboxes do not establish current deployment, UAT or release readiness.
+
+This records the former operational checklist for the Solo, Starter, and Business launch.
+The earlier disposable-test-data assertion is NOT VERIFIED at the WP00 audit;
+treat all remote data as valuable (DEC-009). Step 21 compatibility subscription
+migration remains intentionally deferred. Do not map `ledger_suit` or `legacy_*`
+subscriptions. Active gates are now [RELEASE_CHECKLIST](launch/RELEASE_CHECKLIST.md)
+and [PRODUCTION_CHECKLIST](launch/PRODUCTION_CHECKLIST.md).
 
 > **Approved new-trial policy.** Current signup creates a cardless 14-day trial
 > on the dedicated private `trial` plan, without paid-plan selection. It grants
