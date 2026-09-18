@@ -5,8 +5,8 @@ and where the boundaries sit.
 
 Audited intended code at `8de315838b0d6a23e0bf523813a29c9d9e8bd13d` on 2026-09-18;
 these are implementation descriptions, not deployed or accountant acceptance.
-See [current audit](accounting-v2/CURRENT_STATE_AUDIT.md) and
-[current status](launch/CURRENT_STATUS.md) for gaps and verification limits.
+See [current audit](accountant-system/EVIDENCE_AR.md) and
+[current plan](accountant-system/README.md) for gaps and verification limits.
 
 ---
 
@@ -449,5 +449,5 @@ ids.
 - `subscription_entitlements` — new plans are rows, not code
 
 These are foundations, not evidence of accepted period, approval or dimensions
-workflows. Accounting V2 still needs additive schema and reviewed preservation
-planning; see [domain specification](accounting-v2/ACCOUNTING_DOMAIN_SPEC.md).
+workflows. The accountant-first plan still needs additive schema and reviewed
+preservation planning; see [the new master plan](accountant-system/MASTER_PLAN_AR.md).
