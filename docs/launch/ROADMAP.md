@@ -1,6 +1,6 @@
 # Consolidated roadmap and provenance
 
-One active overall master: [MASTER_LAUNCH_PLAN](MASTER_LAUNCH_PLAN.md). Accounting sequence: [MASTER_PLAN](../accounting-v2/MASTER_PLAN.md). WP00 → WP01 (decision/sign-off) → WP02 (first implementation). No package starts automatically.
+One active overall master: [MASTER_LAUNCH_PLAN](MASTER_LAUNCH_PLAN.md). Accounting sequence: [MASTER_PLAN](../accounting-v2/MASTER_PLAN.md). WP00 (merged #94) → UI-02A (Accounts presentation only, READY FOR REVIEW; DEC-010) → review. WP01 (decision/sign-off) → WP02 remains the accounting/schema dependency. No package starts automatically.
 
 ## Accounting priority and advertised scope
 
@@ -13,7 +13,7 @@ Must Have: ACCT-01–10 and ACCT-14/15 because correct chart, opening, journals,
 | ID | Requirement | Evidence / status | Accounting or launch integration |
 |---|---|---|---|
 | UI-01 | PrimeVue foundation | Merged code evidence: 8e01f8f (#87); no independent V2 acceptance | WP03/05 foundation |
-| UI-02 | DataTable foundation and core tables | NOT STARTED; current accounts/transactions use native tables | WP03/05 |
+| UI-02 | DataTable foundation and core tables | PARTIAL — Accounts slice UI-02A READY FOR REVIEW; Transactions/records outstanding; Accounts uses PrimeVue, other core tables still native | WP03/05 |
 | UI-03 | Remaining tables | NOT STARTED | WP05/06 |
 | UI-04 | Form system and floating-label foundation | NOT STARTED; existing FloatingField is not proof of full program | WP03/04 |
 | UI-05 | Floating-label audit | NOT STARTED | WP03/05 |

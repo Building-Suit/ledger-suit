@@ -1,6 +1,6 @@
 # Accounting V2 master plan
 
-Canonical accounting implementation plan. WP00 evidence date: 2026-09-18. Current work is documentation only, READY FOR REVIEW; independent review is pending. Overall phase and commercial dependencies belong to [Launch](../launch/MASTER_LAUNCH_PLAN.md).
+Canonical accounting implementation plan. WP00 evidence date: 2026-09-18. WP00 PR #94 is merged. The only active execution package is UI-02A (READY FOR REVIEW), an Accounts presentation exception under DEC-010; WP01 accountant decisions remain pending. Overall phase and commercial dependencies belong to [Launch](../launch/MASTER_LAUNCH_PLAN.md).
 
 ## Operating contract
 
@@ -12,7 +12,7 @@ Founder invariants DEC-001 apply throughout. Existing UI program UI-01–UI-18 r
 
 | WP | Objective / requirements | Priority / status | Dependencies | Deliverable and acceptance | Verification / human review |
 |---|---|---|---|---|---|
-| WP00 | Permanent evidence and plans, all requirements | P0 / READY FOR REVIEW | Audited dev | 18 canonical files, provenance, risks, one next WP; docs only | Document links/diff + baseline; independent ChatGPT review pending |
+| WP00 | Permanent evidence and plans, all requirements | P0 / MERGED (PR #94) | Audited dev | 18 canonical files, provenance, risks, one next WP; docs only | Document links/diff + baseline; merged 2026-09-18; separate sign-off record not supplied |
 | WP01 | Lock accounting specification and launch scope, ACCT-01–ACCT-15 | P0 / NOT STARTED | Independent WP00 acceptance | Signed decisions, mapping policy, golden fixtures, explicit scope for bank/assets/dimensions/tax/inventory | Accountant + founder; review arithmetic and historical preservation |
 | WP02 | Account master contracts and preservation, ACCT-01,02,03 | P0 / NOT STARTED | WP01 signed accounting decisions | Additive node/contra/classification contract, reviewed backfill, all posting boundaries deny groups | DB direct/RPC/tenant/race tests, reconciliation; accountant + independent code review |
 | WP03 | Account tree and optional templates, ACCT-01,02,08 | P0 / NOT STARTED | WP02; applicable ordered UI prerequisites | Parent/normal-side/classification exposure, archive rules, tree rollups, optional service/trading/empty templates | EN/AR create/edit/selector/tenant/navigation; accountant usability |
@@ -34,10 +34,10 @@ Dependencies describe sequencing, not authorization to start all packages. If WP
 - [x] Accounting invariants, migration/rollback design and 15 golden fixtures documented.
 - [ ] Independent review accepts WP00; only then mark COMPLETED.
 
-## Exact next work package: WP01
+## Next accounting work package: WP01
 
 Objective: obtain an accountant-reviewed Accounting Specification v1.0 before schema design is implemented. Relevant files: ACCOUNTING_DOMAIN_SPEC.md, ACCOUNTANT_UAT.md, TEST_PLAN.md, SCHEMA_MIGRATION_PLAN.md, TRACEABILITY_MATRIX.md and launch DECISIONS.md/ROADMAP.md/CURRENT_STATUS.md. Use CURRENT_STATE_AUDIT.md evidence; retain the review DOCX as a proposal.
 
 Tasks: resolve DEC-003–DEC-007; sign group/control/contra and historical classification policy; approve opening year-start versus midyear treatment and OBE clearing; choose correction entitlement policy; freeze bank/assets/dimensions/tax/inventory scope and Arabic labels; reproduce RISK-004 with the actual failing path if possible; assign named accountant and reviewers. Do not implement schema/UI during this decision package.
 
-Acceptance: each decision has approver/date/evidence or remains explicitly unresolved; no schema package proceeds with unresolved accounting policy. Recalculate all 15 fixture expectations independently, review direct posting and migration preflight cases, validate links and dependency consistency. No claim that an accountant approved until a human actually signs. First implementation package after WP01 is WP02.
+Acceptance: each decision has approver/date/evidence or remains explicitly unresolved; no schema package proceeds with unresolved accounting policy. Recalculate all 15 fixture expectations independently, review direct posting and migration preflight cases, validate links and dependency consistency. No claim that an accountant approved until a human actually signs. First accounting/schema implementation package after WP01 is WP02. DEC-010 permits only UI-02A presentation beforehand; it does not authorize WP03 or new accounting contracts.

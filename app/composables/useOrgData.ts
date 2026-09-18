@@ -42,17 +42,20 @@ export function useOrgAccounts() {
   const supabase = useSupabaseClient<Database>()
   const { currentId } = useTenant()
 
-  return useLazyAsyncData<AccountRow[]>('org:accounts', async () => {
-    if (!currentId.value) return []
+  return useLazyAsyncData<AccountRow[]>('org:accounts', async (_app, { signal }) => {
+    const organizationId = currentId.value
+    if (!organizationId) return []
 
-    const { data, error } = await supabase
+    const rows = await fetchAccountPages<AccountRow>((from, to) => supabase
       .from('accounts')
-      .select('organization_id, id, code, name, type, subtype, currency, is_liquid, is_archived, is_system, system_key, parent_account_id')
-      .eq('organization_id', currentId.value)
+      .select('organization_id, id, code, name, type, subtype, currency, is_liquid, is_archived, is_system, system_key, parent_account_id', { count: 'exact' })
+      .eq('organization_id', organizationId)
       .order('code', { ascending: true, nullsFirst: false })
+      .order('id')
+      .range(from, to)
+      .abortSignal(signal), signal)
 
-    if (error) throw error
-    return (data ?? []) as AccountRow[]
+    return currentId.value === organizationId ? rows : []
   }, { watch: [currentId], default: () => [] })
 }
 

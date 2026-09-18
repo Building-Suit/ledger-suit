@@ -8,7 +8,7 @@ Ledger Suit is Public Launch Ready only when an accountant can use it for real d
 
 ## Current phase
 
-Exactly one current major phase: **PH-01 — Evidence and accounting design** (IN PROGRESS). Exactly one active work package: **WP00** (READY FOR REVIEW). No canonical work package has yet been independently accepted as COMPLETED. Historical merged changes remain evidence, not V2 acceptance.
+Exactly one current major phase: **PH-01 — Evidence and accounting design** (IN PROGRESS). Exactly one active execution work package: **UI-02A — Accounts table** (READY FOR REVIEW), authorized by DEC-010. WP00 PR #94 is merged; no separate accountant acceptance is inferred. WP01 remains NOT STARTED pending signed decisions. Historical merged changes remain evidence, not V2 acceptance.
 
 ## Phases
 

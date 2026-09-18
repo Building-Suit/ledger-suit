@@ -47,3 +47,11 @@ Context: several historical plans described different snapshots. Decision: launc
 
 Date: 2026-09-18. Status: FOUNDER-MANDATED preservation; operational verification pending.
 Context: deployment docs claimed linked auto-apply and disposable data; connected Supabase project list did not establish the Ledger Suit target. Decision: treat every remote target as valuable until owner proves identity and data status; repository migrations are intended schema, not applied evidence. Reason: historical TRUNCATE and unverified backups. Consequences: no remote SQL or guessed project ID in WP00; Tareq supplies environment mapping, applied versions and restore evidence for release. Affected: RISK-001/009, LAUNCH-02/09.
+
+## DEC-010 — Accounts presentation slice before accounting sign-off
+
+Date: 2026-09-18. Status: FOUNDER-AUTHORIZED by Ledger_Suit_UI02A_Accounts.md.
+Context: WP00 [PR #94](https://github.com/Building-Suit/ledger-suit/pull/94) merged to dev at `6fb152ee72e2b6b22269230917b2f9237fc2612d`; both CI jobs passed. Separate accountant sign-off is not supplied by that merge.
+Decision: UI-02A is the only active execution package, allowing an Accounts-only PrimeVue DataTable, name/code search/sort, complete existing-query pagination, localized states, save/reveal and tenant-cache verification before WP01. Existing ledger-derived balances, aggregate semantics, permissions and account contracts remain unchanged. No schema, seed, RPC, generated-type or financial-policy changes.
+Reason: deliver a reviewable visible improvement while accounting decisions await the accountant.
+Consequences: narrowly supersedes DEC-008's WP00→WP01-only immediate execution sequence. WP01 and DEC-003–007 remain pending; all schema/report-accounting work remains blocked on their sign-offs. UI-01→UI-02→UI-03 stays ordered. UI-02A is only the Accounts slice; Transactions and records remain outstanding, UI-02 is not completed, and UI-18 stays last. Completion requires focused browser evidence plus PR CI, followed by independent review; no automatic merge/deploy/next package. Affected: ACCT-08, LAUNCH-02, UI-02; does not accept Accounting V2 requirements or open launch gates.
