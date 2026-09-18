@@ -1,6 +1,6 @@
 # UI-02A — Accounts table review evidence
 
-2026-09-18. **READY FOR REVIEW**, Accounts slice only. DEC-010 authorizes this presentation work before WP01; UI-02 Transactions/records remain outstanding. No Accounting V2, deployment or accountant acceptance is implied.
+2026-09-18. **READY FOR REVIEW**, Accounts slice only. [PR #96](https://github.com/Building-Suit/ledger-suit/pull/96), implementation/evidence commit `d05a63948873a1adad2b4c98c4a7a8f61a904f95`. DEC-010 authorizes this presentation work before WP01; UI-02 Transactions/records remain outstanding. No Accounting V2, deployment or accountant acceptance is implied.
 
 ## Reproduce
 
@@ -14,7 +14,7 @@ The UI tests use the repository's fake `owner@alpha.test` / `viewer@alpha.test` 
 
 ## Before and after
 
-Baseline: WP00 product code, unchanged by merged PR #94 (`6fb152e`). Both pages used the same disposable Alpha Trading chart: four active EGP assets, one archived asset, and one account in each other type. No posted transactions; displayed balances are intentionally zero. Assets tab, archived off, search empty, ascending code order. Desktop 1440×1000; mobile 390×844. Before and after pairs use the same locale, theme and data. Synthetic browser-test rows are separate from these screenshots.
+Baseline: WP00 product code, unchanged by merged PR #94 (`6fb152e`). Both pages used the same disposable Alpha Trading chart: four active EGP assets, one archived fixture asset, and supporting accounts in the other types. Only the four active fixture assets are visible in these pairs. No posted transactions; displayed balances are intentionally zero. Assets tab, archived off, search empty, ascending code order. Desktop 1440×1000; mobile 390×844. Before and after pairs use the same locale, theme and data. Synthetic browser-test rows are separate from these screenshots.
 
 | View | Before | After |
 |---|---|---|

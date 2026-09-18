@@ -23,7 +23,7 @@ Finish and independently review UI-02A first; no automatic merge or next slice. 
 
 ## UI-02A verification — 2026-09-18
 
-- Branch `codex/ui02a-accounts-table`, isolated `/home/tareq/Dev/ledger-suit-ui02a`, based on merged PR #94 / dev `6fb152e`. Review PR publication pending.
+- Branch `codex/ui02a-accounts-table`, isolated `/home/tareq/Dev/ledger-suit-ui02a`, based on merged PR #94 / dev `6fb152e`. Published as [PR #96](https://github.com/Building-Suit/ledger-suit/pull/96) targeting `dev`; implementation/evidence commit `d05a63948873a1adad2b4c98c4a7a8f61a904f95`. Independent UI-02A review pending.
 - Frozen install, lint, typecheck, build PASS; focused Accounts + existing finance tests **18/18 PASS**; extended large-chart shared-selector check **1/1 PASS**. Unmodified baseline account creation **1/1 PASS**; the reported generic stale-account defect was not reproduced.
 - Browser-verified EN/AR, both themes, desktop/mobile, keyboard sorting, complete 1,003-account search/selector coverage, explicit saved-record reveal and delayed tenant response suppression. [Before/after and interaction captures](../evidence/ui02a/README.md).
 - Full local Chromium E2E: **56/56 PASS**, including the earlier invitation scenario; exact-head PR CI pending. Existing RISK-014 remains open regardless of a subsequent green run; its earlier invitation timeout cause is not established.
